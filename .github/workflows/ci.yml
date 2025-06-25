@@ -61,10 +61,10 @@ jobs:
         ocaml-compiler: "5.1.x"
         dune-cache: true
 
-    - name: Install dependencies
+    - name: Install OxCaml
       run: |
-        opam install . --deps-only --with-test
-        opam install ocamlformat
+        opam switch create 5.2.0+ox --repos ox=git+https://github.com/oxcaml/opam-repository.git,default
+        eval $(opam env --switch 5.2.0+ox)
 
     - name: Check code formatting
       run: opam exec -- dune build @fmt
