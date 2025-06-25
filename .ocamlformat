@@ -1,0 +1,12 @@
+version = 0.26.0
+profile = default
+margin = 80
+parse-docstrings = true
+wrap-comments = true
+let-binding-spacing = compact
+field-space = loose
+break-cases = fit-or-vertical
+cases-exp-indent = 2
+nested-match = wrap
+parens-tuple = always
+single-case = compact 

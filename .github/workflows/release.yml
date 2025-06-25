@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Extract version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.VERSION }}
+        release_name: Release ${{ steps.get_version.outputs.VERSION }}
+        body: |
+          Release ${{ steps.get_version.outputs.VERSION }} of ox-fast-mcp
+          
+          ## Changes
+          See [CHANGELOG.md](CHANGELOG.md) for details.
+          
+        draft: false
+        prerelease: false
+
+  build-release:
+    needs: create-release
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up OCaml
+      uses: ocaml/setup-ocaml@v2
+      with:
+        ocaml-compiler: "5.1.x"
+        dune-cache: true
+
+    - name: Install dependencies
+      run: opam install . --deps-only
+
+    - name: Build release
+      run: |
+        opam exec -- dune build
+        opam exec -- dune build @install
+
+    - name: Create release archive
+      run: |
+        mkdir -p release-${{ matrix.os }}
+        cp -r _build/install/default/* release-${{ matrix.os }}/
+        tar -czf ox-fast-mcp-${{ matrix.os }}.tar.gz release-${{ matrix.os }}/
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./ox-fast-mcp-${{ matrix.os }}.tar.gz
+        asset_name: ox-fast-mcp-${{ matrix.os }}.tar.gz
+        asset_content_type: application/gzip 

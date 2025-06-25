@@ -1,0 +1,61 @@
+name: Security
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly on Monday at 6 AM UTC
+
+jobs:
+  dependency-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up OCaml
+      uses: ocaml/setup-ocaml@v2
+      with:
+        ocaml-compiler: "5.1.x"
+
+    - name: Install opam-dune-lint
+      run: opam install opam-dune-lint
+
+    - name: Check for dependency issues
+      run: opam exec -- opam-dune-lint
+
+    - name: Check opam security advisories
+      run: |
+        opam update
+        opam admin check-upstream --all
+
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up OCaml
+      uses: ocaml/setup-ocaml@v2
+      with:
+        ocaml-compiler: "5.1.x"
+
+    - name: Install code quality tools
+      run: |
+        opam install . --deps-only
+        opam install ocamlformat
+
+    - name: Check code formatting
+      run: |
+        opam exec -- dune build @fmt
+        if ! opam exec -- dune build @fmt 2>/dev/null; then
+          echo "Code formatting issues found. Run 'dune build @fmt --auto-promote' to fix."
+          exit 1
+        fi
+
+    - name: Build with warnings as errors
+      run: opam exec -- dune build --profile dev 

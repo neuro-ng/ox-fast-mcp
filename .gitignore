@@ -1,0 +1,47 @@
+# Dune build artifacts
+_build/
+*.install
+
+# OCaml compiled files
+*.cmo
+*.cmi
+*.cma
+*.cmx
+*.cmxa
+*.cmxs
+*.a
+*.o
+*.so
+*.byte
+*.native
+*.exe
+
+# OCaml documentation
+*.html
+*.css
+*.js
+doc/
+
+# Editor files
+.vscode/
+.idea/
+*~
+*.bak
+*.swp
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Opam
+_opam/
+*.opam.locked
+
+# Coverage
+bisect*.coverage
+_coverage/
+
+# Temporary files
+*.tmp
+*.temp

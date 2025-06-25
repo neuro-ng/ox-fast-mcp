@@ -1,0 +1,11 @@
+(executable
+ (public_name calculator-server)
+ (name calculator_server)
+ (modules calculator_server)
+ (libraries ox_fast_mcp))
+
+(executable
+ (public_name demo)
+ (name demo)
+ (modules demo)
+ (libraries ox_fast_mcp)) 

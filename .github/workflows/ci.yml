@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  release:
+    types: [ published ]
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        ocaml-compiler:
+          - "4.14.x"
+          - "5.0.x"
+          - "5.1.x"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up OCaml ${{ matrix.ocaml-compiler }}
+      uses: ocaml/setup-ocaml@v2
+      with:
+        ocaml-compiler: ${{ matrix.ocaml-compiler }}
+        dune-cache: true
+
+    - name: Install dependencies
+      run: opam install . --deps-only --with-test
+
+    - name: Build project
+      run: opam exec -- dune build
+
+    - name: Run tests
+      run: opam exec -- dune runtest
+
+    - name: Build documentation
+      run: opam exec -- dune build @doc
+
+    - name: Check opam file
+      run: opam lint ox-fast-mcp.opam
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up OCaml
+      uses: ocaml/setup-ocaml@v2
+      with:
+        ocaml-compiler: "5.1.x"
+        dune-cache: true
+
+    - name: Install dependencies
+      run: |
+        opam install . --deps-only --with-test
+        opam install ocamlformat
+
+    - name: Check code formatting
+      run: opam exec -- dune build @fmt
+
+    - name: Lint opam file
+      run: opam lint ox-fast-mcp.opam
+
+  examples:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up OCaml
+      uses: ocaml/setup-ocaml@v2
+      with:
+        ocaml-compiler: "5.1.x"
+        dune-cache: true
+
+    - name: Install dependencies
+      run: opam install . --deps-only
+
+    - name: Build examples
+      run: opam exec -- dune build examples/
+
+    - name: Test calculator server
+      run: opam exec -- dune exec examples/calculator_server.exe
+
+    - name: Test demo
+      run: opam exec -- dune exec examples/demo.exe
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [build-and-test, lint, examples]
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up OCaml
+      uses: ocaml/setup-ocaml@v2
+      with:
+        ocaml-compiler: "5.1.x"
+
+    - name: Install dependencies
+      run: opam install . --deps-only
+
+    - name: Build for release
+      run: opam exec -- dune build
+
+    - name: Generate release artifacts
+      run: |
+        opam exec -- dune build @install
+        mkdir -p _release
+        cp -r _build/install/default/* _release/
+
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ox-fast-mcp-${{ github.event.release.tag_name }}
+        path: _release/ 
