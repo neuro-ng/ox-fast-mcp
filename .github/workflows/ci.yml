@@ -10,95 +10,112 @@ on:
 
 jobs:
   build-and-test:
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-        ocaml-compiler:
-          - "5.2"
-
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/neugon/oxcaml-ubuntu:latest
+      options: --user ocaml-user
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up OCaml ${{ matrix.ocaml-compiler }}
-      uses: ocaml/setup-ocaml@v2
-      with:
-        ocaml-compiler: ${{ matrix.ocaml-compiler }}
-        dune-cache: true
-
-    - name: Install OxCaml
+    - name: Set working directory
       run: |
-        opam switch create 5.2.0+ox --repos ox=git+https://github.com/oxcaml/opam-repository.git,default
-        eval $(opam env --switch 5.2.0+ox)
+        mkdir -p /workspace
+        cp -r . /workspace/
+        cd /workspace
 
     - name: Build project
-      run: opam exec -- dune build
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        dune build
 
     - name: Run tests
-      run: opam exec -- dune runtest
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        dune runtest
 
     - name: Build documentation
-      run: opam exec -- dune build @doc
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        dune build @doc
 
     - name: Check opam file
-      run: opam lint ox-fast-mcp.opam
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        opam lint ox-fast-mcp.opam
 
   lint:
     runs-on: ubuntu-latest
+    container:
+      image: docker.io/neugon/oxcaml-ubuntu:latest
+      options: --user ocaml-user
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v2
-      with:
-        ocaml-compiler: "5.1.x"
-        dune-cache: true
-
-    - name: Install OxCaml
+    - name: Set working directory
       run: |
-        opam switch create 5.2.0+ox --repos ox=git+https://github.com/oxcaml/opam-repository.git,default
-        eval $(opam env --switch 5.2.0+ox)
+        mkdir -p /workspace
+        cp -r . /workspace/
+        cd /workspace
 
     - name: Check code formatting
-      run: opam exec -- dune build @fmt
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        dune build @fmt
 
     - name: Lint opam file
-      run: opam lint ox-fast-mcp.opam
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        opam lint ox-fast-mcp.opam
 
   examples:
     runs-on: ubuntu-latest
+    container:
+      image: docker.io/neugon/oxcaml-ubuntu:latest
+      options: --user ocaml-user
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v2
-      with:
-        ocaml-compiler: "5.2"
-        dune-cache: true
-
-    - name: Install dependencies
-      run: opam install . --deps-only
+    - name: Set working directory
+      run: |
+        mkdir -p /workspace
+        cp -r . /workspace/
+        cd /workspace
 
     - name: Build examples
-      run: opam exec -- dune build examples/
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        dune build examples/
 
     - name: Test calculator server
-      run: opam exec -- dune exec examples/calculator_server.exe
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        dune exec examples/calculator_server.exe
 
     - name: Test demo
-      run: opam exec -- dune exec examples/demo.exe
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        dune exec examples/demo.exe
 
   publish:
     runs-on: ubuntu-latest
+    container:
+      image: docker.io/neugon/oxcaml-ubuntu:latest
+      options: --user ocaml-user
     needs: [build-and-test, lint, examples]
     if: github.event_name == 'release'
     
@@ -106,20 +123,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v2
-      with:
-        ocaml-compiler: "5.1.x"
-
-    - name: Install dependencies
-      run: opam install . --deps-only
+    - name: Set working directory
+      run: |
+        mkdir -p /workspace
+        cp -r . /workspace/
+        cd /workspace
 
     - name: Build for release
-      run: opam exec -- dune build
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        dune build
 
     - name: Generate release artifacts
+      working-directory: /workspace
       run: |
-        opam exec -- dune build @install
+        eval $(opam env)
+        dune build @install
         mkdir -p _release
         cp -r _build/install/default/* _release/
 
@@ -127,4 +147,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ox-fast-mcp-${{ github.event.release.tag_name }}
-        path: _release/ 
+        path: /workspace/_release/ 
