@@ -56,7 +56,15 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: docker.io/neugon/oxcaml-ubuntu:latest
-      options: --user ocaml-user
+      options: --user ocaml-user --workdir /workspace
+    env:
+      USER: ocaml-user
+      HOME: /home/ocaml-user
+      SHELL: /bin/bash
+      PATH: /home/ocaml-user/.opam/5.2.0+ox/bin:/home/ocaml-user/.opam/5.2.0+ox/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+      OPAMROOT: /home/ocaml-user/.opam
+      OPAMSWITCH: 5.2.0+ox
+      OPAMYES: 1
     
     steps:
     - name: Checkout code
