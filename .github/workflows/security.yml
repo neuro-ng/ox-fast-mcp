@@ -11,51 +11,82 @@ on:
 jobs:
   dependency-scan:
     runs-on: ubuntu-latest
+    container:
+      image: docker.io/neugon/oxcaml-ubuntu:latest
+      options: --user ocaml-user --workdir /workspace
+    env:
+      USER: ocaml-user
+      HOME: /home/ocaml-user
+      SHELL: /bin/bash
+      PATH: /home/ocaml-user/.opam/5.2.0+ox/bin:/home/ocaml-user/.opam/5.2.0+ox/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+      OPAMROOT: /home/ocaml-user/.opam
+      OPAMSWITCH: 5.2.0+ox
+      OPAMYES: 1
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v2
-      with:
-        ocaml-compiler: "5.1.x"
+    - name: Set working directory
+      run: |
+        mkdir -p /workspace
+        cp -r . /workspace/
+        cd /workspace
 
     - name: Install opam-dune-lint
-      run: opam install opam-dune-lint
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        opam install opam-dune-lint
 
     - name: Check for dependency issues
-      run: opam exec -- opam-dune-lint
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        opam-dune-lint
 
     - name: Check opam security advisories
+      working-directory: /workspace
       run: |
+        eval $(opam env)
         opam update
         opam admin check-upstream --all
 
   code-quality:
     runs-on: ubuntu-latest
+    container:
+      image: docker.io/neugon/oxcaml-ubuntu:latest
+      options: --user ocaml-user
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v2
-      with:
-        ocaml-compiler: "5.1.x"
+    - name: Set working directory
+      run: |
+        mkdir -p /workspace
+        cp -r . /workspace/
+        cd /workspace
 
     - name: Install code quality tools
+      working-directory: /workspace
       run: |
+        eval $(opam env)
         opam install . --deps-only
         opam install ocamlformat
 
     - name: Check code formatting
+      working-directory: /workspace
       run: |
-        opam exec -- dune build @fmt
-        if ! opam exec -- dune build @fmt 2>/dev/null; then
+        eval $(opam env)
+        dune build @fmt
+        if ! dune build @fmt 2>/dev/null; then
           echo "Code formatting issues found. Run 'dune build @fmt --auto-promote' to fix."
           exit 1
         fi
 
     - name: Build with warnings as errors
-      run: opam exec -- dune build --profile dev 
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        dune build --profile dev 

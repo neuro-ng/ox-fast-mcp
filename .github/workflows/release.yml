@@ -36,35 +36,42 @@ jobs:
 
   build-release:
     needs: create-release
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/neugon/oxcaml-ubuntu:latest
+      options: --user ocaml-user --workdir /workspace
+    env:
+      USER: ocaml-user
+      HOME: /home/ocaml-user
+      SHELL: /bin/bash
+      PATH: /home/ocaml-user/.opam/5.2.0+ox/bin:/home/ocaml-user/.opam/5.2.0+ox/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+      OPAMROOT: /home/ocaml-user/.opam
+      OPAMSWITCH: 5.2.0+ox
+      OPAMYES: 1
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v2
-      with:
-        ocaml-compiler: "5.1.x"
-        dune-cache: true
-
-    - name: Install dependencies
-      run: opam install . --deps-only
+    - name: Set working directory
+      run: |
+        mkdir -p /workspace
+        cp -r . /workspace/
+        cd /workspace
 
     - name: Build release
+      working-directory: /workspace
       run: |
-        opam exec -- dune build
-        opam exec -- dune build @install
+        eval $(opam env)
+        dune build
+        dune build @install
 
     - name: Create release archive
+      working-directory: /workspace
       run: |
-        mkdir -p release-${{ matrix.os }}
-        cp -r _build/install/default/* release-${{ matrix.os }}/
-        tar -czf ox-fast-mcp-${{ matrix.os }}.tar.gz release-${{ matrix.os }}/
+        mkdir -p release-ubuntu
+        cp -r _build/install/default/* release-ubuntu/
+        tar -czf ox-fast-mcp-ubuntu.tar.gz release-ubuntu/
 
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
@@ -72,6 +79,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: ./ox-fast-mcp-${{ matrix.os }}.tar.gz
-        asset_name: ox-fast-mcp-${{ matrix.os }}.tar.gz
+        asset_path: /workspace/ox-fast-mcp-ubuntu.tar.gz
+        asset_name: ox-fast-mcp-ubuntu.tar.gz
         asset_content_type: application/gzip 
