@@ -8,4 +8,4 @@
  (public_name demo)
  (name demo)
  (modules demo)
- (libraries ox_fast_mcp)) 
+ (libraries ox_fast_mcp))

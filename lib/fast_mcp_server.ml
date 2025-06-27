@@ -1,6 +1,5 @@
 open Mcp_types
 
-(** FastMCP server state *)
 type t = {
   name : string;
   instructions : string option;
@@ -8,15 +7,11 @@ type t = {
   mutable resource_count : int;
   mutable prompt_count : int;
 }
+(** FastMCP server state *)
 
 (** Create a new FastMCP server *)
-let create ?(instructions = None) ~name () = {
-  name;
-  instructions;
-  tool_count = 0;
-  resource_count = 0;
-  prompt_count = 0;
-}
+let create ?(instructions = None) ~name () =
+  { name; instructions; tool_count = 0; resource_count = 0; prompt_count = 0 }
 
 (** Get server name *)
 let get_name server = server.name
@@ -60,21 +55,41 @@ let register_prompt server ~name ~description ~func =
   ignore (name, description, func)
 
 (** List all tools - simplified *)
-let list_tools _server = 
-  [{ name = "example_tool"; description = "An example tool"; input_schema = None }]
+let list_tools _server =
+  [
+    {
+      name = "example_tool";
+      description = "An example tool";
+      input_schema = None;
+    };
+  ]
 
 (** List all resources - simplified *)
 let list_resources _server =
-  [{ uri = "example://resource"; name = Some "Example Resource"; description = Some "An example resource"; mime_type = None }]
+  [
+    {
+      uri = "example://resource";
+      name = Some "Example Resource";
+      description = Some "An example resource";
+      mime_type = None;
+    };
+  ]
 
 (** List all prompts - simplified *)
 let list_prompts _server =
-  [{ name = "example_prompt"; description = "An example prompt"; arguments = None }]
+  [
+    {
+      name = "example_prompt";
+      description = "An example prompt";
+      arguments = None;
+    };
+  ]
 
 (** Get server capabilities - simplified *)
-let get_capabilities _server = {
-  logging = None;
-  prompts = Some (Object [("listChanged", Bool true)]);
-  resources = Some (Object [("subscribe", Bool true)]);
-  tools = Some (Object [("listChanged", Bool true)]);
-} 
+let get_capabilities _server =
+  {
+    logging = None;
+    prompts = Some (Object [ ("listChanged", Bool true) ]);
+    resources = Some (Object [ ("subscribe", Bool true) ]);
+    tools = Some (Object [ ("listChanged", Bool true) ]);
+  }
