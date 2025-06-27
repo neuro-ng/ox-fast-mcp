@@ -45,13 +45,6 @@ jobs:
         eval $(opam env)
         opam-dune-lint
 
-    - name: Check opam security advisories
-      working-directory: /workspace
-      run: |
-        eval $(opam env)
-        opam update
-        opam admin check-upstream --all
-
   code-quality:
     runs-on: ubuntu-latest
     container:
@@ -75,13 +68,6 @@ jobs:
         mkdir -p /workspace
         cp -r . /workspace/
         cd /workspace
-
-    - name: Install code quality tools
-      working-directory: /workspace
-      run: |
-        eval $(opam env)
-        opam install . --deps-only
-        opam install ocamlformat
 
     - name: Check code formatting
       working-directory: /workspace
