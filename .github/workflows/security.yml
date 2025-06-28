@@ -12,7 +12,7 @@ jobs:
   dependency-scan:
     runs-on: ubuntu-latest
     container:
-      image: docker.io/neugon/oxcaml-ubuntu:latest
+      image: ghcr.io/neuro-ng/oxcaml-ubuntu:20250628
       options: --user ocaml-user --workdir /workspace
     env:
       USER: ocaml-user
@@ -48,7 +48,7 @@ jobs:
   code-quality:
     runs-on: ubuntu-latest
     container:
-      image: docker.io/neugon/oxcaml-ubuntu:latest
+      image: ghcr.io/neuro-ng/oxcaml-ubuntu:20250628
       options: --user ocaml-user --workdir /workspace
     env:
       USER: ocaml-user
