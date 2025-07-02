@@ -1,5 +1,6 @@
 open Alcotest
 open Yojson.Safe
+open Utilities.Openapi
 
 module TestData = struct
   let complex_schema = `Assoc [
@@ -339,7 +340,7 @@ end
 
 module TestComplexSchemas = struct
   let test_complex_schema_route_count () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.complex_schema in
+    let routes = parse_openapi_to_http_routes TestData.complex_schema in
     Alcotest.(check int) "route count" 3 (List.length routes)
 
   let rec check_no_components_refs json =
@@ -360,150 +361,150 @@ module TestComplexSchemas = struct
     | _ -> ()
 
   let test_complex_schema_ref_rewriting () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.complex_schema in
+    let routes = parse_openapi_to_http_routes TestData.complex_schema in
     List.iter (fun route ->
-      let schema_defs = FastMCP.Utilities.OpenAPI.HttpRoute.get_schema_definitions route in
+      let schema_defs = `Assoc route.schema_definitions in
       check_no_components_refs schema_defs;
-      let params = FastMCP.Utilities.OpenAPI.HttpRoute.get_parameters route in
+      let params = HttpRoute.get_parameters route in
       List.iter (fun param ->
-        let schema = FastMCP.Utilities.OpenAPI.Parameter.get_schema param in
+        let schema = Parameter.get_schema param in
         check_no_components_refs schema
       ) params
     ) routes
 
   let test_complex_schema_list_users_query_param_limit () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.complex_schema in
+    let routes = parse_openapi_to_http_routes TestData.complex_schema in
     let route_map = List.fold_left (fun acc route ->
-      match FastMCP.Utilities.OpenAPI.HttpRoute.get_operation_id route with
+      match HttpRoute.get_operation_id route with
       | Some op_id -> (op_id, route) :: acc
       | None -> acc
     ) [] routes in
     let list_users = List.assoc "listUsers" route_map in
-    let params = FastMCP.Utilities.OpenAPI.HttpRoute.get_parameters list_users in
+    let params = HttpRoute.get_parameters list_users in
     let limit_param = List.find_opt (fun p -> 
-      FastMCP.Utilities.OpenAPI.Parameter.get_name p = "limit"
+      Parameter.get_name p = "limit"
     ) params in
     match limit_param with
     | Some param ->
-        Alcotest.(check string) "param location" "query" (FastMCP.Utilities.OpenAPI.Parameter.get_location param);
-        let schema = FastMCP.Utilities.OpenAPI.Parameter.get_schema param in
+        Alcotest.(check string) "param location" "query" (Parameter.get_location param);
+        let schema = Parameter.get_schema param in
         let default_val = Yojson.Safe.Util.member "default" schema |> Yojson.Safe.Util.to_int in
         Alcotest.(check int) "param default" 20 default_val
     | None -> Alcotest.fail "limit parameter not found"
 
   let test_complex_schema_list_users_query_param_limit_maximum () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.complex_schema in
+    let routes = parse_openapi_to_http_routes TestData.complex_schema in
     let route_map = List.fold_left (fun acc route ->
-      match FastMCP.Utilities.OpenAPI.HttpRoute.get_operation_id route with
+      match HttpRoute.get_operation_id route with
       | Some op_id -> (op_id, route) :: acc
       | None -> acc
     ) [] routes in
     let list_users = List.assoc "listUsers" route_map in
-    let params = FastMCP.Utilities.OpenAPI.HttpRoute.get_parameters list_users in
+    let params = HttpRoute.get_parameters list_users in
     let limit_param = List.find_opt (fun p -> 
-      FastMCP.Utilities.OpenAPI.Parameter.get_name p = "limit"
+      Parameter.get_name p = "limit"
     ) params in
     match limit_param with
     | Some param ->
-        let schema = FastMCP.Utilities.OpenAPI.Parameter.get_schema param in
+        let schema = Parameter.get_schema param in
         let maximum_val = Yojson.Safe.Util.member "maximum" schema |> Yojson.Safe.Util.to_int in
         Alcotest.(check int) "param maximum" 100 maximum_val
     | None -> Alcotest.fail "limit parameter not found"
 
   let test_complex_schema_get_user_path_param_existence () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.complex_schema in
+    let routes = parse_openapi_to_http_routes TestData.complex_schema in
     let route_map = List.fold_left (fun acc route ->
-      match FastMCP.Utilities.OpenAPI.HttpRoute.get_operation_id route with
+      match HttpRoute.get_operation_id route with
       | Some op_id -> (op_id, route) :: acc
       | None -> acc
     ) [] routes in
     let get_user = List.assoc "getUser" route_map in
-    let params = FastMCP.Utilities.OpenAPI.HttpRoute.get_parameters get_user in
+    let params = HttpRoute.get_parameters get_user in
     let user_id_param = List.find_opt (fun p -> 
-      FastMCP.Utilities.OpenAPI.Parameter.get_name p = "userId"
+      Parameter.get_name p = "userId"
     ) params in
     match user_id_param with
     | Some param ->
-        Alcotest.(check string) "param location" "path" (FastMCP.Utilities.OpenAPI.Parameter.get_location param)
+        Alcotest.(check string) "param location" "path" (Parameter.get_location param)
     | None -> Alcotest.fail "userId parameter not found"
 
   let test_complex_schema_get_user_path_param_required () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.complex_schema in
+    let routes = parse_openapi_to_http_routes TestData.complex_schema in
     let route_map = List.fold_left (fun acc route ->
-      match FastMCP.Utilities.OpenAPI.HttpRoute.get_operation_id route with
+      match HttpRoute.get_operation_id route with
       | Some op_id -> (op_id, route) :: acc
       | None -> acc
     ) [] routes in
     let get_user = List.assoc "getUser" route_map in
-    let params = FastMCP.Utilities.OpenAPI.HttpRoute.get_parameters get_user in
+    let params = HttpRoute.get_parameters get_user in
     let user_id_param = List.find_opt (fun p -> 
-      FastMCP.Utilities.OpenAPI.Parameter.get_name p = "userId"
+      Parameter.get_name p = "userId"
     ) params in
     match user_id_param with
     | Some param ->
-        Alcotest.(check bool) "param required" true (FastMCP.Utilities.OpenAPI.Parameter.get_required param)
+        Alcotest.(check bool) "param required" true (Parameter.get_required param)
     | None -> Alcotest.fail "userId parameter not found"
 
   let test_complex_schema_get_user_path_param_format () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.complex_schema in
+    let routes = parse_openapi_to_http_routes TestData.complex_schema in
     let route_map = List.fold_left (fun acc route ->
-      match FastMCP.Utilities.OpenAPI.HttpRoute.get_operation_id route with
+      match HttpRoute.get_operation_id route with
       | Some op_id -> (op_id, route) :: acc
       | None -> acc
     ) [] routes in
     let get_user = List.assoc "getUser" route_map in
-    let params = FastMCP.Utilities.OpenAPI.HttpRoute.get_parameters get_user in
+    let params = HttpRoute.get_parameters get_user in
     let user_id_param = List.find_opt (fun p -> 
-      FastMCP.Utilities.OpenAPI.Parameter.get_name p = "userId"
+      Parameter.get_name p = "userId"
     ) params in
     match user_id_param with
     | Some param ->
-        let schema = FastMCP.Utilities.OpenAPI.Parameter.get_schema param in
+        let schema = Parameter.get_schema param in
         let format_val = Yojson.Safe.Util.member "format" schema |> Yojson.Safe.Util.to_string in
         Alcotest.(check string) "param format" "uuid" format_val
     | None -> Alcotest.fail "userId parameter not found"
 
   let test_complex_schema_create_order_request_body_presence () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.complex_schema in
+    let routes = parse_openapi_to_http_routes TestData.complex_schema in
     let route_map = List.fold_left (fun acc route ->
-      match FastMCP.Utilities.OpenAPI.HttpRoute.get_operation_id route with
+      match HttpRoute.get_operation_id route with
       | Some op_id -> (op_id, route) :: acc
       | None -> acc
     ) [] routes in
     let create_order = List.assoc "createOrder" route_map in
-    let request_body = FastMCP.Utilities.OpenAPI.HttpRoute.get_request_body create_order in
+    let request_body = HttpRoute.get_request_body create_order in
     match request_body with
     | Some body ->
-        Alcotest.(check bool) "request body required" true (FastMCP.Utilities.OpenAPI.RequestBody.get_required body)
+        Alcotest.(check bool) "request body required" true (RequestBody.get_required_field body)
     | None -> Alcotest.fail "Request body not found"
 
   let test_complex_schema_create_order_request_body_content_type () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.complex_schema in
+    let routes = parse_openapi_to_http_routes TestData.complex_schema in
     let route_map = List.fold_left (fun acc route ->
-      match FastMCP.Utilities.OpenAPI.HttpRoute.get_operation_id route with
+      match HttpRoute.get_operation_id route with
       | Some op_id -> (op_id, route) :: acc
       | None -> acc
     ) [] routes in
     let create_order = List.assoc "createOrder" route_map in
-    let request_body = FastMCP.Utilities.OpenAPI.HttpRoute.get_request_body create_order in
+    let request_body = HttpRoute.get_request_body create_order in
     match request_body with
     | Some body ->
-        let content_schema = FastMCP.Utilities.OpenAPI.RequestBody.get_content_schema body in
+        let content_schema = RequestBody.get_content_schema body in
         Alcotest.(check bool) "has application/json" true (List.mem_assoc "application/json" content_schema)
     | None -> Alcotest.fail "Request body not found"
 
   let test_complex_schema_create_order_request_body_properties () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.complex_schema in
+    let routes = parse_openapi_to_http_routes TestData.complex_schema in
     let route_map = List.fold_left (fun acc route ->
-      match FastMCP.Utilities.OpenAPI.HttpRoute.get_operation_id route with
+      match HttpRoute.get_operation_id route with
       | Some op_id -> (op_id, route) :: acc
       | None -> acc
     ) [] routes in
     let create_order = List.assoc "createOrder" route_map in
-    let request_body = FastMCP.Utilities.OpenAPI.HttpRoute.get_request_body create_order in
+    let request_body = HttpRoute.get_request_body create_order in
     match request_body with
     | Some body ->
-        let content_schema = FastMCP.Utilities.OpenAPI.RequestBody.get_content_schema body in
+        let content_schema = RequestBody.get_content_schema body in
         let json_schema = List.assoc "application/json" content_schema in
         let properties = Yojson.Safe.Util.member "properties" json_schema in
         let items_prop = Yojson.Safe.Util.member "items" properties in
@@ -511,17 +512,17 @@ module TestComplexSchemas = struct
     | None -> Alcotest.fail "Request body not found"
 
   let test_complex_schema_create_order_request_body_required_fields () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.complex_schema in
+    let routes = parse_openapi_to_http_routes TestData.complex_schema in
     let route_map = List.fold_left (fun acc route ->
-      match FastMCP.Utilities.OpenAPI.HttpRoute.get_operation_id route with
+      match HttpRoute.get_operation_id route with
       | Some op_id -> (op_id, route) :: acc
       | None -> acc
     ) [] routes in
     let create_order = List.assoc "createOrder" route_map in
-    let request_body = FastMCP.Utilities.OpenAPI.HttpRoute.get_request_body create_order in
+    let request_body = HttpRoute.get_request_body create_order in
     match request_body with
     | Some body ->
-        let content_schema = FastMCP.Utilities.OpenAPI.RequestBody.get_content_schema body in
+        let content_schema = RequestBody.get_content_schema body in
         let json_schema = List.assoc "application/json" content_schema in
         let required = Yojson.Safe.Util.member "required" json_schema |> Yojson.Safe.Util.to_list |> List.map Yojson.Safe.Util.to_string in
         Alcotest.(check (list string)) "required fields" ["items"] required
@@ -530,41 +531,41 @@ end
 
 module TestBrokenReferences = struct
   let test_parser_handles_broken_references () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.schema_with_invalid_reference in
+    let routes = parse_openapi_to_http_routes TestData.schema_with_invalid_reference in
     Alcotest.(check bool) "routes is list" true (List.length routes >= 0);
     let broken_route = List.find_opt (fun r -> 
-      FastMCP.Utilities.OpenAPI.HttpRoute.get_path r = "/broken-ref" && 
-      FastMCP.Utilities.OpenAPI.HttpRoute.get_method r = "GET"
+      HttpRoute.get_path r = "/broken-ref" && 
+      HttpRoute.get_method r = "GET"
     ) routes in
     match broken_route with
     | Some route ->
-        let op_id = FastMCP.Utilities.OpenAPI.HttpRoute.get_operation_id route in
+        let op_id = HttpRoute.get_operation_id route in
         Alcotest.(check (option string)) "operation_id" (Some "brokenRef") op_id
     | None -> Alcotest.fail "broken route not found"
 end
 
 module TestContentParameters = struct
   let test_content_param_parameter_name () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.schema_with_content_params in
+    let routes = parse_openapi_to_http_routes TestData.schema_with_content_params in
     let complex_params = List.hd routes in
-    let params = FastMCP.Utilities.OpenAPI.HttpRoute.get_parameters complex_params in
+    let params = HttpRoute.get_parameters complex_params in
     Alcotest.(check int) "parameter count" 1 (List.length params);
     let param = List.hd params in
-    Alcotest.(check string) "param name" "filter" (FastMCP.Utilities.OpenAPI.Parameter.get_name param)
+    Alcotest.(check string) "param name" "filter" (Parameter.get_name param)
 
   let test_content_param_parameter_location () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.schema_with_content_params in
+    let routes = parse_openapi_to_http_routes TestData.schema_with_content_params in
     let complex_params = List.hd routes in
-    let params = FastMCP.Utilities.OpenAPI.HttpRoute.get_parameters complex_params in
+    let params = HttpRoute.get_parameters complex_params in
     let param = List.hd params in
-    Alcotest.(check string) "param location" "query" (FastMCP.Utilities.OpenAPI.Parameter.get_location param)
+    Alcotest.(check string) "param location" "query" (Parameter.get_location param)
 
   let test_content_param_schema_properties_presence () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.schema_with_content_params in
+    let routes = parse_openapi_to_http_routes TestData.schema_with_content_params in
     let complex_params = List.hd routes in
-    let params = FastMCP.Utilities.OpenAPI.HttpRoute.get_parameters complex_params in
+    let params = HttpRoute.get_parameters complex_params in
     let param = List.hd params in
-    let schema = FastMCP.Utilities.OpenAPI.Parameter.get_schema param in
+    let schema = Parameter.get_schema param in
     let properties = Yojson.Safe.Util.member "properties" schema in
     let field_prop = Yojson.Safe.Util.member "field" properties in
     let operator_prop = Yojson.Safe.Util.member "operator" properties in
@@ -574,11 +575,11 @@ module TestContentParameters = struct
     Alcotest.(check bool) "has value property" true (value_prop <> `Null)
 
   let test_content_param_schema_enum_presence () =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.schema_with_content_params in
+    let routes = parse_openapi_to_http_routes TestData.schema_with_content_params in
     let complex_params = List.hd routes in
-    let params = FastMCP.Utilities.OpenAPI.HttpRoute.get_parameters complex_params in
+    let params = HttpRoute.get_parameters complex_params in
     let param = List.hd params in
-    let schema = FastMCP.Utilities.OpenAPI.Parameter.get_schema param in
+    let schema = Parameter.get_schema param in
     let properties = Yojson.Safe.Util.member "properties" schema in
     let operator_prop = Yojson.Safe.Util.member "operator" properties in
     let enum_val = Yojson.Safe.Util.member "enum" operator_prop in
@@ -587,15 +588,15 @@ end
 
 module TestHttpMethods = struct
   let test_http_method_presence method_name operation_id =
-    let routes = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.schema_all_http_methods in
+    let routes = parse_openapi_to_http_routes TestData.schema_all_http_methods in
     let method_route = List.find_opt (fun r -> 
-      FastMCP.Utilities.OpenAPI.HttpRoute.get_method r = method_name
+      HttpRoute.get_method r = method_name
     ) routes in
     match method_route with
     | Some route ->
-        let op_id = FastMCP.Utilities.OpenAPI.HttpRoute.get_operation_id route in
+        let op_id = HttpRoute.get_operation_id route in
         Alcotest.(check (option string)) "operation_id" (Some operation_id) op_id;
-        Alcotest.(check string) "path" "/resource" (FastMCP.Utilities.OpenAPI.HttpRoute.get_path route)
+        Alcotest.(check string) "path" "/resource" (HttpRoute.get_path route)
     | None -> Alcotest.fail (Printf.sprintf "%s route not found" method_name)
 
   let test_http_get_method_presence () =
@@ -626,13 +627,16 @@ end
 module TestExternalReferences = struct
   let test_external_reference_raises_clear_error () =
     try
-      let _ = FastMCP.Utilities.OpenAPI.parse_openapi_to_http_routes TestData.schema_with_external_reference in
+      let _ = parse_openapi_to_http_routes TestData.schema_with_external_reference in
       Alcotest.fail "Expected ValueError for external reference"
     with
     | Invalid_argument error_message ->
-        Alcotest.(check bool) "contains error message" true (String.contains error_message "External or non-local reference not supported");
-        Alcotest.(check bool) "contains reference URL" true (String.contains error_message "http://cyaninc.com/json-schemas/market-v1/product-constraints");
-        Alcotest.(check bool) "contains FastMCP message" true (String.contains error_message "FastMCP only supports local schema references")
+        let contains_substring s substr = 
+          try let _ = Str.search_forward (Str.regexp_string substr) s 0 in true 
+          with Not_found -> false in
+        Alcotest.(check bool) "contains error message" true (contains_substring error_message "External or non-local reference not supported");
+        Alcotest.(check bool) "contains reference URL" true (contains_substring error_message "http://cyaninc.com/json-schemas/market-v1/product-constraints");
+        Alcotest.(check bool) "contains FastMCP message" true (contains_substring error_message "FastMCP only supports local schema references")
     | _ ->
         Alcotest.fail "Expected Invalid_argument exception"
 end

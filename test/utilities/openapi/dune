@@ -4,4 +4,20 @@
  (libraries
   alcotest
   yojson
+  ox-fast-mcp.utilities))
+
+(test
+ (name test_openapi_advanced)
+ (package ox-fast-mcp)
+ (libraries
+  alcotest
+  yojson
+  ox-fast-mcp.utilities))
+
+(test
+ (name test_openapi_fastapi)
+ (package ox-fast-mcp)
+ (libraries
+  alcotest
+  yojson
   ox-fast-mcp.utilities)) 

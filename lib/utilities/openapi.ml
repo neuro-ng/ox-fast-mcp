@@ -139,6 +139,7 @@ let rec deep_copy_json = function
       | Some v -> `Assoc [("tag", `String s); ("value", deep_copy_json v)]
       | None -> `Assoc [("tag", `String s)]
 
+
 let request_body_info_of_json json =
   let required = Yojson.Safe.Util.member "required" json |> Yojson.Safe.Util.to_bool_option |> Option.value ~default:false in
   let content = Yojson.Safe.Util.member "content" json |> Yojson.Safe.Util.to_assoc in
@@ -281,8 +282,8 @@ let rec replace_ref_with_defs schema json =
               else
                 (key, replace_ref_with_defs schema resolved)
             else (
-              Printf.eprintf "Warning: External reference not supported: %s\n" ref;
-              (key, `String "#/$defs/external_ref")
+              let error_msg = Printf.sprintf "External or non-local reference not supported: %s. FastMCP only supports local schema references (starting with #/)." ref in
+              raise (Invalid_argument error_msg)
             )
         | _, value -> (key, replace_ref_with_defs schema value)
       in
@@ -290,6 +291,20 @@ let rec replace_ref_with_defs schema json =
   | `List items ->
       `List (List.map (replace_ref_with_defs schema) items)
   | other -> other
+
+let request_body_info_of_json_with_schema schema_context json =
+  let required = Yojson.Safe.Util.member "required" json |> Yojson.Safe.Util.to_bool_option |> Option.value ~default:false in
+  let content = Yojson.Safe.Util.member "content" json |> Yojson.Safe.Util.to_assoc in
+  let content_schema = List.map (fun (media_type, schema) ->
+    let raw_schema = deep_copy_json (Yojson.Safe.Util.member "schema" schema) in
+    (media_type, replace_ref_with_defs schema_context raw_schema)
+  ) content in
+  let description = Yojson.Safe.Util.member "description" json |> Yojson.Safe.Util.to_string_option in
+    Some {
+      required;
+      content_schema;
+      description;
+    }
 
 let combine_schemas route =
   let combined = `Assoc [
@@ -444,7 +459,21 @@ let parse_openapi_to_http_routes schema =
                 | `List params -> params
                 | _ -> []
               in
-              List.filter_map parameter_info_of_json (path_params @ common_params)
+              let resolve_param_ref param =
+                match Yojson.Safe.Util.member "$ref" param with
+                | `String ref_path -> 
+                    if String.starts_with ~prefix:"#/" ref_path then
+                      let resolved = resolve_ref schema ref_path in
+                      if resolved = `Null then 
+                        (Printf.eprintf "Warning: Skipping broken parameter reference: %s\n" ref_path; `Null)
+                      else resolved
+                    else param
+                | _ -> param
+              in
+              List.filter_map (fun p -> 
+                let resolved = resolve_param_ref p in
+                if resolved = `Null then None else parameter_info_of_json resolved
+              ) (path_params @ common_params)
             in
             let request_body = 
               match Yojson.Safe.Util.member "requestBody" operation with
@@ -457,13 +486,16 @@ let parse_openapi_to_http_routes schema =
                         else body
                     | _ -> body
                   in
-                  request_body_info_of_json resolved_body
+                  request_body_info_of_json_with_schema schema resolved_body
             in
             let responses = Yojson.Safe.Util.member "responses" operation |> Yojson.Safe.Util.to_assoc |> List.filter_map (fun (code, resp) ->
               match response_info_of_json resp with
               | Some info -> Some (code, info)
               | None -> None
             ) in
+            let rewritten_schema_definitions = List.map (fun (name, def_schema) ->
+              (name, replace_ref_with_defs schema def_schema)
+            ) schema_definitions in
             Some {
               path = path_str;
               http_method;
@@ -474,7 +506,7 @@ let parse_openapi_to_http_routes schema =
               parameters;
               request_body;
               responses;
-              schema_definitions;
+              schema_definitions = rewritten_schema_definitions;
             }
       in
       let extract_path_operations (path_str, path_item) =
@@ -486,8 +518,10 @@ let parse_openapi_to_http_routes schema =
         let routes = List.concat_map extract_path_operations paths in
         Printf.printf "Info: Successfully extracted %d routes\n" (List.length routes);
         routes
-      with e -> 
-                  Printf.eprintf "Error: Failed to parse OpenAPI schema: %s\n" (Printexc.to_string e);
+      with 
+      | Invalid_argument _ as e -> raise e  (* Re-raise Invalid_argument exceptions *)
+      | e -> 
+        Printf.eprintf "Error: Failed to parse OpenAPI schema: %s\n" (Printexc.to_string e);
         []
 
 let rec clean_schema_for_display schema =
