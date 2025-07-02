@@ -4,15 +4,29 @@
  (libraries
   core
   yojson
-  jsonschema
   logs
   logs.lwt
   uri
   str
-  ox-fast-mcp.shared
-  ox-fast-mcp.json_schema)
+  base64
+  re
+  fmt
+  lwt
+  lwt.unix
+  unix
+  cohttp-lwt-unix)
  (modules
   openapi
-  json_schema)
+  json_schema
+  fast_mcp_error
+  types
+  mcp_config
+  logging
+  http
+  exceptions
+  components
+  cache)
  (preprocess
-  (pps ppx_jane ppx_deriving_yojson))) 
+  (pps ppx_jane))
+ (flags
+  (:standard -w -34-37))) 

@@ -89,7 +89,7 @@ let error_data_of_yojson = function
            List.Assoc.find fields ~equal:String.equal "message",
            List.Assoc.find fields ~equal:String.equal "details" with
      | Some (`Int code), Some (`String message), details ->
-       Ok { code; message; details = Option.filter details ~f:(fun x -> not (x = `Null)) }
+       Ok { code; message; details = Option.filter details ~f:(fun x -> not (Yojson.Safe.equal x `Null)) }
      | _ -> Error "Invalid error data format")
   | _ -> Error "Invalid error data format"
 

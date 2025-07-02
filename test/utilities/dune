@@ -1,7 +1,7 @@
 (test
  (name test_types)
  (modules test_types)
- (libraries alcotest utilities))
+ (libraries alcotest ox-fast-mcp.utilities))
 
 (test
  (name test_cache)

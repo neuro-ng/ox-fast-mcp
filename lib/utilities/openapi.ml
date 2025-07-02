@@ -80,15 +80,15 @@ module HttpRoute = struct
 end
 
 module Parameter = struct
-  let get_name param = param.name
-  let get_location param = string_of_parameter_location param.location
-  let get_required param = param.required
-  let get_schema param = param.schema
+  let get_name (param : parameter_info) = param.name
+  let get_location (param : parameter_info) = string_of_parameter_location param.location
+  let get_required (param : parameter_info) = param.required
+  let get_schema (param : parameter_info) = param.schema
 end
 
 module RequestBody = struct
-  let get_required body = body.required
-  let get_content_schema body = body.content_schema
+  let get_required_field (body : request_body_info) = body.required
+  let get_content_schema (body : request_body_info) = body.content_schema
 end
 
 (* JSON conversion functions *)
@@ -129,9 +129,15 @@ let rec deep_copy_json = function
   | `List items -> `List (List.map deep_copy_json items)
   | `String s -> `String s
   | `Int i -> `Int i
+  | `Intlit s -> `String s (* Convert intlit to string *)
   | `Float f -> `Float f
   | `Bool b -> `Bool b
   | `Null -> `Null
+  | `Tuple items -> `List (List.map deep_copy_json items) (* Convert tuple to list *)
+  | `Variant (s, opt) -> (* Convert variant to object *)
+      match opt with
+      | Some v -> `Assoc [("tag", `String s); ("value", deep_copy_json v)]
+      | None -> `Assoc [("tag", `String s)]
 
 let request_body_info_of_json json =
   let required = Yojson.Safe.Util.member "required" json |> Yojson.Safe.Util.to_bool_option |> Option.value ~default:false in
@@ -256,7 +262,7 @@ let rec resolve_ref schema ref_path =
         resolve_ref schema (match nested_ref with `String s -> s | _ -> ref_path)
     | _ -> resolved
   with Invalid_argument msg ->
-    log_warning (fun m -> m "Failed to resolve reference '%s': %s" ref_path msg);
+    Printf.eprintf "Warning: Failed to resolve reference '%s': %s\n" ref_path msg;
     `Null
 
 let rec replace_ref_with_defs schema json =
@@ -275,7 +281,7 @@ let rec replace_ref_with_defs schema json =
               else
                 (key, replace_ref_with_defs schema resolved)
             else (
-              log_warning (fun m -> m "External reference not supported: %s" ref);
+              Printf.eprintf "Warning: External reference not supported: %s\n" ref;
               (key, `String "#/$defs/external_ref")
             )
         | _, value -> (key, replace_ref_with_defs schema value)
@@ -400,10 +406,10 @@ let validate_schema schema =
 let parse_openapi_to_http_routes schema =
   match validate_schema schema with
   | Error msg ->
-      log_error (fun m -> m "%s" msg);
+      Printf.eprintf "Error: %s\n" msg;
       []
   | Ok version ->
-      log_info (fun m -> m "Parsing OpenAPI schema version: %s" version);
+      Printf.printf "Info: Parsing OpenAPI schema version: %s\n" version;
       let paths = Yojson.Safe.Util.member "paths" schema |> Yojson.Safe.Util.to_assoc in
       let components = Yojson.Safe.Util.member "components" schema in
       let schema_definitions = match components with
@@ -412,27 +418,29 @@ let parse_openapi_to_http_routes schema =
             | `Assoc defs -> defs
             | _ -> []
       in
-      let extract_operation path_str (method_str, operation) =
+      let extract_operation path_str path_item (method_str, operation) =
         let http_method = http_method_of_string (String.uppercase_ascii method_str) in
         match http_method with
         | None -> 
-            log_warning (fun m -> m "Invalid HTTP method: %s" method_str);
+            Printf.eprintf "Warning: Invalid HTTP method: %s\n" method_str;
             None
         | Some http_method ->
             let operation_id = Yojson.Safe.Util.member "operationId" operation |> Yojson.Safe.Util.to_string_option in
             let summary = Yojson.Safe.Util.member "summary" operation |> Yojson.Safe.Util.to_string_option in
             let description = Yojson.Safe.Util.member "description" operation |> Yojson.Safe.Util.to_string_option in
-            let tags = Yojson.Safe.Util.member "tags" operation |> Yojson.Safe.Util.to_list |> List.map Yojson.Safe.Util.to_string in
-            log_debug (fun m -> m "Processing operation: %s %s (ID: %s)" 
+            let tags = match Yojson.Safe.Util.member "tags" operation with
+              | `List tags -> List.map Yojson.Safe.Util.to_string tags
+              | _ -> [] in
+            Printf.printf "Debug: Processing operation: %s %s (ID: %s)\n" 
               (string_of_http_method http_method) 
               path_str 
-              (Option.value operation_id ~default:"<no-id>"));
+              (Option.value operation_id ~default:"<no-id>");
             let parameters = 
               let path_params = match Yojson.Safe.Util.member "parameters" operation with
                 | `List params -> params
                 | _ -> []
               in
-              let common_params = match Yojson.Safe.Util.member "parameters" (List.assoc path_str paths) with
+              let common_params = match Yojson.Safe.Util.member "parameters" path_item with
                 | `List params -> params
                 | _ -> []
               in
@@ -441,7 +449,15 @@ let parse_openapi_to_http_routes schema =
             let request_body = 
               match Yojson.Safe.Util.member "requestBody" operation with
               | `Null -> None
-              | body -> request_body_info_of_json body
+              | body -> 
+                  let resolved_body = match Yojson.Safe.Util.member "$ref" body with
+                    | `String ref_path -> 
+                        if String.starts_with ~prefix:"#/" ref_path then
+                          resolve_ref schema ref_path
+                        else body
+                    | _ -> body
+                  in
+                  request_body_info_of_json resolved_body
             in
             let responses = Yojson.Safe.Util.member "responses" operation |> Yojson.Safe.Util.to_assoc |> List.filter_map (fun (code, resp) ->
               match response_info_of_json resp with
@@ -464,14 +480,14 @@ let parse_openapi_to_http_routes schema =
       let extract_path_operations (path_str, path_item) =
         let operations = Yojson.Safe.Util.to_assoc path_item |> 
           List.filter (fun (k, _) -> http_method_of_string (String.uppercase_ascii k) <> None) in
-        List.filter_map (extract_operation path_str) operations
+        List.filter_map (extract_operation path_str path_item) operations
       in
       try
         let routes = List.concat_map extract_path_operations paths in
-        log_info (fun m -> m "Successfully extracted %d routes" (List.length routes));
+        Printf.printf "Info: Successfully extracted %d routes\n" (List.length routes);
         routes
       with e -> 
-        log_error (fun m -> m "Failed to parse OpenAPI schema: %s" (Printexc.to_string e));
+                  Printf.eprintf "Error: Failed to parse OpenAPI schema: %s\n" (Printexc.to_string e);
         []
 
 let rec clean_schema_for_display schema =
@@ -522,7 +538,14 @@ let rec generate_example_from_schema schema =
                       | _ -> "") reqs
                     | _ -> []
                   in
-                  let first_props = List.take (min 3 (List.length props)) props in
+                  let take n lst = 
+                    let rec aux acc i = function
+                      | [] -> List.rev acc
+                      | x :: xs when i > 0 -> aux (x :: acc) (i - 1) xs
+                      | _ -> List.rev acc
+                    in aux [] n lst
+                  in
+                  let first_props = take (min 3 (List.length props)) props in
                   let example_props = List.map (fun (name, schema) ->
                     (name, generate_example_from_schema schema)
                   ) first_props in
@@ -573,7 +596,7 @@ let format_description_with_responses ?(parameters=[]) ?request_body ~responses 
 
   if path_params <> [] then (
     Buffer.add_string buf "\n\n**Path Parameters:**";
-    List.iter (fun param ->
+    List.iter (fun (param : parameter_info) ->
       let required_marker = if param.required then " (Required)" else "" in
       let desc = match param.description with 
         | Some d -> d 
@@ -586,7 +609,7 @@ let format_description_with_responses ?(parameters=[]) ?request_body ~responses 
 
   if query_params <> [] then (
     Buffer.add_string buf "\n\n**Query Parameters:**";
-    List.iter (fun param ->
+    List.iter (fun (param : parameter_info) ->
       let required_marker = if param.required then " (Required)" else "" in
       let desc = match param.description with 
         | Some d -> d 
@@ -599,7 +622,7 @@ let format_description_with_responses ?(parameters=[]) ?request_body ~responses 
 
   (* Add request body information *)
   (match request_body with
-  | Some rb when rb.description <> None ->
+  | Some (rb : request_body_info) when rb.description <> None ->
       Buffer.add_string buf "\n\n**Request Body:**";
       let required_marker = if rb.required then " (Required)" else "" in
       Buffer.add_string buf (Printf.sprintf "\n%s%s" 
@@ -645,7 +668,7 @@ let format_description_with_responses ?(parameters=[]) ?request_body ~responses 
       List.mem code success_codes
     ) responses in
 
-    List.iter (fun (status_code, resp_info) ->
+    List.iter (fun (status_code, (resp_info : response_info)) ->
       let status_marker = match success_status with
         | Some (code, _) when code = status_code -> " (Success)"
         | _ -> ""
@@ -700,8 +723,9 @@ let format_description_with_responses ?(parameters=[]) ?request_body ~responses 
               Buffer.add_string buf (format_json_for_description example)
             )
           | _ -> ()
+          )
       | _ -> ()
     ) responses
-  );
+  ); (* Close the if statement *)
 
   Buffer.contents buf

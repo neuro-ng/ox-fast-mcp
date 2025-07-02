@@ -66,7 +66,7 @@ module Parameter : sig
 end
 
 module RequestBody : sig
-  val get_required : request_body_info -> bool
+  val get_required_field : request_body_info -> bool
   val get_content_schema : request_body_info -> (string * json_schema) list
 end
 
