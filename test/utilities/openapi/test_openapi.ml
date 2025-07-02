@@ -1,5 +1,4 @@
 open Alcotest
-open Yojson.Safe
 open Utilities.Openapi
 
 (* Import helper functions *)
@@ -20,7 +19,6 @@ let get_required_body = RequestBody.get_required_field
 
 (* Import utility functions *)
 let replace_ref_with_defs = replace_ref_with_defs
-let combine_schemas = combine_schemas
 
 module TestData = struct
   let petstore_schema = `Assoc [
@@ -644,7 +642,7 @@ module TestCompatibility = struct
           | `String s -> s
           | _ -> "unknown" in
         
-        let properties = Yojson.Safe.Util.member "properties" json_schema in
+        let _properties = Yojson.Safe.Util.member "properties" json_schema in
         (* Skip required field tests - edge case with complex reference resolution *)
         let _required = match Yojson.Safe.Util.member "required" json_schema with
           | `List items -> List.map Yojson.Safe.Util.to_string items

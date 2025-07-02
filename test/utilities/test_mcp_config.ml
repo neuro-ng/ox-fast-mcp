@@ -84,18 +84,18 @@ let test_parse_multiple_servers () =
   let config = config_of_json config_json in
   check int "server count" 2 (List.length config.mcp_servers);
   
-  match List.assoc_opt "test_server" config.mcp_servers with
+  (match List.assoc_opt "test_server" config.mcp_servers with
   | Some (RemoteServer server) ->
       check string "url" "http://localhost:8000/sse/" server.url;
       check bool "transport inferred as sse" true (infer_transport_type_from_url server.url = SSE)
-  | _ -> Alcotest.fail "Expected RemoteServer for test_server";
+  | _ -> Alcotest.fail "Expected RemoteServer for test_server");
   
-  match List.assoc_opt "test_server_2" config.mcp_servers with
+  (match List.assoc_opt "test_server_2" config.mcp_servers with
   | Some (StdioServer server) ->
       check string "command" "echo" server.command;
       check (list string) "args" ["hello"] server.args;
       check (list (pair string string)) "env" [("TEST", "test")] server.env
-  | _ -> Alcotest.fail "Expected StdioServer for test_server_2"
+  | _ -> Alcotest.fail "Expected StdioServer for test_server_2")
 
 let test_remote_config_with_auth_token () =
   let config_json = `Assoc [

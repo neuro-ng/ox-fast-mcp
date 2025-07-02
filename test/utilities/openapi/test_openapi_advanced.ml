@@ -1,5 +1,4 @@
 open Alcotest
-open Yojson.Safe
 open Utilities.Openapi
 
 module TestData = struct
