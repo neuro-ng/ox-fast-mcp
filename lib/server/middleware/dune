@@ -1,0 +1,11 @@
+(library
+ (name middleware)
+ (public_name ox-fast-mcp.server.middleware)
+ (libraries
+  core
+  async
+  yojson
+  ox-fast-mcp.mcp
+  ox-fast-mcp.shared)
+ (preprocess
+  (pps ppx_jane ppx_let))) 

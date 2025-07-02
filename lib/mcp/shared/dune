@@ -1,0 +1,19 @@
+(library
+ (name mcp_shared)
+ (public_name ox-fast-mcp.mcp.shared)
+ (libraries
+  core
+  lwt
+  lwt.unix
+  ppx_jane
+  ppx_deriving_yojson
+  yojson
+  ox-fast-mcp.mcp)
+ (modules
+  context
+  exceptions
+  message
+  session
+  version)
+ (preprocess
+  (pps ppx_jane ppx_deriving_yojson))) 

@@ -2,25 +2,34 @@
 
 (name ox-fast-mcp)
 
+(generate_opam_files true)
+
 (package
  (name ox-fast-mcp)
- (synopsis "Fast, functional way to build MCP servers and clients in OCaml")
- (description "An OCaml implementation of FastMCP inspired by the Python library, providing a high-level, type-safe interface for building Model Context Protocol (MCP) servers and clients.")
- (depends 
-  ocaml
+ (synopsis "Fast MCP implementation in OCaml")
+ (description "Fast MCP implementation in OCaml")
+ (depends
+  (ocaml (>= 4.14.0))
   dune
+  core
+  yojson
+  uri
+  re
+  logs
   lwt
   lwt_ppx
-  yojson
-  ppx_yojson_conv
+  ppx_fields_conv
+  ppx_jane
   ppx_deriving
+  ppx_deriving_yojson
   cohttp-lwt-unix
-  uri
-  logs
+  base64
   fmt
-  alcotest
+  (alcotest :with-test)
+  (alcotest-async :with-test)
   (odoc :with-doc))
- (license Apache-2.0)
- (authors "Norwen Gonio")
- (maintainers "neuro-ng@github.com")
- (source (github neuro-ng/ox-fast-mcp))) 
+  (license MIT)
+  (authors "Norwen Gonio")
+  (maintainers "neuro-ng@github.com")
+ (source (github neuro-ng/ox-fast-mcp)))
+ 

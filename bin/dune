@@ -1,0 +1,4 @@
+(executable
+ (public_name fastmcp)
+ (name main)
+ (libraries cli utilities tools prompts)) 

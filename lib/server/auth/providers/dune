@@ -1,0 +1,19 @@
+(library
+ (name auth_providers)
+ (public_name ox-fast-mcp.auth_providers)
+ (libraries
+  core
+  cohttp
+  cohttp-lwt
+  cohttp-lwt-unix
+  jose
+  lwt
+  nocrypto
+  uri
+  x509
+  yojson
+  ox-fast-mcp.shared
+  ox-fast-mcp.mcp.server.auth
+  ox-fast-mcp.utilities)
+ (preprocess
+  (pps ppx_jane))) 

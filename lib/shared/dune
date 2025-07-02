@@ -1,0 +1,8 @@
+(library
+ (name shared)
+ (public_name ox-fast-mcp.shared)
+ (libraries
+  core
+  yojson)
+ (preprocess
+  (pps ppx_jane))) 

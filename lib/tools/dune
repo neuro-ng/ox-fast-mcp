@@ -1,0 +1,30 @@
+(library
+ (public_name ox-fast-mcp.tools)
+ (name tools)
+ (modules
+  errors
+  tool
+  tool_manager
+  tool_transform
+  tool_types)
+ (libraries
+  base
+  core
+  core_unix.sys_unix
+  async
+  utilities
+  yojson
+  lwt
+  server
+  settings
+  content_block
+  context
+  template
+  schema
+  ppx_jane
+  ppx_enumerate
+  ox-fast-mcp.errors
+  ox-fast-mcp.schema)
+ (preprocess
+  (pps ppx_jane ppx_enumerate))
+ (inline_tests)) 

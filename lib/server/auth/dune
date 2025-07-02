@@ -1,0 +1,12 @@
+(library
+ (name server_auth)
+ (public_name ox-fast-mcp.server.auth)
+ (preprocess (pps ppx_fields_conv))
+ (libraries
+  core
+  lwt
+  lwt.unix
+  server_auth_providers
+  uri
+  uri-sexp
+  yojson)) 

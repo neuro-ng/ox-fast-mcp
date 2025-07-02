@@ -1,0 +1,12 @@
+(library
+ (name test_middleware)
+ (libraries
+  core
+  async
+  ounit2
+  yojson
+  ox-fast-mcp.mcp
+  ox-fast-mcp.shared
+  ox-fast-mcp.server.middleware)
+ (preprocess
+  (pps ppx_jane ppx_let))) 

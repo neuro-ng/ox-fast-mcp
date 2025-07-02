@@ -1,0 +1,7 @@
+(test
+ (name test_openapi)
+ (package ox-fast-mcp)
+ (libraries
+  alcotest
+  yojson
+  ox-fast-mcp.utilities)) 

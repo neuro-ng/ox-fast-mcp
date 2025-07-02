@@ -1,0 +1,63 @@
+(test
+ (name test_types)
+ (modules test_types)
+ (libraries alcotest utilities))
+
+(test
+ (name test_cache)
+ (modules test_cache)
+ (libraries alcotest utilities))
+
+(test
+ (name test_components)
+ (modules test_components)
+ (libraries alcotest utilities str))
+
+(test
+ (name test_exceptions)
+ (libraries alcotest utilities str))
+
+(test
+ (name test_http)
+ (libraries
+  alcotest
+  unix
+  utilities))
+
+(test
+ (name test_json_schema)
+ (libraries
+  alcotest
+  yojson
+  utilities))
+
+(test
+ (name test_logging)
+ (libraries
+  alcotest
+  logs
+  logs.fmt
+  fmt
+  fmt.tty
+  str
+  utilities))
+
+(test
+ (name test_mcp_config)
+ (package ox-fast-mcp)
+ (libraries
+  ox-fast-mcp.utilities
+  alcotest))
+
+(test
+ (name test_openapi)
+ (package ox-fast-mcp)
+ (modules test_openapi)
+ (libraries
+  ox-fast-mcp.utilities
+  alcotest
+  yojson))
+
+(env
+ (dev
+  (flags (:standard -warn-error -A)))) 

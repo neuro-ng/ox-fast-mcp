@@ -1,3 +1,28 @@
 (library
+ (name ox_fast_mcp)
  (public_name ox-fast-mcp)
- (name ox_fast_mcp))
+ (libraries
+  base
+  core
+  async
+  yojson
+  uri
+  re
+  logs
+  lwt
+  cohttp-lwt-unix
+  ppx_fields_conv
+  ppx_jane
+  ppx_deriving
+  ppx_deriving_yojson
+  base64
+  fmt)
+ (modules
+  exceptions
+  fastmcp
+  ox_fast_mcp
+  version
+  settings
+  fast_mcp_server)
+ (preprocess
+  (pps ppx_jane ppx_let)))

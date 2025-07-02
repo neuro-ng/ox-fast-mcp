@@ -1,0 +1,17 @@
+(library
+ (name resources)
+ (public_name ox-fast-mcp.mcp.resources)
+ (libraries
+  base
+  core
+  async
+  yojson
+  uri
+  cohttp-lwt-unix
+  logs
+  lwt
+  base64)
+ (modules
+  resource)
+ (preprocess
+  (pps ppx_jane lwt_ppx))) 

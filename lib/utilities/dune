@@ -1,0 +1,18 @@
+(library
+ (name utilities)
+ (public_name ox-fast-mcp.utilities)
+ (libraries
+  core
+  yojson
+  jsonschema
+  logs
+  logs.lwt
+  uri
+  str
+  ox-fast-mcp.shared
+  ox-fast-mcp.json_schema)
+ (modules
+  openapi
+  json_schema)
+ (preprocess
+  (pps ppx_jane ppx_deriving_yojson))) 

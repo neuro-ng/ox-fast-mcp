@@ -1,0 +1,17 @@
+(library
+ (name mcp_server_auth)
+ (public_name ox-fast-mcp.mcp.server.auth)
+ (libraries
+  core
+  lwt
+  lwt.unix
+  cohttp
+  cohttp-lwt
+  uri
+  yojson
+  ox-fast-mcp.shared)
+ (modules
+  middleware/bearer_auth
+  middleware/auth_context)
+ (preprocess
+  (pps ppx_jane))) 

@@ -1,0 +1,4 @@
+(library
+ (name tests)
+ (public_name ox-fast-mcp.tests)
+ (libraries core unix)) 

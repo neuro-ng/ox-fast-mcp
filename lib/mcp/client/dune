@@ -1,0 +1,16 @@
+(library
+ (name client)
+ (public_name ox-fast-mcp.client)
+ (libraries
+  base
+  core
+  async
+  yojson
+  uri
+  cohttp-lwt-unix
+  logs
+  lwt)
+ (modules
+  session)
+ (preprocess
+  (pps ppx_jane))) 

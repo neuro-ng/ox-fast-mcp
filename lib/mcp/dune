@@ -1,0 +1,19 @@
+(library
+ (name mcp)
+ (public_name ox-fast-mcp.mcp)
+ (libraries
+  base
+  core
+  async
+  yojson
+  uri
+  cohttp
+  cohttp-async
+  ppx_yojson_conv
+  ppx_sexp_conv)
+ (modules
+  mcp_error
+  types
+  mcp_client)
+ (preprocess
+  (pps ppx_jane ppx_let ppx_yojson_conv ppx_sexp_conv))) 

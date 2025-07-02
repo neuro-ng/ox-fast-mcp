@@ -9,6 +9,12 @@ module Fast_mcp_server = Fast_mcp_server
 module Mcp_client = Mcp_client
 (** MCP client implementation *)
 
+module Settings = Settings
+module Version = Version
+
+let settings = Settings.default
+let version = Version.version
+
 (** Re-export commonly used types for convenience *)
 module Types = struct
   include Mcp_types
@@ -49,8 +55,5 @@ module Client = struct
   (** Create a new in-memory client *)
   let make_in_memory = create_in_memory
 end
-
-(** Version information *)
-let version = "0.1.0"
 
 let protocol_version = "2024-11-05"
