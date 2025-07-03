@@ -54,4 +54,112 @@ let error_to_string = function
   | Client_error msg -> sprintf "Client error: %s" msg
   | Not_found_error msg -> sprintf "Not found: %s" msg
   | Disabled_error msg -> sprintf "Disabled: %s" msg
-  | exn -> sprintf "Unknown error: %s" (Exn.to_string exn) 
+  | exn -> sprintf "Unknown error: %s" (Exn.to_string exn)
+
+exception Not_found_s of Sexp.t
+
+let () =
+  Caml.Printexc.register_printer (function
+    | Tool_error msg -> Some (sprintf "Tool error: %s" msg)
+    | Not_found_s sexp -> Some (sprintf "Not found: %s" (Sexp.to_string_hum sexp))
+    | _ -> None)
+
+module Exception_group = struct
+  type t = {
+    message : string;
+    exceptions : exn list;
+  } [@@deriving sexp]
+
+  exception Exception_group of t
+
+  let create ?(message = "Multiple exceptions occurred") exceptions =
+    Exception_group { message; exceptions }
+
+  let to_string { message; exceptions } =
+    let exception_strings =
+      List.map exceptions ~f:(fun e -> Exn.to_string e)
+    in
+    sprintf "%s:\n%s" message
+      (String.concat ~sep:"\n"
+         (List.mapi exception_strings ~f:(fun i s ->
+              sprintf "%d) %s" (i + 1) s)))
+
+  let get_first_error { exceptions; _ } = List.hd exceptions
+end
+
+module Tool_error = struct
+  type t = {
+    tool_name : string;
+    message : string;
+    details : (string * string) list;
+  } [@@deriving sexp, yojson_of, yojson]
+
+  exception Tool_error of t
+
+  let create ?(details = []) ~tool_name message =
+    Tool_error { tool_name; message; details }
+
+  let to_string { tool_name; message; details } =
+    let details_str =
+      if List.is_empty details then ""
+      else
+        "\nDetails:\n"
+        ^ String.concat ~sep:"\n"
+            (List.map details ~f:(fun (k, v) -> sprintf "%s: %s" k v))
+    in
+    sprintf "Tool error in %s: %s%s" tool_name message details_str
+end
+
+module Resource_error = struct
+  type t = {
+    resource_name : string;
+    message : string;
+    details : (string * string) list;
+  } [@@deriving sexp, yojson_of, yojson]
+
+  exception Resource_error of t
+
+  let create ?(details = []) ~resource_name message =
+    Resource_error { resource_name; message; details }
+
+  let to_string { resource_name; message; details } =
+    let details_str =
+      if List.is_empty details then ""
+      else
+        "\nDetails:\n"
+        ^ String.concat ~sep:"\n"
+            (List.map details ~f:(fun (k, v) -> sprintf "%s: %s" k v))
+    in
+    sprintf "Resource error in %s: %s%s" resource_name message details_str
+end
+
+module Prompt_error = struct
+  type t = {
+    prompt_name : string;
+    message : string;
+    details : (string * string) list;
+  } [@@deriving sexp, yojson_of, yojson]
+
+  exception Prompt_error of t
+
+  let create ?(details = []) ~prompt_name message =
+    Prompt_error { prompt_name; message; details }
+
+  let to_string { prompt_name; message; details } =
+    let details_str =
+      if List.is_empty details then ""
+      else
+        "\nDetails:\n"
+        ^ String.concat ~sep:"\n"
+            (List.map details ~f:(fun (k, v) -> sprintf "%s: %s" k v))
+    in
+    sprintf "Prompt error in %s: %s%s" prompt_name message details_str
+end
+
+let handle_errors f =
+  try f () with
+  | Exception_group.Exception_group e -> Error (Exception_group.to_string e)
+  | Tool_error.Tool_error e -> Error (Tool_error.to_string e)
+  | Resource_error.Resource_error e -> Error (Resource_error.to_string e)
+  | Prompt_error.Prompt_error e -> Error (Prompt_error.to_string e)
+  | e -> Error (Exn.to_string e) 
