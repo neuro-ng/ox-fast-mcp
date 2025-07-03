@@ -18,11 +18,19 @@ COMPONENTS MODULE TODO LIST
 - from typing import Any -> Implemented using polymorphic types and Core.Poly
 - fastmcp.utilities.json_schema -> Implemented in /lib/utilities/json_schema.ml
 - mcp.types -> Implemented in /lib/mcp/types.ml
+- fastmcp.exceptions -> Implemented in /lib/exceptions.ml
+- fastmcp.tools.tool -> Implemented in /lib/tools/tool.ml
 
 ### 🚫 MISSING/INCOMPLETE
-- fastmcp.exceptions -> Need to implement in /lib/exceptions.ml
-- fastmcp.tools.tool -> Need to implement in /lib/tools/tool.ml
 - fastmcp.client.client -> Need to implement in /lib/client/client.ml
+- server.auth.middleware.bearer_auth -> Need to implement in /lib/mcp/server/auth/middleware/bearer_auth.ml
+- test.server -> Need to implement in /test/server/test_server.ml
+- execution_context type -> Need to define in appropriate module
+- server.instructions field -> Need to add to server record type
+
+### ⚠️ NEEDS FIXING
+- Core.Unix usage in lib_test/tests.ml -> Should use Core_unix instead
+- Inline test runner configuration -> Need to fix dune test command
 
 ## Functionality TODO
 
@@ -44,14 +52,21 @@ COMPONENTS MODULE TODO LIST
 15. [x] Added extra validation
 16. [x] Added sexp support for exceptions
 17. [x] Added Core.Result based error handling
+18. [x] Fixed validation test functions
+19. [x] Fixed Error constructor references
 
 ### High Priority
 1. [ ] Add support for nested component validation
 2. [ ] Add validation for extra field based on type parameter
 3. [ ] Add support for custom validation rules
 4. [ ] Add migration support for version changes
-5. [ ] Implement exceptions.ml for error handling
-6. [ ] Add Core.Option based null handling
+5. [ ] Add Core.Option based null handling
+6. [ ] Fix inline test runner configuration
+7. [ ] Update Core.Unix usage to Core_unix
+8. [ ] Implement missing server auth middleware
+9. [ ] Implement missing test server module
+10. [ ] Define execution_context type
+11. [ ] Add server instructions field
 
 ### Medium Priority
 1. [ ] Add support for component inheritance
@@ -80,6 +95,7 @@ COMPONENTS MODULE TODO LIST
 7. [x] Hash function tests
 8. [x] List operation tests
 9. [x] Comparison function tests
+10. [x] Fixed validation test functions
 
 ### Remaining
 1. [ ] Add property-based tests using Core_quickcheck
@@ -87,6 +103,8 @@ COMPONENTS MODULE TODO LIST
 3. [ ] Add performance benchmarks with Core_bench
 4. [ ] Add stress tests for large components
 5. [ ] Add Core.Test based unit tests
+6. [ ] Fix inline test runner configuration
+7. [ ] Implement missing test server module
 
 ## Documentation TODO
 
@@ -105,6 +123,8 @@ COMPONENTS MODULE TODO LIST
 4. [ ] Document best practices
 5. [ ] Document Core library usage
 6. [ ] Add Core.Info based documentation
+7. [ ] Document new error handling approach
+8. [ ] Document test fixes and improvements
 
 ## Known Issues
 
@@ -125,6 +145,16 @@ COMPONENTS MODULE TODO LIST
    - Some Python patterns don't translate directly
    - Consider alternative designs for complex cases
    - Using Core.Type_equal for type safety
+
+4. Test runner configuration issues
+   - Inline test runner not properly configured
+   - Need to fix dune test command
+   - Consider switching to Alcotest for some tests
+
+5. Core.Unix deprecation
+   - Need to update to Core_unix
+   - May affect other modules using Unix functions
+   - Consider audit of Unix usage
 
 ## Future Improvements
 
@@ -157,7 +187,7 @@ COMPONENTS MODULE TODO LIST
 ### Required
 - Core (Jane Street)
 - Core_kernel
-- Core_unix
+- Core_unix (replacing Core.Unix)
 - Core.Command
 - Core.Error
 - Core.Option
@@ -198,13 +228,6 @@ COMPONENTS MODULE TODO LIST
    - Use OCaml's type system for validation where possible
    - Add runtime validation only when necessary
    - Keep components simple and focused
-   - Use ppx extensions to reduce boilerplate
-   - Use Jane Street libraries and conventions
-   - Follow Core library patterns
-
-3. Performance considerations:
-   - OCaml version generally faster
-   - Less runtime checking needed
-   - More efficient memory usage
-   - Better static guarantees
-   - Using Core.Container for efficient collections 
+   - Use Core_unix instead of Core.Unix
+   - Properly handle validation errors
+   - Use ppx_yojson_conv for JSON handling 

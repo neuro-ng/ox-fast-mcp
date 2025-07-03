@@ -257,32 +257,32 @@ module For_testing = struct
 
   let%test_unit "validation - invalid name" =
     let assert_raises_invalid_name f =
-      match Result.try_with f with
+      match f () with
       | Ok _ -> failwith "Expected Invalid_name error"
-      | Error (Error.Component_error (Invalid_name _)) -> ()
+      | Error (Error.Invalid_name _) -> ()
       | Error _ -> failwith "Expected Invalid_name error"
     in
-    assert_raises_invalid_name (fun () -> create ~name:"" ~extra:() () |> to_or_error |> ok_exn);
-    assert_raises_invalid_name (fun () -> create ~name:"invalid name" ~extra:() () |> to_or_error |> ok_exn)
+    assert_raises_invalid_name (fun () -> create ~name:"" ~extra:() ());
+    assert_raises_invalid_name (fun () -> create ~name:"invalid name" ~extra:() ())
 
   let%test_unit "validation - invalid tags" =
     let assert_raises_invalid_tags f =
-      match Result.try_with f with
+      match f () with
       | Ok _ -> failwith "Expected Invalid_tags error"
-      | Error (Error.Component_error (Invalid_tags _)) -> ()
+      | Error (Error.Invalid_tags _) -> ()
       | Error _ -> failwith "Expected Invalid_tags error"
     in
-    assert_raises_invalid_tags (fun () -> create ~name:"test" ~tags:[""] ~extra:() () |> to_or_error |> ok_exn);
-    assert_raises_invalid_tags (fun () -> create ~name:"test" ~tags:["invalid tag"] ~extra:() () |> to_or_error |> ok_exn)
+    assert_raises_invalid_tags (fun () -> create ~name:"test" ~tags:[""] ~extra:() ());
+    assert_raises_invalid_tags (fun () -> create ~name:"test" ~tags:["invalid tag"] ~extra:() ())
 
   let%test_unit "validation - invalid version" =
     let assert_raises_invalid_version f =
-      match Result.try_with f with
+      match f () with
       | Ok _ -> failwith "Expected Invalid_version error"
-      | Error (Error.Component_error (Invalid_version _)) -> ()
+      | Error (Error.Invalid_version _) -> ()
       | Error _ -> failwith "Expected Invalid_version error"
     in
-    assert_raises_invalid_version (fun () -> create ~name:"test" ~version:(Some (-1)) ~extra:() () |> to_or_error |> ok_exn)
+    assert_raises_invalid_version (fun () -> create ~name:"test" ~version:(Some (-1)) ~extra:() ())
 
   let%test_unit "copy with validation" =
     let t = create ~name:"test" ~extra:1 () |> to_or_error |> ok_exn in
@@ -290,12 +290,12 @@ module For_testing = struct
     [%test_result: string] t2.name ~expect:"test2";
     [%test_result: int] t2.extra ~expect:1;
     let assert_raises_invalid_name f =
-      match Result.try_with f with
+      match f () with
       | Ok _ -> failwith "Expected Invalid_name error"
-      | Error (Error.Component_error (Invalid_name _)) -> ()
+      | Error (Error.Invalid_name _) -> ()
       | Error _ -> failwith "Expected Invalid_name error"
     in
-    assert_raises_invalid_name (fun () -> copy ~name:"" t |> to_or_error |> ok_exn)
+    assert_raises_invalid_name (fun () -> copy ~name:"" t)
 
   let%test_unit "version operations" =
     let t = create ~name:"test" ~extra:() () |> to_or_error |> ok_exn in
