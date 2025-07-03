@@ -1,76 +1,91 @@
 open Core
-open Async
 open Tool_types
 
 (* Context variable to store current transformed tool *)
 let current_tool : transformed option ref = ref None
 
-module Arg_transform = struct
-  type t = {
-    name : string option;
-    description : string option;
-    default : Yojson.Safe.t option;
-    default_factory : (unit -> Yojson.Safe.t) option;
-    type_schema : Yojson.Safe.t option;
-    hide : bool;
-    required : bool option;
-    examples : Yojson.Safe.t option;
-  }
-  [@@deriving sexp]
+(** JSON manipulation helpers *)
+let update_json_field json field value =
+  match json with
+  | `Assoc fields ->
+      let updated_fields = List.map fields ~f:(fun (k, v) ->
+        if String.equal k field then (k, value) else (k, v)
+      ) in
+      if List.exists fields ~f:(fun (k, _) -> String.equal k field) then
+        `Assoc updated_fields
+      else
+        `Assoc ((field, value) :: fields)
+  | _ -> `Assoc [(field, value)]
 
-  let create
-      ?name
-      ?description
-      ?default
-      ?default_factory
-      ?type_schema
-      ?(hide = false)
-      ?required
-      ?examples
-      () =
-    (* Validation *)
-    if Option.is_some default && Option.is_some default_factory then
-      failwith "Cannot specify both 'default' and 'default_factory' in ArgTransform";
-    if Option.is_some default_factory && not hide then
-      failwith "default_factory can only be used with hide=True";
-    if Option.equal Bool.equal (Some true) required &&
-       (Option.is_some default || Option.is_some default_factory) then
-      failwith "Required parameters cannot have defaults";
-    if hide && Option.equal Bool.equal (Some true) required then
-      failwith "Hidden parameters cannot be required";
-    if Option.equal Bool.equal (Some false) required then
-      failwith "Cannot specify 'required=false'. Set a default value instead";
+let remove_json_field json field =
+  match json with
+  | `Assoc fields ->
+      `Assoc (List.filter fields ~f:(fun (k, _) -> not (String.equal k field)))
+  | _ -> json
 
-    { name
-    ; description
-    ; default
-    ; default_factory
-    ; type_schema
-    ; hide
-    ; required
-    ; examples
-    }
-end
+let merge_json_objects json1 json2 =
+  match json1, json2 with
+  | `Assoc fields1, `Assoc fields2 ->
+      let merged = List.fold fields1 ~init:fields2 ~f:(fun acc (k, v) ->
+        if List.exists fields2 ~f:(fun (k2, _) -> String.equal k2 k) then acc
+        else (k, v) :: acc
+      ) in
+      `Assoc merged
+  | _, `Assoc _ -> json2
+  | `Assoc _, _ -> json1
+  | _ -> json2
 
-let forward arguments =
+(** Helper functions for JSON schema manipulation *)
+let extract_properties json_schema =
+  match json_schema with
+  | `Assoc fields ->
+      (match List.Assoc.find fields ~equal:String.equal "properties" with
+       | Some (`Assoc props) -> 
+           Map.of_alist_exn (module String) 
+             (List.map props ~f:(fun (k, v) -> (k, v)))
+       | _ -> String.Map.empty)
+  | _ -> String.Map.empty
+
+let extract_required json_schema =
+  match json_schema with
+  | `Assoc fields ->
+      (match List.Assoc.find fields ~equal:String.equal "required" with
+       | Some (`List req_list) -> 
+           List.filter_map req_list ~f:(function
+             | `String s -> Some s
+             | _ -> None)
+       | _ -> [])
+  | _ -> []
+
+let create_schema ?(type_="object") ?(properties=[]) ?(required=[]) ?(additional_properties=false) () =
+  let props_json = `Assoc (List.map properties ~f:(fun (k, v) -> (k, v))) in
+  let required_json = `List (List.map required ~f:(fun s -> `String s)) in
+  let additional_props_json = `Bool additional_properties in
+  
+  `Assoc [
+    ("type", `String type_);
+    ("properties", props_json);
+    ("required", required_json);
+    ("additionalProperties", additional_props_json);
+  ]
+
+let forward ctx arguments =
   match !current_tool with
-  | None -> failwith "forward() can only be called within a transformed tool"
-  | Some tool -> Tool.run_transformed_forwarding tool arguments
+  | None -> Lwt.fail (Invalid_argument "forward() can only be called within a transformed tool")
+  | Some tool -> tool.forwarding_fn ctx arguments
 
-let forward_raw arguments =
+let forward_raw ctx arguments =
   match !current_tool with
-  | None -> failwith "forward_raw() can only be called within a transformed tool"
-  | Some tool -> Tool.run tool.parent_tool arguments
+  | None -> Lwt.fail (Invalid_argument "forward_raw() can only be called within a transformed tool")
+  | Some tool -> tool.parent_tool.handler ctx arguments
 
 (** Check if a function accepts kwargs *)
-let function_has_kwargs fn =
-  let open Template in
-  let signature = fn.metadata.signature in
-  List.exists signature.parameters ~f:(function KwArgs -> true | _ -> false)
+let function_has_kwargs _fn =
+  false (* Placeholder - Template module not available *)
 
 (** Apply transformation to a single parameter *)
-let apply_single_transform ~old_name ~old_schema ~transform ~is_required =
-  if transform.Arg_transform.hide then None
+let apply_single_transform ~old_name ~old_schema ~(transform : Tool_types.Arg_transform.t) ~is_required =
+  if transform.hide then None
   else
     let new_name =
       match transform.name with
@@ -78,247 +93,290 @@ let apply_single_transform ~old_name ~old_schema ~transform ~is_required =
       | None -> old_name
     in
 
-    let new_schema = Map.copy old_schema in
+    let new_schema = ref (old_schema : Yojson.Safe.t) in
     
     (* Handle description *)
     (match transform.description with
-    | Some desc -> Map.set new_schema ~key:"description" ~data:(`String desc)
-    | None -> Map.remove new_schema "description");
+    | Some desc -> 
+        new_schema := update_json_field !new_schema "description" (`String desc)
+    | None -> 
+        new_schema := remove_json_field !new_schema "description");
 
     (* Handle required transformation first *)
     let is_required =
       match transform.required with
       | Some true ->
-        Map.remove new_schema "default";
+        new_schema := remove_json_field !new_schema "default";
         true
       | Some false -> false
       | None -> is_required
     in
 
     (* Handle default value *)
-    (match transform.default with
-    | Some default when Option.is_none transform.required ->
-      Map.set new_schema ~key:"default" ~data:default;
-      false (* Not required if it has a default *)
-    | _ -> is_required);
+    let is_required = 
+      match transform.default with
+      | Some default when Option.is_none transform.required ->
+        new_schema := update_json_field !new_schema "default" default;
+        false (* Not required if it has a default *)
+      | _ -> is_required in
 
-    (* Handle type schema *)
-    Option.iter transform.type_schema ~f:(fun type_schema ->
-      Map.merge_into ~src:type_schema ~dst:new_schema
-        ~f:(fun ~key:_ -> function
-          | `Left v | `Right v -> Some v
-          | `Both (_, v2) -> Some v2));
+    (* Handle type transformation *)
+    (match transform.type_, transform.type_schema with
+    | Some type_name, None ->
+        new_schema := update_json_field !new_schema "type" (`String type_name)
+    | None, Some type_schema ->
+        new_schema := merge_json_objects !new_schema type_schema
+    | Some type_name, Some _ ->
+        (* Both specified - type_ takes precedence for simplicity *)
+        new_schema := update_json_field !new_schema "type" (`String type_name)
+    | None, None -> ());
 
     (* Handle examples *)
-    Option.iter transform.examples ~f:(fun examples ->
-      Map.set new_schema ~key:"examples" ~data:examples);
+    (match transform.examples with
+    | Some examples ->
+        new_schema := update_json_field !new_schema "examples" examples
+    | None -> ());
 
-    Some (new_name, new_schema, is_required)
+    Some (new_name, !new_schema, is_required)
 
 (** Create schema and forwarding function for transformed tool *)
-let create_forwarding_transform ~parent_tool ~transform_args =
-  let parent_props = Tool.parameters parent_tool |> Schema.properties in
-  let parent_required = Tool.parameters parent_tool |> Schema.required |> Set.of_list (module String) in
+let create_forwarding_transform ~(parent_tool : Tool_types.function_tool) ~transform_args =
+  let parent_props = parent_tool.base.parameters |> extract_properties in
+  let parent_required = parent_tool.base.parameters |> extract_required |> Set.of_list (module String) in
 
-  let new_props = String.Map.empty in
-  let new_required = Set.empty (module String) in
-  let new_to_old = String.Map.empty in
-  let hidden_defaults = String.Map.empty in
+  let new_props = ref String.Map.empty in
+  let new_required = ref (Set.empty (module String)) in
+  let new_to_old = ref String.Map.empty in
+  let hidden_defaults = ref String.Map.empty in
 
   (* Process each parameter *)
   Map.iteri parent_props ~f:(fun ~key:old_name ~data:old_schema ->
     let transform =
       match Map.find transform_args old_name with
       | Some t -> t
-      | None -> Arg_transform.create ()
+      | None -> Tool_types.Arg_transform.create ()
     in
 
     (* Handle hidden parameters *)
     if transform.hide then
       match (transform.default, transform.default_factory) with
       | Some default, None ->
-        Map.set hidden_defaults ~key:old_name ~data:(`Default default)
+        hidden_defaults := Map.set !hidden_defaults ~key:old_name ~data:(`Default default)
       | None, Some factory ->
-        Map.set hidden_defaults ~key:old_name ~data:(`Factory factory)
+        hidden_defaults := Map.set !hidden_defaults ~key:old_name ~data:(`Factory factory)
       | None, None ->
         if Set.mem parent_required old_name then
-          failwith (sprintf "Hidden parameter '%s' has no default value" old_name)
+          invalid_arg (sprintf "Hidden parameter '%s' has no default value" old_name)
       | Some _, Some _ -> assert false (* prevented by Arg_transform.create *)
     else
       (* Process visible parameter *)
       match apply_single_transform ~old_name ~old_schema ~transform
               ~is_required:(Set.mem parent_required old_name) with
       | Some (new_name, new_schema, is_required) ->
-        Map.set new_props ~key:new_name ~data:new_schema;
-        Map.set new_to_old ~key:new_name ~data:old_name;
-        if is_required then Set.add new_required new_name
+        new_props := Map.set !new_props ~key:new_name ~data:new_schema;
+        new_to_old := Map.set !new_to_old ~key:new_name ~data:old_name;
+        if is_required then new_required := Set.add !new_required new_name
       | None -> ());
 
-  let schema = Schema.create
+  let schema = create_schema
     ~type_:"object"
-    ~properties:(Map.to_alist new_props)
-    ~required:(Set.to_list new_required)
+    ~properties:(Map.to_alist !new_props)
+    ~required:(Set.to_list !new_required)
     ~additional_properties:false
     ()
   in
 
   (* Create forwarding function *)
-  let forwarding_fn arguments =
+  let forwarding_fn ctx arguments =
+    (* Convert arguments from JSON to map *)
+    let arguments_map = match arguments with
+      | `Assoc args -> Map.of_alist_exn (module String) args
+      | _ -> String.Map.empty
+    in
+    
     (* Validate arguments *)
-    let valid_args = Map.keys new_props |> Set.of_list (module String) in
-    let provided_args = Map.keys arguments |> Set.of_list (module String) in
+    let valid_args = Map.keys !new_props |> Set.of_list (module String) in
+    let provided_args = Map.keys arguments_map |> Set.of_list (module String) in
     let unknown_args = Set.diff provided_args valid_args in
     
     if not (Set.is_empty unknown_args) then
-      failwith (sprintf "Got unexpected keyword argument(s): %s"
+      invalid_arg (sprintf "Got unexpected keyword argument(s): %s"
         (Set.to_list unknown_args |> String.concat ~sep:", "));
 
     (* Check required arguments *)
-    let missing_args = Set.diff new_required provided_args in
+    let missing_args = Set.diff !new_required provided_args in
     if not (Set.is_empty missing_args) then
-      failwith (sprintf "Missing required argument(s): %s"
+      invalid_arg (sprintf "Missing required argument(s): %s"
         (Set.to_list missing_args |> String.concat ~sep:", "));
 
     (* Map arguments to parent names *)
-    let parent_args = String.Map.empty in
-    Map.iteri arguments ~f:(fun ~key:new_name ~data:value ->
+    let parent_args = ref String.Map.empty in
+    Map.iteri arguments_map ~f:(fun ~key:new_name ~data:value ->
       let old_name =
-        match Map.find new_to_old new_name with
+        match Map.find !new_to_old new_name with
         | Some name -> name
         | None -> new_name
       in
-      Map.set parent_args ~key:old_name ~data:value);
+      parent_args := Map.set !parent_args ~key:old_name ~data:value);
 
     (* Add hidden defaults *)
-    Map.iteri hidden_defaults ~f:(fun ~key:old_name ~data ->
+    Map.iteri !hidden_defaults ~f:(fun ~key:old_name ~data ->
       let value = match data with
         | `Default d -> d
         | `Factory f -> f ()
       in
-      Map.set parent_args ~key:old_name ~data:value);
+      parent_args := Map.set !parent_args ~key:old_name ~data:value);
 
-    Tool.run parent_tool parent_args
+    parent_tool.handler ctx (`Assoc (Map.to_alist !parent_args))
   in
 
   (schema, forwarding_fn)
 
 let merge_schema_with_precedence ~base_schema ~override_schema ~fn =
-  let merged_props = Map.copy (Map.of_alist_exn (module String) base_schema.properties) in
-  let merged_required = Set.of_list (module String) base_schema.required in
-  let override_props = Map.of_alist_exn (module String) override_schema.properties in
-  let override_required = Set.of_list (module String) override_schema.required in
+  let merged_props = ref (extract_properties base_schema) in
+  let merged_required = ref (Set.of_list (module String) (extract_required base_schema)) in
+  let override_props = extract_properties override_schema in
+  let override_required = Set.of_list (module String) (extract_required override_schema) in
 
   (* Override properties *)
   Map.iteri override_props ~f:(fun ~key ~data ->
-    match Map.find merged_props key with
+    match Map.find !merged_props key with
     | Some base_param ->
-      let merged_param = Map.merge_skewed base_param data
-        ~combine:(fun ~key:_ _v1 v2 -> v2)
-      in
-      Map.set merged_props ~key ~data:merged_param
+      let merged_param = merge_json_objects base_param data in
+      merged_props := Map.set !merged_props ~key ~data:merged_param
     | None ->
-      Map.set merged_props ~key ~data);
+      merged_props := Map.set !merged_props ~key ~data);
 
   (* Handle required parameters *)
-  let final_required = Set.copy override_required in
-  Set.iter merged_required ~f:(fun param_name ->
+  let final_required = ref override_required in
+  Set.iter !merged_required ~f:(fun param_name ->
     if not (Map.mem override_props param_name) then
-      Set.add final_required param_name
+      final_required := Set.add !final_required param_name
     else if Map.mem override_props param_name &&
-            not (Map.mem (Map.find_exn merged_props param_name) "default") then
+            not (match Map.find_exn !merged_props param_name with
+                 | `Assoc fields -> List.exists fields ~f:(fun (k, _) -> String.equal k "default")
+                 | _ -> false) then
       if not (Set.mem override_required param_name) then
-        Set.add final_required param_name);
+        final_required := Set.add !final_required param_name);
 
   (* Remove parameters with defaults *)
-  Map.iteri merged_props ~f:(fun ~key ~data ->
-    if Map.mem data "default" then
-      Set.remove final_required key);
+  Map.iteri !merged_props ~f:(fun ~key ~data ->
+    if match data with
+       | `Assoc fields -> List.exists fields ~f:(fun (k, _) -> String.equal k "default")
+       | _ -> false
+    then
+      final_required := Set.remove !final_required key);
 
   (* If function has kwargs, allow extra parameters *)
   let has_kwargs = function_has_kwargs fn in
   if has_kwargs then
-    Schema.create
+    create_schema
       ~type_:"object"
-      ~properties:(Map.to_alist merged_props)
-      ~required:(Set.to_list final_required)
+      ~properties:(Map.to_alist !merged_props)
+      ~required:(Set.to_list !final_required)
       ~additional_properties:true
       ()
   else
-    Schema.create
+    create_schema
       ~type_:"object"
-      ~properties:(Map.to_alist merged_props)
-      ~required:(Set.to_list final_required)
+      ~properties:(Map.to_alist !merged_props)
+      ~required:(Set.to_list !final_required)
       ~additional_properties:false
       ()
 
-let from_tool
+let create_from_tool
     ?name
     ?description
     ?tags
     ?transform_fn
-    ?transform_args
-    ?annotations
-    ?serializer
+    ?(transform_args : Tool_types.Arg_transform.t String.Map.t = String.Map.empty)
+    ?_annotations
+    ?_serializer
     ?enabled
-    parent_tool =
-  let transform_args = Option.value transform_args ~default:String.Map.empty in
+    (parent_tool : Tool_types.function_tool) =
 
   (* Validate transform_args *)
-  let parent_params = Tool.parameters parent_tool |> Schema.properties |> Map.keys |> Set.of_list (module String) in
-  let unknown_args = Map.keys transform_args |> Set.of_list (module String) |> Set.diff parent_params in
+  let parent_params = parent_tool.base.parameters |> extract_properties |> Map.keys |> Set.of_list (module String) in
+  let transform_keys = Map.keys transform_args |> Set.of_list (module String) in
+  let unknown_args = Set.diff transform_keys parent_params in
   if not (Set.is_empty unknown_args) then
-    failwith (sprintf "Unknown arguments in transform_args: %s. Parent tool has: %s"
+    invalid_arg (sprintf "Unknown arguments in transform_args: %s. Parent tool has: %s"
       (Set.to_list unknown_args |> String.concat ~sep:", ")
       (Set.to_list parent_params |> String.concat ~sep:", "));
+
+  (* Validate for duplicate names after transformation *)
+  let new_names = ref [] in
+  Map.iteri transform_args ~f:(fun ~key:old_name ~data:transform ->
+    if not transform.hide then
+      let new_name = match transform.name with
+        | Some name -> name 
+        | None -> old_name
+      in
+      new_names := new_name :: !new_names
+  );
+  
+  (* Check for duplicates *)
+  let name_counts = List.fold !new_names ~init:String.Map.empty ~f:(fun acc name ->
+    Map.update acc name ~f:(function | Some count -> count + 1 | None -> 1)
+  ) in
+  let duplicates = Map.fold name_counts ~init:[] ~f:(fun ~key ~data acc ->
+    if data > 1 then key :: acc else acc
+  ) in
+  if not (List.is_empty duplicates) then
+    invalid_arg (sprintf "Multiple arguments would be mapped to the same names: %s"
+      (String.concat duplicates ~sep:", "));
 
   (* Create forwarding transform *)
   let schema, forwarding_fn = create_forwarding_transform ~parent_tool ~transform_args in
 
-  match transform_fn with
+  (match transform_fn with
   | None ->
     (* Pure transformation - use forwarding_fn *)
-    Tool.create_transformed
-      ?name
-      ?description
-      ?tags
-      ?annotations
-      ?serializer
-      ?enabled
-      ~parent_tool
-      ~fn:forwarding_fn
-      ~forwarding_fn
-      ~parameters:schema
-      ~transform_args
-      ()
+    {
+      base = {
+        name = Option.value name ~default:parent_tool.base.name;
+        description = Option.value description ~default:parent_tool.base.description;
+        parameters = schema;
+        enabled = Option.value enabled ~default:parent_tool.base.enabled;
+        tags = Option.value tags ~default:parent_tool.base.tags;
+        annotations = parent_tool.base.annotations;
+      };
+      parent_tool = parent_tool;
+      fn = forwarding_fn;
+      forwarding_fn = forwarding_fn;
+      transform_args = transform_args;
+    }
 
   | Some custom_fn ->
     (* Custom function with schema merging *)
-    let fn_schema = Template.parameters custom_fn in
-    let has_kwargs = function_has_kwargs custom_fn in
+    let fn_schema = `Assoc [] in (* Placeholder - Template module not available *)
+    let has_kwargs = false in (* Placeholder - function_has_kwargs not available *)
 
     (* Validate function parameters *)
-    if not has_kwargs then
-      let fn_params = Schema.properties fn_schema |> Map.keys |> Set.of_list (module String) in
-      let transformed_params = Schema.properties schema |> Map.keys |> Set.of_list (module String) in
+    if not has_kwargs then (
+      let fn_params = extract_properties fn_schema |> Map.keys |> Set.of_list (module String) in
+      let transformed_params = extract_properties schema |> Map.keys |> Set.of_list (module String) in
       let missing_params = Set.diff transformed_params fn_params in
       if not (Set.is_empty missing_params) then
-        failwith (sprintf "Function missing parameters required after transformation: %s. Function declares: %s"
+        invalid_arg (sprintf "Function missing parameters required after transformation: %s. Function declares: %s"
           (Set.to_list missing_params |> String.concat ~sep:", ")
-          (Set.to_list fn_params |> String.concat ~sep:", "));
+          (Set.to_list fn_params |> String.concat ~sep:", "))
+    );
 
     (* Merge schemas with precedence *)
     let final_schema = merge_schema_with_precedence ~base_schema:fn_schema ~override_schema:schema ~fn:custom_fn in
 
-    Tool.create_transformed
-      ?name
-      ?description
-      ?tags
-      ?annotations
-      ?serializer
-      ?enabled
-      ~parent_tool
-      ~fn:custom_fn
-      ~forwarding_fn
-      ~parameters:final_schema
-      ~transform_args
-      () 
+    {
+      base = {
+        name = Option.value name ~default:parent_tool.base.name;
+        description = Option.value description ~default:parent_tool.base.description;
+        parameters = final_schema;
+        enabled = Option.value enabled ~default:parent_tool.base.enabled;
+        tags = Option.value tags ~default:parent_tool.base.tags;
+        annotations = parent_tool.base.annotations;
+      };
+      parent_tool = parent_tool;
+      fn = custom_fn;
+      forwarding_fn = forwarding_fn;
+      transform_args = transform_args;
+    })

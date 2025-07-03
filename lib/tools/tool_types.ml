@@ -1,46 +1,53 @@
 open Utilities.Types
 
 (** Tool handler signature *)
+type execution_context = {
+  request_id : string option;
+  client_id : string option;
+  session_data : (string, json) Hashtbl.t;
+  mutable tools_changed : bool;
+  mutable resources_changed : bool;
+  mutable prompts_changed : bool;
+}
+
 type tool_handler = execution_context -> json -> content_type list Lwt.t
 
-(** Function tool definition *)
-type function_tool = {
+(** Base tool interface *)
+type base_tool = {
   name : string;
   description : string;
   parameters : json;
-  handler : tool_handler;
   enabled : bool;
   tags : string list;
   annotations : (string * json) list option;
 }
 
-(** Transformed tool type *)
-type transformed = {
-  parent_tool : function_tool;
-  fn : tool_handler;
-  forwarding_fn : tool_handler;
-  parameters : json;
-  transform_args : (string, Arg_transform.t) Map.t;
+(** Function tool definition *)
+type function_tool = {
+  base : base_tool;
+  handler : tool_handler;
 }
 
-and module Arg_transform = struct
+(** Transformed tool arguments *)
+module Arg_transform = struct
   type t = {
     name : string option;
     description : string option;
-    default : Yojson.Safe.t option;
-    default_factory : (unit -> Yojson.Safe.t) option;
-    type_schema : Yojson.Safe.t option;
+    default : json option;
+    default_factory : (unit -> json) option;
+    type_ : string option;
+    type_schema : json option;
     hide : bool;
     required : bool option;
-    examples : Yojson.Safe.t option;
+    examples : json option;
   }
-  [@@deriving sexp]
 
   let create
       ?name
       ?description
       ?default
       ?default_factory
+      ?type_
       ?type_schema
       ?(hide = false)
       ?required
@@ -48,24 +55,65 @@ and module Arg_transform = struct
       () =
     (* Validation *)
     if Option.is_some default && Option.is_some default_factory then
-      failwith "Cannot specify both 'default' and 'default_factory' in ArgTransform";
+      invalid_arg "Cannot specify both 'default' and 'default_factory' in ArgTransform";
     if Option.is_some default_factory && not hide then
-      failwith "default_factory can only be used with hide=True";
+      invalid_arg "default_factory can only be used with hide=True";
     if Option.equal Bool.equal (Some true) required &&
        (Option.is_some default || Option.is_some default_factory) then
-      failwith "Required parameters cannot have defaults";
+      invalid_arg "Required parameters cannot have defaults";
     if hide && Option.equal Bool.equal (Some true) required then
-      failwith "Hidden parameters cannot be required";
+      invalid_arg "Hidden parameters cannot be required";
     if Option.equal Bool.equal (Some false) required then
-      failwith "Cannot specify 'required=false'. Set a default value instead";
+      invalid_arg "Cannot specify 'required=false'. Set a default value instead";
 
     { name
     ; description
     ; default
     ; default_factory
+    ; type_
     ; type_schema
     ; hide
     ; required
     ; examples
     }
-end 
+end
+
+(** Transformed tool type *)
+type transformed = {
+  base : base_tool;
+  parent_tool : function_tool;
+  fn : tool_handler;
+  forwarding_fn : tool_handler;
+  transform_args : Arg_transform.t Core.String.Map.t;
+}
+
+(** Unified tool type *)
+type tool =
+  | Function of function_tool
+  | Transformed of transformed
+
+(** Helper functions for tool interface *)
+let get_base_tool = function
+  | Function ft -> ft.base
+  | Transformed tt -> tt.base
+
+let get_name tool = (get_base_tool tool).name
+let get_description tool = (get_base_tool tool).description
+let get_parameters tool = (get_base_tool tool).parameters
+let is_enabled tool = (get_base_tool tool).enabled
+let get_tags tool = (get_base_tool tool).tags
+let get_annotations tool = (get_base_tool tool).annotations
+
+let get_handler = function
+  | Function ft -> ft.handler
+  | Transformed tt -> tt.fn
+
+let set_enabled tool enabled =
+  match tool with
+  | Function ft -> Function { ft with base = { ft.base with enabled } }
+  | Transformed tt -> Transformed { tt with base = { tt.base with enabled } }
+
+let set_tags tool tags =
+  match tool with
+  | Function ft -> Function { ft with base = { ft.base with tags } }
+  | Transformed tt -> Transformed { tt with base = { tt.base with tags } }

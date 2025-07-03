@@ -13,10 +13,11 @@
   cohttp-lwt-unix
   ppx_fields_conv
   ppx_jane
-  ppx_deriving
-  ppx_deriving_yojson
+  ppx_yojson_conv
   base64
-  fmt)
+  fmt
+  utilities
+  tools)
  (modules
   exceptions
   fastmcp
@@ -25,4 +26,4 @@
   settings
   fast_mcp_server)
  (preprocess
-  (pps ppx_jane ppx_let)))
+  (pps ppx_jane ppx_let ppx_yojson_conv)))

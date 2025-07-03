@@ -1,17 +1,24 @@
-open Mcp.Types
+open Core
+open Tools.Tool_types
+open Utilities.Types
 
 type t = {
   name : string;
-  tools : Tool.t list;
-  resources : Resource.t list;
-  resource_templates : Resource_template.t list;
-  prompts : Prompt.t list;
+  tools : function_tool list;
+  resources : string list;  (* Simplified for now *)
+  resource_templates : string list;  (* Simplified for now *)
+  prompts : string list;  (* Simplified for now *)
 }
 (** FastMCP server state *)
 
 (** Create a new FastMCP server *)
-let create ~name () =
-  { name; tools = []; resources = []; resource_templates = []; prompts = [] }
+let create ?(name="FastMCP") () = {
+  name;
+  tools = [];
+  resources = [];
+  resource_templates = [];
+  prompts = [];
+}
 
 (** Get server name *)
 let get_name server = server.name
@@ -134,3 +141,8 @@ let read_resource t uri =
     ) with
     | Some (template, params) -> template.f ~user_id:(List.Assoc.find_exn params ~equal:String.equal "user_id")
     | None -> Error.of_string (sprintf "Resource '%s' not found" (Uri.to_string uri)) |> return
+
+let get_tools t = t.tools
+
+let get_tool t name =
+  List.find t.tools ~f:(fun tool -> String.equal tool.base.name name)

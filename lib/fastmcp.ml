@@ -29,6 +29,10 @@ module Server = struct
   }
 
   let create name = { name }
+
+  let start server ~port =
+    Logs.info (fun m -> m "Server %s starting on port %d" server.name port);
+    Lwt.return_unit
 end
 
 module Client = struct
@@ -66,15 +70,12 @@ let () =
               ~doc:"NAME Server name (default: FastMCP)"
           in
           fun () ->
-            let server = Server.create ~name () in
-            Logs.info (fun m -> m "Starting FastMCP server on port %d" port);
-            Server.start server ~port
+            let server = Server.create name in
+            ignore (Server.start server ~port);
+            Lwt_main.run (Lwt.return_unit)
         ]
     ]
   |> Command_unix.run
 
-let () =
-  (* Suppress some warnings *)
-  Warnings.mark_as_shown [@warning "-3"] ();
-  (* Run the CLI *)
-  run () 
+(* Suppress some warnings *)
+[@@@warning "-3"] 

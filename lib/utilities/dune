@@ -2,8 +2,19 @@
  (name utilities)
  (public_name ox-fast-mcp.utilities)
  (libraries
+  base
   core
+  core_unix
+  core_unix.sys_unix
+  core_kernel
+  core_kernel.version_util
+  core.command
   yojson
+  ppx_yojson_conv_lib
+  ppx_compare
+  ppx_sexp_conv
+  ppx_fields_conv
+  ppx_hash
   logs
   logs.lwt
   uri
@@ -27,6 +38,13 @@
   components
   cache)
  (preprocess
-  (pps ppx_jane))
+  (pps
+   ppx_jane
+   ppx_yojson_conv
+   ppx_compare
+   ppx_sexp_conv
+   ppx_fields_conv
+   ppx_hash))
  (flags
-  (:standard -w -34-37))) 
+  (:standard -w -33-34-37))
+ (inline_tests)) 

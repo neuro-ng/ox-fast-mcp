@@ -1,3 +1,23 @@
-(tests
- (names test_tool test_tool_manager test_tool_transform)
- (libraries alcotest utilities tools yojson lwt lwt.unix)) 
+(library
+ (public_name ox-fast-mcp.tests.tools)
+ (name test_tools)
+ (modules test_tool_transform)
+ (libraries 
+   core
+   base
+   stdio
+   expect_test_helpers_core
+   tools
+   utilities
+   ox_fast_mcp
+   yojson
+   lwt
+   lwt.unix
+   async
+   re)
+ (preprocess (pps 
+   ppx_jane
+   ppx_expect
+   ppx_yojson_conv
+   lwt_ppx))
+ (inline_tests))

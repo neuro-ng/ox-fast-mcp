@@ -4,27 +4,15 @@
  (modules
   errors
   tool
-  tool_manager
   tool_transform
   tool_types)
  (libraries
   base
   core
-  core_unix.sys_unix
   async
-  utilities
   yojson
   lwt
-  server
-  settings
-  content_block
-  context
-  template
-  schema
-  ppx_jane
-  ppx_enumerate
-  ox-fast-mcp.errors
-  ox-fast-mcp.schema)
+  ox-fast-mcp.utilities)
  (preprocess
-  (pps ppx_jane ppx_enumerate))
+  (pps ppx_jane ppx_enumerate ppx_yojson_conv))
  (inline_tests)) 

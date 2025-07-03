@@ -10,5 +10,5 @@ let default = create ()
 
 let get_deprecation_warnings t = t.deprecation_warnings
 
-let set_deprecation_warnings t value = 
-  { t with deprecation_warnings = value } 
+let set_deprecation_warnings _t value = 
+  { deprecation_warnings = value } 

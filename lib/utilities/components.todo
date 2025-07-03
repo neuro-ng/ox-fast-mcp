@@ -1,0 +1,210 @@
+COMPONENTS MODULE TODO LIST
+=======================
+
+## Python to OCaml Module Mappings
+
+### ✅ IMPLEMENTED
+- from typing import Annotated -> OCaml polymorphic variants
+- from pydantic import Field -> ppx_yojson_conv attributes [@key] and [@default]
+- from typing_extensions import Self -> OCaml module type
+- from fastmcp.utilities.types import FastMCPBaseModel -> Core.t type with ppx_yojson_conv
+- from collections.abc import Sequence -> OCaml list type with Core.List
+- BeforeValidator -> Implemented as explicit validation functions in Validation module
+- PrivateAttr -> Implemented using [@yojson_drop_default None] attribute
+- model_copy -> Implemented as copy function with optional fields
+- model_dump -> Implemented using ppx_yojson_conv derived functions
+- TypeVar -> Implemented using OCaml polymorphic types ('a)
+- Pydantic's automatic validation -> Implemented using manual validation in Validation module
+- from typing import Any -> Implemented using polymorphic types and Core.Poly
+- fastmcp.utilities.json_schema -> Implemented in /lib/utilities/json_schema.ml
+- mcp.types -> Implemented in /lib/mcp/types.ml
+
+### 🚫 MISSING/INCOMPLETE
+- fastmcp.exceptions -> Need to implement in /lib/exceptions.ml
+- fastmcp.tools.tool -> Need to implement in /lib/tools/tool.ml
+- fastmcp.client.client -> Need to implement in /lib/client/client.ml
+
+## Functionality TODO
+
+### ✅ COMPLETED
+1. [x] Basic type validation equivalent to Pydantic
+2. [x] Runtime type checking for JSON conversion
+3. [x] Support for custom validation functions
+4. [x] Better error handling for JSON conversion failures
+5. [x] Add serialization format versioning
+6. [x] Support for component copying/updating
+7. [x] Comprehensive test coverage
+8. [x] Proper error types and handling
+9. [x] Version management functions
+10. [x] Improved Jane Street library integration
+11. [x] Better type comparisons using ppx_compare
+12. [x] Added hash support with ppx_hash
+13. [x] Added comparison functions
+14. [x] Added list operations with Core.List
+15. [x] Added extra validation
+16. [x] Added sexp support for exceptions
+17. [x] Added Core.Result based error handling
+
+### High Priority
+1. [ ] Add support for nested component validation
+2. [ ] Add validation for extra field based on type parameter
+3. [ ] Add support for custom validation rules
+4. [ ] Add migration support for version changes
+5. [ ] Implement exceptions.ml for error handling
+6. [ ] Add Core.Option based null handling
+
+### Medium Priority
+1. [ ] Add support for component inheritance
+2. [ ] Add component lifecycle hooks
+3. [ ] Add component dependency tracking
+4. [ ] Add support for component caching
+5. [ ] Add Core_quickcheck property tests
+6. [ ] Add Core.Container based collections
+
+### Low Priority
+1. [ ] Add debug logging with Core.Debug
+2. [ ] Add performance benchmarks with Core_bench
+3. [ ] Add component registry
+4. [ ] Add component event system
+5. [ ] Add Core.Memo for caching
+
+## Testing TODO
+
+### ✅ COMPLETED
+1. [x] Basic property tests
+2. [x] Validation tests
+3. [x] Error handling tests
+4. [x] JSON conversion tests
+5. [x] Version management tests
+6. [x] Equality comparison tests
+7. [x] Hash function tests
+8. [x] List operation tests
+9. [x] Comparison function tests
+
+### Remaining
+1. [ ] Add property-based tests using Core_quickcheck
+2. [ ] Add serialization/deserialization round-trip tests
+3. [ ] Add performance benchmarks with Core_bench
+4. [ ] Add stress tests for large components
+5. [ ] Add Core.Test based unit tests
+
+## Documentation TODO
+
+### ✅ COMPLETED
+1. [x] Basic module documentation
+2. [x] Function documentation
+3. [x] Type documentation
+4. [x] Error handling documentation
+5. [x] Version management documentation
+6. [x] Jane Street library usage documentation
+
+### Remaining
+1. [ ] Add examples to mli file
+2. [ ] Document validation rules
+3. [ ] Add migration guide from Python version
+4. [ ] Document best practices
+5. [ ] Document Core library usage
+6. [ ] Add Core.Info based documentation
+
+## Known Issues
+
+1. Type validation less strict than Python/Pydantic version
+   - OCaml's type system handles most cases
+   - Runtime validation added for critical cases
+   - Some dynamic typing features not possible in OCaml
+   - Using Core.Poly for dynamic comparisons
+
+2. Manual JSON conversion more verbose than Pydantic
+   - Using ppx_yojson_conv reduces boilerplate
+   - Custom serialization still requires more code
+   - Consider adding helper functions for common patterns
+   - Using Core.Jsonaf for better JSON handling
+
+3. Limited support for generic type constraints
+   - OCaml's type system handles most cases differently
+   - Some Python patterns don't translate directly
+   - Consider alternative designs for complex cases
+   - Using Core.Type_equal for type safety
+
+## Future Improvements
+
+1. Consider using ppx_validate for validation
+   - Would provide more declarative validation
+   - Better error messages
+   - More composable validation rules
+   - Integration with Core.Result
+
+2. Add support for JSON schema generation
+   - Would help with API documentation
+   - Could validate against schema at runtime
+   - Useful for client code generation
+   - Use Core.Jsonaf for schema handling
+
+3. Improve error messages
+   - Add context to validation errors
+   - Add suggestions for fixes
+   - Add error codes
+   - Use Core.Error for error handling
+
+4. Add migration support
+   - Version-based migrations
+   - Automatic upgrade paths
+   - Migration validation
+   - Use Core.Version for versioning
+
+## Module Dependencies
+
+### Required
+- Core (Jane Street)
+- Core_kernel
+- Core_unix
+- Core.Command
+- Core.Error
+- Core.Option
+- Core.Result
+- Core.List
+- Core.String
+- Core.Hash
+- Core.Compare
+- Core.Container
+- Core.Version
+- Yojson
+- ppx_yojson_conv
+- ppx_compare
+- ppx_sexp_conv
+- ppx_fields_conv
+- ppx_version
+- ppx_hash
+
+### Optional
+- ppx_validate (future)
+- Core_quickcheck (testing)
+- Core_bench (benchmarking)
+- Core.Debug (debugging)
+- Core.Info (documentation)
+- Core.Jsonaf (JSON handling)
+- Core.Memo (caching)
+
+## Migration Notes
+
+1. Python to OCaml differences:
+   - No dynamic typing
+   - No runtime type reflection
+   - Different approach to generics
+   - Different validation patterns
+   - Using Core.Type_equal for type safety
+
+2. Best practices:
+   - Use OCaml's type system for validation where possible
+   - Add runtime validation only when necessary
+   - Keep components simple and focused
+   - Use ppx extensions to reduce boilerplate
+   - Use Jane Street libraries and conventions
+   - Follow Core library patterns
+
+3. Performance considerations:
+   - OCaml version generally faster
+   - Less runtime checking needed
+   - More efficient memory usage
+   - Better static guarantees
+   - Using Core.Container for efficient collections 

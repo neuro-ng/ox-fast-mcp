@@ -1,125 +1,141 @@
-open Alcotest
+open Core
+open Expect_test_helpers_core
 open Utilities.Components
 
-(** Test component creation and basic properties *)
-let test_component_creation () =
-  let component = create_component
-    ~name:"test_component"
-    ~description:(Some "A test component")
-    ~tags:["test"; "example"]
-    ~enabled:true
-    ~extra:()
-    () in
-  
-  check string "component name" "test_component" component.name;
-  check (option string) "component description" (Some "A test component") component.description;
-  check (list string) "component tags" ["example"; "test"] (List.sort String.compare component.tags);
-  check bool "component enabled" true component.enabled
+let%expect_test "create with defaults" =
+  let t = create ~name:"test" ~extra:() () |> to_or_error |> ok_exn in
+  print_s [%sexp (t : unit t)];
+  [%expect {|
+    ((name test) (description ()) (tags ()) (enabled true) (key ()) (extra ())
+     (version ())) |}]
 
-(** Test key functionality *)
-let test_key_handling () =
-  let component = create_component ~name:"test" ~extra:() () in
-  check string "default key is name" "test" (get_key component);
-  
-  let with_custom_key = with_key component "custom_key" in
-  check string "custom key set" "custom_key" (get_key with_custom_key)
-
-(** Test enable/disable functions *)
-let test_enable_disable () =
-  let component = create_component ~name:"test" ~enabled:false ~extra:() () in
-  check bool "initially disabled" false component.enabled;
-  
-  let enabled = enable component in
-  check bool "component enabled" true enabled.enabled;
-  
-  let disabled = disable enabled in
-  check bool "component disabled" false disabled.enabled
-
-(** Test equality comparison *)
-let test_equality () =
-  let comp1 = create_component
+let%expect_test "create with all fields" =
+  let t = create
     ~name:"test"
     ~description:(Some "desc")
-    ~tags:["tag1"; "tag2"]
-    ~extra:()
-    () in
-  
-  let comp2 = create_component
-    ~name:"test"
-    ~description:(Some "desc")
-    ~tags:["tag2"; "tag1"]
-    ~extra:()
-    () in
-  
-  let comp3 = create_component
-    ~name:"different"
-    ~description:(Some "desc")
-    ~tags:["tag1"; "tag2"]
-    ~extra:()
-    () in
-  
-  check bool "identical components equal" true (equal comp1 comp2);
-  check bool "different components not equal" false (equal comp1 comp3)
-
-(** Test JSON serialization *)
-let test_json_serialization () =
-  let component = create_component
-    ~name:"test_json"
-    ~description:(Some "JSON test")
-    ~tags:["json"; "test"]
-    ~extra:()
-    () in
-  
-  let json = component_to_yojson component in
-  match component_of_yojson json with
-  | Ok decoded ->
-    check string "decoded name" component.name decoded.name;
-    check (option string) "decoded description" component.description decoded.description;
-    check (list string) "decoded tags" 
-      (List.sort String.compare component.tags)
-      (List.sort String.compare decoded.tags);
-    check bool "decoded enabled" component.enabled decoded.enabled
-  | Error msg -> fail msg
-
-(** Test string representation *)
-let test_to_string () =
-  let component = create_component
-    ~name:"test_str"
-    ~description:(Some "String test")
-    ~tags:["str"; "test"]
-    ~extra:()
-    () in
-  
-  let str = to_string component in
-  let contains s1 s2 =
-    try
-      let _ = Str.search_forward (Str.regexp_string s2) s1 0 in
-      true
-    with Not_found -> false
+    ~tags:["a"; "b"]
+    ~enabled:false
+    ~key:(Some "key")
+    ~version:(Some 1)
+    ~extra:42
+    ()
+    |> to_or_error |> ok_exn
   in
-  check bool "string contains name" (contains str "test_str") true;
-  check bool "string contains description" (contains str "String test") true;
-  check bool "string contains tags" (contains str "str, test") true
+  print_s [%sexp (t : int t)];
+  [%expect {|
+    ((name test) (description (desc)) (tags (a b)) (enabled false) (key (key))
+     (extra 42) (version (1))) |}]
 
-(** Main test suite *)
-let () =
-  run "Components Module Tests" [
-    ("Component Creation", [
-      test_case "Basic component creation" `Quick test_component_creation;
-    ]);
-    ("Key Handling", [
-      test_case "Key functionality" `Quick test_key_handling;
-    ]);
-    ("Enable/Disable", [
-      test_case "Enable and disable functions" `Quick test_enable_disable;
-    ]);
-    ("Equality", [
-      test_case "Component equality" `Quick test_equality;
-    ]);
-    ("JSON", [
-      test_case "JSON serialization" `Quick test_json_serialization;
-    ]);
-    ("String Representation", [
-      test_case "String conversion" `Quick test_to_string;
-    ]);
-  ] 
+let%expect_test "create with invalid name" =
+  let result = create ~name:"" ~extra:() () in
+  print_s [%sexp (result : (unit t, Error.t) Result.t)];
+  [%expect {| (Error (Invalid_name "Name cannot be empty")) |}];
+  let result = create ~name:"invalid name" ~extra:() () in
+  print_s [%sexp (result : (unit t, Error.t) Result.t)];
+  [%expect {| (Error (Invalid_name "Name cannot contain whitespace")) |}]
+
+let%expect_test "create with invalid tags" =
+  let result = create ~name:"test" ~tags:[""] ~extra:() () in
+  print_s [%sexp (result : (unit t, Error.t) Result.t)];
+  [%expect {| (Error (Invalid_tags (""))) |}];
+  let result = create ~name:"test" ~tags:["invalid tag"] ~extra:() () in
+  print_s [%sexp (result : (unit t, Error.t) Result.t)];
+  [%expect {| (Error (Invalid_tags ("invalid tag"))) |}]
+
+let%expect_test "create with invalid version" =
+  let result = create ~name:"test" ~version:(Some (-1)) ~extra:() () in
+  print_s [%sexp (result : (unit t, Error.t) Result.t)];
+  [%expect {| (Error (Invalid_version "Version cannot be negative")) |}]
+
+let%expect_test "get_key fallback" =
+  let t = create ~name:"test" ~extra:() () |> to_or_error |> ok_exn in
+  print_s [%sexp (get_key t : string)];
+  [%expect {| test |}];
+  let t_with_key = with_key t "custom_key" in
+  print_s [%sexp (get_key t_with_key : string)];
+  [%expect {| custom_key |}]
+
+let%expect_test "enable/disable" =
+  let t = create ~name:"test" ~enabled:false ~extra:() () |> to_or_error |> ok_exn in
+  print_s [%sexp (t.enabled : bool)];
+  [%expect {| false |}];
+  let t = enable t in
+  print_s [%sexp (t.enabled : bool)];
+  [%expect {| true |}];
+  let t = disable t in
+  print_s [%sexp (t.enabled : bool)];
+  [%expect {| false |}]
+
+let%expect_test "equal comparison" =
+  let t1 = create ~name:"test" ~description:(Some "desc") ~tags:["a"; "b"] ~extra:1 () |> to_or_error |> ok_exn in
+  let t2 = create ~name:"test" ~description:(Some "desc") ~tags:["b"; "a"] ~extra:1 () |> to_or_error |> ok_exn in
+  let t3 = create ~name:"test2" ~description:(Some "desc") ~tags:["a"; "b"] ~extra:1 () |> to_or_error |> ok_exn in
+  print_s [%sexp (equal t1 t2 : bool)];
+  [%expect {| true |}];
+  print_s [%sexp (equal t1 t3 : bool)];
+  [%expect {| false |}]
+
+let%expect_test "to_string" =
+  let t = create ~name:"test" ~description:(Some "desc") ~tags:["a"; "b"] ~extra:() () |> to_or_error |> ok_exn in
+  print_s [%sexp (to_string t : string)];
+  [%expect {| "FastMCPComponent(name=test, description=desc, tags=a, b, enabled=true)" |}]
+
+let%expect_test "copy with validation" =
+  let t = create ~name:"test" ~extra:1 () |> to_or_error |> ok_exn in
+  let t2 = copy ~name:"test2" t |> to_or_error |> ok_exn in
+  print_s [%sexp (t2 : int t)];
+  [%expect {|
+    ((name test2) (description ()) (tags ()) (enabled true) (key ()) (extra 1)
+     (version ())) |}];
+  let result = copy ~name:"" t in
+  print_s [%sexp (result : (int t, Error.t) Result.t)];
+  [%expect {| (Error (Invalid_name "Name cannot be empty")) |}]
+
+let%expect_test "version operations" =
+  let t = create ~name:"test" ~extra:() () |> to_or_error |> ok_exn in
+  print_s [%sexp (get_version t : int option)];
+  [%expect {| () |}];
+  let t = set_version t 1 |> to_or_error |> ok_exn in
+  print_s [%sexp (get_version t : int option)];
+  [%expect {| (1) |}];
+  let t = clear_version t |> to_or_error |> ok_exn in
+  print_s [%sexp (get_version t : int option)];
+  [%expect {| () |}]
+
+let%expect_test "comparison functions" =
+  let t1 = create ~name:"a" ~extra:1 () |> to_or_error |> ok_exn in
+  let t2 = create ~name:"b" ~extra:1 () |> to_or_error |> ok_exn in
+  let t3 = create ~name:"a" ~version:(Some 1) ~extra:1 () |> to_or_error |> ok_exn in
+  let t4 = create ~name:"a" ~version:(Some 2) ~extra:1 () |> to_or_error |> ok_exn in
+  print_s [%sexp (compare_by_name t1 t2 < 0 : bool)];
+  [%expect {| true |}];
+  print_s [%sexp (compare_by_version t3 t4 < 0 : bool)];
+  [%expect {| true |}];
+  print_s [%sexp (compare_by_key t1 t2 = 0 : bool)];
+  [%expect {| true |}]
+
+let%expect_test "list operations" =
+  let ts = [
+    create ~name:"b" ~extra:1 () |> to_or_error |> ok_exn;
+    create ~name:"a" ~extra:1 () |> to_or_error |> ok_exn;
+    create ~name:"c" ~extra:1 () |> to_or_error |> ok_exn;
+  ] in
+  let sorted = to_list ts in
+  print_s [%sexp (List.length sorted : int)];
+  [%expect {| 3 |}];
+  print_s [%sexp ((List.hd_exn sorted).name : string)];
+  [%expect {| a |}];
+  print_s [%sexp ((List.last_exn sorted).name : string)];
+  [%expect {| c |}]
+
+let%expect_test "json serialization" =
+  let t = create ~name:"test" ~description:(Some "desc") ~tags:["a"; "b"] ~extra:42 () |> to_or_error |> ok_exn in
+  let json = to_yojson (fun x -> `Int x) t |> to_or_error |> ok_exn in
+  print_s [%sexp (Yojson.Safe.to_string json : string)];
+  [%expect {|
+    "{\"name\":\"test\",\"description\":\"desc\",\"tags\":[\"a\",\"b\"],\"enabled\":true,\"_key\":null,\"extra\":42,\"version\":null}" |}];
+  match of_yojson (fun j -> match j with `Int i -> Ok i | _ -> Error "expected int") json with
+  | Ok t' -> print_s [%sexp (equal t t' : bool)];
+    [%expect {| true |}]
+  | Error msg -> print_s [%sexp (msg : string)];
+    [%expect {| |}] 
