@@ -17,7 +17,7 @@ type t = {
 exception Parameter_validation_error of string
 
 (** Function signature error *)
-exception Function_signature_error of string
+exception Template_function_signature_error of string
 
 (** Lambda function error *)
 exception Lambda_function_error of string
@@ -32,7 +32,7 @@ type parameter_type =
 [@@deriving sexp, compare]
 
 (** Function signature *)
-type function_signature = {
+type template_function_signature = {
   parameters : parameter_type list;
   docstring : string option;
   is_async : bool;
@@ -40,10 +40,10 @@ type function_signature = {
 
 (** Function type *)
 type ('ctx, 'params, 'result) function_type =
-  | Normal of (?ctx:'ctx -> 'params -> 'result Lwt.t) * function_signature
-  | Static of (?ctx:'ctx -> 'params -> 'result Lwt.t) * function_signature
-  | Method of (?ctx:'ctx -> 'params -> 'result Lwt.t) * function_signature
-  | Class_method of (?ctx:'ctx -> 'params -> 'result Lwt.t) * function_signature
+  | Normal of (?ctx:'ctx -> 'params -> 'result Lwt.t) * template_function_signature
+  | Static of (?ctx:'ctx -> 'params -> 'result Lwt.t) * template_function_signature
+  | Method of (?ctx:'ctx -> 'params -> 'result Lwt.t) * template_function_signature
+  | Class_method of (?ctx:'ctx -> 'params -> 'result Lwt.t) * template_function_signature
 
 (** Function metadata *)
 type function_metadata = {
@@ -52,7 +52,7 @@ type function_metadata = {
   is_static : bool;
   is_method : bool;
   is_class_method : bool;
-  signature : function_signature;
+  signature : template_function_signature;
 } [@@deriving sexp]
 
 (** Get function metadata *)
@@ -122,7 +122,7 @@ let validate_function_parameters ~uri_template ~required_params ~optional_params
   (* Check if required parameters are a subset of URI parameters *)
   if not (Set.is_subset required_params ~of_:uri_params) then
     let missing = Set.diff required_params uri_params in
-    raise (Function_signature_error (
+    raise (Template_function_signature_error (
       sprintf "Required parameters %s must be present in URI template parameters %s"
         (Set.to_list missing |> String.concat ~sep:", ")
         (Set.to_list uri_params |> String.concat ~sep:", ")
@@ -134,7 +134,7 @@ let validate_function_parameters ~uri_template ~required_params ~optional_params
     let all_params = Set.union required_params optional_params in
     if not (Set.is_subset uri_params ~of_:all_params) then
       let extra = Set.diff uri_params all_params in
-      raise (Function_signature_error (
+      raise (Template_function_signature_error (
         sprintf "URI parameters %s must be a subset of function parameters %s"
           (Set.to_list extra |> String.concat ~sep:", ")
           (Set.to_list all_params |> String.concat ~sep:", ")

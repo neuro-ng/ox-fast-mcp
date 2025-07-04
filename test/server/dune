@@ -1,4 +1,0 @@
-(executable
- (public_name test_server)
- (name test_server)
- (libraries alcotest lwt lwt.unix utilities tools prompts)) 

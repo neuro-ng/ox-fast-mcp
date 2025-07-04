@@ -1,5 +1,7 @@
-open Alcotest
-open Lwt.Syntax
+open Core
+open Async
+open Expect_test_helpers_core
+open Tools.Tool_types
 open Utilities.Types
 
 module TestTools = struct
@@ -30,6 +32,128 @@ module TestTools = struct
     mutable duplicate_behavior : [ `Warn | `Error | `Replace | `Ignore ];
   }
 end
+
+(* Test helper functions *)
+let create_test_tool name description =
+  let handler _ctx args =
+    Lwt.return (
+      match args with
+      | `Assoc args_list ->
+          let x = List.Assoc.find_exn args_list ~equal:String.equal "x" in
+          let y = 
+            List.Assoc.find args_list ~equal:String.equal "y" 
+            |> Option.value ~default:(`Int 10)
+          in
+          (match x, y with
+          | `Int x, `Int y -> [Text (Int.to_string (x + y))]
+          | _ -> failwith "Expected integers")
+      | _ -> failwith "Expected object arguments"
+    )
+  in
+  let base = {
+    name;
+    description;
+    parameters = `Assoc [
+      ("type", `String "object");
+      ("properties", `Assoc [
+        ("x", `Assoc [
+          ("type", `String "integer");
+          ("description", `String "First number")
+        ]);
+        ("y", `Assoc [
+          ("type", `String "integer");
+          ("default", `Int 10);
+          ("description", `String "Second number")
+        ])
+      ]);
+      ("required", `List [`String "x"])
+    ];
+    enabled = true;
+    tags = [];
+    annotations = None;
+  } in
+  { base; handler }
+
+(* Basic tool creation test *)
+let%expect_test "create basic tool" =
+  let tool = create_test_tool "add" "Add two numbers" in
+  print_endline (Printf.sprintf "Tool name: %s" tool.base.name);
+  print_endline (Printf.sprintf "Tool description: %s" tool.base.description);
+  [%expect {|
+    Tool name: add
+    Tool description: Add two numbers
+  |}]
+
+(* Test tool execution *)
+let%expect_test "execute tool" =
+  let tool = create_test_tool "add" "Add two numbers" in
+  let ctx = {
+    request_id = Some "test-request";
+    client_id = Some "test-client";
+    session_data = Stdlib.Hashtbl.create 10;
+    tools_changed = false;
+    resources_changed = false;
+    prompts_changed = false;
+  } in
+  
+  Lwt_main.run (
+    let%lwt result = tool.handler ctx (`Assoc [("x", `Int 5); ("y", `Int 3)]) in
+    match result with
+    | [Text content] -> 
+        print_endline content;
+        Lwt.return_unit
+    | _ -> 
+        print_endline "Unexpected result format";
+        Lwt.return_unit
+  );
+  [%expect {| 8 |}]
+
+(* Test default parameter *)
+let%expect_test "use default parameter" =
+  let tool = create_test_tool "add" "Add two numbers" in
+  let ctx = {
+    request_id = Some "test-request";
+    client_id = Some "test-client";
+    session_data = Stdlib.Hashtbl.create 10;
+    tools_changed = false;
+    resources_changed = false;
+    prompts_changed = false;
+  } in
+  
+  Lwt_main.run (
+    let%lwt result = tool.handler ctx (`Assoc [("x", `Int 5)]) in
+    match result with
+    | [Text content] -> 
+        print_endline content;
+        Lwt.return_unit
+    | _ -> 
+        print_endline "Unexpected result format";
+        Lwt.return_unit
+  );
+  [%expect {| 15 |}]
+
+(* Test invalid parameter type *)
+let%expect_test "invalid parameter type" =
+  let tool = create_test_tool "add" "Add two numbers" in
+  let ctx = {
+    request_id = Some "test-request";
+    client_id = Some "test-client";
+    session_data = Stdlib.Hashtbl.create 10;
+    tools_changed = false;
+    resources_changed = false;
+    prompts_changed = false;
+  } in
+  
+  Lwt_main.run (
+    try%lwt
+      let%lwt _ = tool.handler ctx (`Assoc [("x", `String "not a number")]) in
+      print_endline "Should have failed";
+      Lwt.return_unit
+    with _ ->
+      print_endline "Failed as expected";
+      Lwt.return_unit
+  );
+  [%expect {| Failed as expected |}]
 
 (** Test tool creation *)
 let test_tool_creation () =

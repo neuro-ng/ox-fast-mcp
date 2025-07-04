@@ -1,18 +1,13 @@
 (library
- (public_name ox-fast-mcp.tools)
  (name tools)
- (modules
-  errors
-  tool
-  tool_transform
-  tool_types)
+ (public_name ox-fast-mcp.tools)
  (libraries
-  base
   core
   async
   yojson
-  lwt
-  ox-fast-mcp.utilities)
+  ppx_yojson_conv_lib
+  mcp
+  utilities
+  exceptions)
  (preprocess
-  (pps ppx_jane ppx_enumerate ppx_yojson_conv))
- (inline_tests)) 
+  (pps ppx_jane ppx_yojson_conv))) 

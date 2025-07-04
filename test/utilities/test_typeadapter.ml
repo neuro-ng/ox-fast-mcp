@@ -5,8 +5,6 @@ open Utilities.Types
 
 (** Complex model equivalent to Python BaseModel *)
 
-
-
 type complex_model = {
   x : int;
   y : (int * string) list; (* OCaml equivalent of dict[int, str] *)
@@ -38,25 +36,26 @@ type 'a type_adapter = {
 (** Create type adapter for simple functions *)
 let create_simple_func_adapter () =
   let signature = {
-    func_name = "simple_func";
+    name = "simple_func";
+    description = Some "A simple test function";
     parameters = [
-      {
-        param_name = "x";
-        param_type = "integer";
-        param_description = None;
-        param_required = true;
-        param_default = None;
-      };
-      {
-        param_name = "y";
-        param_type = "string";
-        param_description = None;
-        param_required = false;
-        param_default = Some (`String "default");
-      }
+      create_parameter 
+        ~name:"x" 
+        ~type_:"integer" 
+        ~required:true 
+        ();
+      create_parameter 
+        ~name:"y" 
+        ~type_:"string" 
+        ~required:false 
+        ~default:(`String "default") 
+        ();
     ];
     return_type = "string";
-    description = Some "A simple test function";
+    is_async = false;
+    is_static = false;
+    is_method = false;
+    is_class_method = false;
   } in
   
   let validate_and_call args =
@@ -98,25 +97,25 @@ let create_simple_func_adapter () =
 (** Create type adapter for functions without annotations *)
 let create_unannotated_func_adapter () =
   let signature = {
-    func_name = "unannotated_func";
+    name = "unannotated_func";
+    description = None;
     parameters = [
-      {
-        param_name = "x";
-        param_type = "any";
-        param_description = None;
-        param_required = true;
-        param_default = None;
-      };
-      {
-        param_name = "y";
-        param_type = "any";
-        param_description = None;
-        param_required = true;
-        param_default = None;
-      }
+      create_parameter 
+        ~name:"x" 
+        ~type_:"any" 
+        ~required:true 
+        ();
+      create_parameter 
+        ~name:"y" 
+        ~type_:"any" 
+        ~required:true 
+        ();
     ];
     return_type = "any";
-    description = None;
+    is_async = false;
+    is_static = false;
+    is_method = false;
+    is_class_method = false;
   } in
   
   let validate_and_call args =
@@ -158,18 +157,21 @@ let create_unannotated_func_adapter () =
 (** Create type adapter for complex model functions *)
 let create_complex_model_func_adapter () =
   let signature = {
-    func_name = "complex_model_func";
+    name = "complex_model_func";
+    description = Some "Function that takes and returns a complex model";
     parameters = [
-      {
-        param_name = "model";
-        param_type = "complex_model";
-        param_description = Some "A complex model with nested data";
-        param_required = true;
-        param_default = None;
-      }
+      create_parameter 
+        ~name:"model" 
+        ~type_:"complex_model" 
+        ~description:"A complex model with nested data" 
+        ~required:true 
+        ();
     ];
     return_type = "complex_model";
-    description = Some "Function that takes and returns a complex model";
+    is_async = false;
+    is_static = false;
+    is_method = false;
+    is_class_method = false;
   } in
   
   let validate_and_call args =
@@ -228,39 +230,35 @@ let create_complex_model_func_adapter () =
 (** Create type adapter for functions with many parameters *)
 let create_many_params_func_adapter () =
   let signature = {
-    func_name = "many_params_func";
+    name = "many_params_func";
+    description = Some "Function with many parameters for testing pruning";
     parameters = [
-      {
-        param_name = "keep_this";
-        param_type = "integer";
-        param_description = None;
-        param_required = true;
-        param_default = None;
-      };
-      {
-        param_name = "skip_this";
-        param_type = "string";
-        param_description = None;
-        param_required = true;
-        param_default = None;
-      };
-      {
-        param_name = "also_keep";
-        param_type = "number";
-        param_description = None;
-        param_required = true;
-        param_default = None;
-      };
-      {
-        param_name = "also_skip";
-        param_type = "boolean";
-        param_description = None;
-        param_required = true;
-        param_default = None;
-      }
+      create_parameter 
+        ~name:"keep_this" 
+        ~type_:"integer" 
+        ~required:true 
+        ();
+      create_parameter 
+        ~name:"skip_this" 
+        ~type_:"string" 
+        ~required:true 
+        ();
+      create_parameter 
+        ~name:"also_keep" 
+        ~type_:"number" 
+        ~required:true 
+        ();
+      create_parameter 
+        ~name:"also_skip" 
+        ~type_:"boolean" 
+        ~required:true 
+        ();
     ];
     return_type = "array";
-    description = Some "Function with many parameters for testing pruning";
+    is_async = false;
+    is_static = false;
+    is_method = false;
+    is_class_method = false;
   } in
   
   let validate_and_call args =
@@ -411,25 +409,26 @@ let test_skip_names () =
 let test_lambda_function () =
   (* Create a simple lambda-like function adapter *)
   let signature = {
-    func_name = "lambda_func";
+    name = "lambda_func";
+    description = None;
     parameters = [
-      {
-        param_name = "x";
-        param_type = "any";
-        param_description = None;
-        param_required = true;
-        param_default = None;
-      };
-      {
-        param_name = "y";
-        param_type = "integer";
-        param_description = None;
-        param_required = false;
-        param_default = Some (`Int 5);
-      }
+      create_parameter 
+        ~name:"x" 
+        ~type_:"any" 
+        ~required:true 
+        ();
+      create_parameter 
+        ~name:"y" 
+        ~type_:"integer" 
+        ~required:false 
+        ~default:(`Int 5) 
+        ();
     ];
     return_type = "string";
-    description = None;
+    is_async = false;
+    is_static = false;
+    is_method = false;
+    is_class_method = false;
   } in
   
   let validate_and_call args =
@@ -513,25 +512,25 @@ let test_basic_json_schema () =
 (** Test string vs integer handling *)
 let test_str_vs_int () =
   let signature = {
-    func_name = "str_vs_int_func";
+    name = "str_vs_int_func";
+    description = None;
     parameters = [
-      {
-        param_name = "a";
-        param_type = "string";
-        param_description = None;
-        param_required = true;
-        param_default = None;
-      };
-      {
-        param_name = "b";
-        param_type = "integer";
-        param_description = None;
-        param_required = true;
-        param_default = None;
-      }
+      create_parameter 
+        ~name:"a" 
+        ~type_:"string" 
+        ~required:true 
+        ();
+      create_parameter 
+        ~name:"b" 
+        ~type_:"integer" 
+        ~required:true 
+        ();
     ];
     return_type = "string";
-    description = None;
+    is_async = false;
+    is_static = false;
+    is_method = false;
+    is_class_method = false;
   } in
   
   let validate_and_call args =
@@ -594,7 +593,7 @@ let test_function_signature_metadata () =
   let type_adapter = create_simple_func_adapter () in
   let signature = type_adapter.signature in
   
-  check string "function name" "simple_func" signature.func_name;
+  check string "function name" "simple_func" signature.name;
   check string "return type" "string" signature.return_type;
   check bool "has description" true (Option.is_some signature.description);
   check int "parameter count" 2 (List.length signature.parameters);

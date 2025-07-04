@@ -1,5 +1,4 @@
 open Core
-open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 (** Component validation errors *)
 module Error : sig
@@ -22,31 +21,19 @@ end
 (** Base type for FastMCP components *)
 type 'a t = {
   name : string; [@key "name"] (** The name of the component *)
-  description : string option; [@key "description"] (** The description of the component *)
-  tags : string list; [@key "tags"] (** Tags for the component *)
+  description : string option; [@key "description"] [@default None] (** The description of the component *)
+  tags : string list; [@key "tags"] [@default []] (** Tags for the component *)
   enabled : bool; [@key "enabled"] [@default true] (** Whether the component is enabled *)
   key : string option; [@key "_key"] [@default None] (** Internal key for bookkeeping *)
   extra : 'a; [@key "extra"] (** Extra data specific to each component type *)
   version : int option; [@key "version"] [@default None] (** Component version for migrations *)
-} [@@deriving fields, sexp, compare]
+} [@@deriving fields, sexp, compare, yojson]
 
 (** Convert a list to a set, defaulting to an empty list if None *)
 val convert_set_default_none : 'a list option -> 'a list
 
 (** Convert Result to Or_error *)
 val to_or_error : ('a, Error.t) Result.t -> 'a Or_error.t
-
-(** Create a new FastMCP component with validation *)
-val create :
-  ?description:string option ->
-  ?tags:string list ->
-  ?enabled:bool ->
-  ?key:string option ->
-  ?version:int option ->
-  name:string ->
-  extra:'a ->
-  unit ->
-  ('a t, Error.t) Result.t
 
 (** Get the component's key, falling back to name if not set *)
 val get_key : 'a t -> string
@@ -108,4 +95,30 @@ module Validation : sig
   val validate_version : int option -> (unit, Error.t) Result.t
   val validate_extra : 'a option -> (unit, Error.t) Result.t
   val validate_all : 'a t -> (unit, Error.t) Result.t
-end 
+end
+
+type error = [
+  | `Invalid_name of string
+  | `Invalid_version of int
+  | `Invalid_key of string
+] [@@deriving sexp, compare]
+
+(** Create a new component with validation
+    @param name Component name
+    @param description Optional component description
+    @param tags Optional list of tags
+    @param enabled Whether the component is enabled
+    @param key Optional component key
+    @param version Optional component version
+    @param extra Extra component data
+    @return Result containing either the component or an error *)
+val create :
+  name:string ->
+  ?description:string ->
+  ?tags:string list ->
+  ?enabled:bool ->
+  ?key:string ->
+  ?version:int ->
+  extra:'a ->
+  unit ->
+  ('a t, error) Result.t 

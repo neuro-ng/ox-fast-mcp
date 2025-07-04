@@ -1,4 +1,8 @@
 open Utilities.Types
+open Core
+open Async
+open Yojson.Safe
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 (** Tool handler signature *)
 type execution_context = {
@@ -117,3 +121,70 @@ let set_tags tool tags =
   match tool with
   | Function ft -> Function { ft with base = { ft.base with tags } }
   | Transformed tt -> Transformed { tt with base = { tt.base with tags } }
+
+type content_block = {
+  text : string option;
+  image : string option;
+  error : string option;
+} [@@deriving sexp, yojson_of]
+
+let create_text_content text = { text = Some text; image = None; error = None }
+let create_image_content image = { text = None; image = Some image; error = None }
+let create_error_content error = { text = None; image = None; error = Some error }
+
+type t = {
+  key : string;
+  name : string option [@yojson.option];
+  description : string option [@yojson.option];
+  tags : string list;
+  annotations : (string * string) list;
+  parameters : Yojson.Safe.t;
+  enabled : bool;
+  error : string option [@yojson.option];
+  fn : tool_handler;
+} [@@deriving fields]
+
+let yojson_of_t t = 
+  `Assoc [
+    ("key", `String t.key);
+    ("name", match t.name with Some n -> `String n | None -> `Null);
+    ("description", match t.description with Some d -> `String d | None -> `Null);
+    ("tags", `List (List.map t.tags ~f:(fun s -> `String s)));
+    ("annotations", `List (List.map t.annotations ~f:(fun (k,v) -> `List [`String k; `String v])));
+    ("parameters", t.parameters);
+    ("enabled", `Bool t.enabled);
+    ("error", match t.error with Some e -> `String e | None -> `Null);
+  ]
+
+let with_key t new_key = { t with key = new_key }
+
+let enable t = { t with enabled = true }
+
+let disable t = { t with enabled = false }
+
+let from_function
+    ?name
+    ?description
+    ?(tags = [])
+    ?(annotations = [])
+    ?(exclude_args = [])
+    ?serializer
+    ?(enabled = true)
+    fn =
+  let key =
+    match name with
+    | Some n -> String.lowercase n
+    | None -> "<function>"
+  in
+  { key;
+    name;
+    description;
+    tags;
+    annotations;
+    parameters = `Assoc [];  (* TODO: Generate JSON schema from function type *)
+    enabled;
+    error = None;
+    fn = (fun args -> 
+      let%bind result = fn args in
+      return result)
+  }

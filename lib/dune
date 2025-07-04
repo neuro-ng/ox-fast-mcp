@@ -2,28 +2,10 @@
  (name ox_fast_mcp)
  (public_name ox-fast-mcp)
  (libraries
-  base
   core
+  core_unix.time_float_unix
   async
   yojson
-  uri
-  re
-  logs
-  lwt
-  cohttp-lwt-unix
-  ppx_fields_conv
-  ppx_jane
-  ppx_yojson_conv
-  base64
-  fmt
-  utilities
-  tools)
- (modules
-  exceptions
-  fastmcp
-  ox_fast_mcp
-  version
-  settings
-  fast_mcp_server)
+  ppx_yojson_conv_lib)
  (preprocess
-  (pps ppx_jane ppx_let ppx_yojson_conv)))
+  (pps ppx_jane ppx_yojson_conv)))

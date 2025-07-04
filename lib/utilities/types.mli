@@ -1,7 +1,60 @@
 (** Types module for FastMCP utilities *)
 
+open Core
+open Async
+
+type json_value = [
+  | `Null
+  | `Bool of bool
+  | `Int of int
+  | `Float of float
+  | `String of string
+  | `List of json_value list
+  | `Assoc of (string * json_value) list
+] [@@deriving sexp, compare, yojson]
+
+type parameter = {
+  param_name : string [@key "name"];
+  param_type : string [@key "type"];
+  param_description : string option [@yojson.option] [@key "description"];
+  param_default : json_value option [@yojson.option] [@key "default"];
+  param_required : bool [@key "required"];
+} [@@deriving fields, sexp, compare, yojson]
+
+val create_parameter : 
+  name:string -> 
+  type_:string -> 
+  ?description:string -> 
+  ?default:json_value -> 
+  ?required:bool -> 
+  unit -> parameter
+
+val json_schema : parameter list -> Yojson.Safe.t
+val filter_schema : Yojson.Safe.t -> Yojson.Safe.t
+
 (** Basic JSON representation *)
 type json = Yojson.Safe.t
+
+(** Function signature type *)
+type function_signature = {
+  name : string;
+  description : string option;
+  parameters : parameter list;
+  return_type : string;
+  is_async : bool;
+  is_static : bool;
+  is_method : bool;
+  is_class_method : bool;
+} [@@deriving fields, sexp, compare, yojson]
+
+(** Function parameter definition for type adapters *)
+type function_parameter = {
+  param_name : string;
+  param_type : string;
+  param_description : string option;
+  param_required : bool;
+  param_default : json option;
+} [@@deriving fields, sexp, compare, yojson]
 
 (** Content types for MCP messages *)
 type content_type =
@@ -25,15 +78,7 @@ type content_type =
       annotations : (string * json) list option;
       format : string option;
     }
-
-(** Function parameter definition for type adapters *)
-type function_parameter = {
-  param_name : string;
-  param_type : string;
-  param_description : string option;
-  param_required : bool;
-  param_default : json option;
-}
+[@@deriving sexp, compare, yojson]
 
 (** Resource types *)
 type resource_type =
@@ -60,6 +105,7 @@ type resource_type =
       url : string;
       mime_type : string;
     }
+[@@deriving sexp, compare]
 
 (** Resource error types *)
 type resource_error =
@@ -68,6 +114,7 @@ type resource_error =
   | ResourceInvalidPath of string
   | ResourceIOError of string
   | ResourceParseError of string
+[@@deriving sexp, compare]
 
 (** Helper functions *)
 val is_content_type_match : content_type -> content_type -> bool
@@ -85,4 +132,4 @@ val base64_encode : string -> string
 val base64_decode : string -> string option
 val find_param_by_type : function_parameter list -> string -> function_parameter option
 val get_mime_type_from_extension : string -> string
-val read_resource : resource_type -> (content_type, resource_error) result Lwt.t 
+val read_resource : resource_type -> (content_type, resource_error) result Deferred.t 

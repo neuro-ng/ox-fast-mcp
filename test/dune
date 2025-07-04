@@ -1,4 +1,11 @@
-(test
- (name test_test)
- (package ox-fast-mcp)
- (libraries core ounit2 tests))
+(library
+ (name test_ox_fast_mcp)
+ (libraries
+  core
+  core_unix
+  async
+  expect_test_helpers_core
+  test_utilities)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_expect)))

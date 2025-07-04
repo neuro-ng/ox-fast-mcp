@@ -1,0 +1,15 @@
+(library
+ (name mcp_server_auth_middleware)
+ (public_name ox-fast-mcp.server.auth.middleware)
+ (modules auth_context bearer_auth)
+ (libraries
+  core
+  async
+  cohttp
+  lwt
+  mcp_server_auth_core
+  mcp_server_auth_provider
+  dream
+  yojson)
+ (preprocess
+  (pps ppx_deriving_yojson ppx_deriving.show))) 

@@ -11,7 +11,6 @@
   yojson
   ox-fast-mcp.shared)
  (modules
-  middleware/bearer_auth
-  middleware/auth_context)
+  provider)
  (preprocess
   (pps ppx_jane))) 

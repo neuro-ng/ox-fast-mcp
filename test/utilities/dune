@@ -1,35 +1,15 @@
 (library
  (name test_utilities)
  (libraries
-  base
   core
-  core_unix
-  core_unix.sys_unix
+  core_unix.time_float_unix
+  async
   expect_test_helpers_core
-  alcotest
   ox-fast-mcp.utilities)
- (modules
-  test_types
-  test_cache
-  test_components
-  test_exceptions
-  test_http
-  test_json_schema
-  test_logging
-  test_mcp_config
-  test_openapi)
  (inline_tests)
  (preprocess
-  (pps ppx_jane ppx_expect ppx_inline_test)))
-
-(executable
- (name run_tests)
- (modules run_tests)
- (libraries
-  base
-  core
-  alcotest
-  test_utilities))
+  (pps ppx_jane ppx_expect))
+ (modules test_cache))
 
 (env
  (dev

@@ -1,10 +1,8 @@
 (library
- (name utilities)
- (public_name ox-fast-mcp.utilities)
- (modules cache)
+ (name exceptions)
+ (public_name ox-fast-mcp.exceptions)
  (libraries
   core
-  core_unix.time_float_unix
   async
   yojson
   ppx_yojson_conv_lib)

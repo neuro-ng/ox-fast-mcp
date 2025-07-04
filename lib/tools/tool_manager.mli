@@ -34,7 +34,7 @@ module Tool : sig
     annotations : (string * string) list;
     parameters : Yojson.Safe.t;
     enabled : bool;
-    fn : Yojson.Safe.t -> Content_block.t list Deferred.t;
+    fn : Yojson.Safe.t -> Utilities.Types.content_type list Deferred.t;
   }
   [@@deriving sexp]
 
@@ -46,7 +46,7 @@ module Tool : sig
   val to_mcp_tool : ?overrides:(string * Yojson.Safe.t) list -> t -> Yojson.Safe.t
 
   val default_serializer : Yojson.Safe.t -> string
-  val convert_to_content : ?serializer:(Yojson.Safe.t -> string) -> Yojson.Safe.t -> Content_block.t list
+  val convert_to_content : ?serializer:(Yojson.Safe.t -> string) -> Yojson.Safe.t -> Utilities.Types.content_type list
 
   val from_function :
     ?name:string
@@ -56,7 +56,7 @@ module Tool : sig
     -> ?exclude_args:string list
     -> ?serializer:(Yojson.Safe.t -> string)
     -> ?enabled:bool
-    -> (Yojson.Safe.t -> Content_block.t list Deferred.t)
+    -> (Yojson.Safe.t -> Utilities.Types.content_type list Deferred.t)
     -> t
 end
 
@@ -64,7 +64,7 @@ type t [@@deriving sexp]
 
 type mounted_server = {
   prefix : string option;
-  server : Server.t;
+  server : unit; (* Placeholder - Server module not available *)
 }
 [@@deriving sexp]
 
@@ -81,7 +81,7 @@ val create :
 (** Mount a server as a source of tools.
     Tools from mounted servers are available with their prefix (if any).
 *)
-val mount : t -> server:Server.t -> prefix:string option -> unit
+val mount : t -> server:unit -> prefix:string option -> unit
 
 (** Check if a tool exists.
     This includes tools from mounted servers.
@@ -108,7 +108,7 @@ val list_tools : t -> Tool.t list Deferred.t
 *)
 val add_tool_from_fn :
   t
-  -> (Yojson.Safe.t -> Content_block.t list Deferred.t)
+  -> (Yojson.Safe.t -> Utilities.Types.content_type list Deferred.t)
   -> ?name:string
   -> ?description:string
   -> ?tags:string list
@@ -132,4 +132,4 @@ val remove_tool : t -> string -> unit
     @raise Not_found_error if the tool is not found
     @raise Tool_error if the tool execution fails
 *)
-val call_tool : t -> string -> Yojson.Safe.t -> Content_block.t list Deferred.t 
+val call_tool : t -> string -> Yojson.Safe.t -> Utilities.Types.content_type list Deferred.t 

@@ -38,14 +38,14 @@ end
 
 module Field_value = struct
   type t =
-    | String of string
-    | Int of int
-    | Float of float
-    | Bool of bool
-    | List of t list
-    | Dict of (string * t) list
-    | Null
-  [@@deriving sexp, yojson_of, yojson]
+    | String of string [@to_yojson fun s -> `String s] [@of_yojson fun j -> match j with `String s -> Ok s | _ -> Error "Expected string"]
+    | Int of int [@to_yojson fun i -> `Int i] [@of_yojson fun j -> match j with `Int i -> Ok i | _ -> Error "Expected int"]
+    | Float of float [@to_yojson fun f -> `Float f] [@of_yojson fun j -> match j with `Float f -> Ok f | _ -> Error "Expected float"]
+    | Bool of bool [@to_yojson fun b -> `Bool b] [@of_yojson fun j -> match j with `Bool b -> Ok b | _ -> Error "Expected bool"]
+    | List of t list [@to_yojson fun l -> `List (List.map l ~f:yojson_of_t)] [@of_yojson fun j -> match j with `List l -> List.map_result l ~f:t_of_yojson | _ -> Error "Expected list"]
+    | Dict of (string * t) list [@to_yojson fun d -> `Assoc (List.map d ~f:(fun (k, v) -> (k, yojson_of_t v)))] [@of_yojson fun j -> match j with `Assoc d -> List.map_result d ~f:(fun (k, v) -> t_of_yojson v |> Result.map ~f:(fun v -> (k, v))) | _ -> Error "Expected dict"]
+    | Null [@to_yojson fun _ -> `Null] [@of_yojson fun j -> match j with `Null -> Ok Null | _ -> Error "Expected null"]
+  [@@deriving sexp, yojson]
 
   let type_name = function
     | String _ -> "string"
@@ -195,4 +195,42 @@ let validate_enum values s =
   else
     Error
       (sprintf "Must be one of: %s"
-         (String.concat ~sep:", " values)) 
+         (String.concat ~sep:", " values))
+
+type value =
+  | String of string [@key "string"]
+  | Int of int [@key "int"]
+  | Float of float [@key "float"]
+  | Bool of bool [@key "bool"]
+  | List of value list [@key "list"]
+  | Dict of (string * value) list [@key "dict"]
+[@@deriving sexp, compare, yojson]
+
+type t = (string * value) list [@@deriving sexp, compare, yojson]
+
+let _ = fun (_ : value) -> ()
+[@@@end]
+
+let _ = fun (_ : t) -> ()
+[@@@end]
+
+let rec merge_value v1 v2 =
+  match v1, v2 with
+  | Dict d1, Dict d2 ->
+    Dict (merge_dicts d1 d2)
+  | List l1, List l2 ->
+    List (l1 @ l2)
+  | _, v -> v
+
+and merge_dicts d1 d2 =
+  let combined = d1 @ d2 in
+  List.fold combined ~init:[] ~f:(fun acc (k, v) ->
+    match List.Assoc.find acc k ~equal:String.equal with
+    | None -> (k, v) :: acc
+    | Some existing ->
+      let merged = merge_value existing v in
+      List.Assoc.add acc k merged ~equal:String.equal
+  )
+  |> List.rev
+
+let merge s1 s2 = merge_dicts s1 s2 

@@ -111,4 +111,55 @@ Python to OCaml Module Mapping:
 - fastmcp.utilities.json_schema -> lib/utilities/json_schema.ml
 - mcp.types -> lib/mcp/types.ml
 - pydantic.fields -> lib/utilities/nested_settings.ml (Field_metadata module)
-- pydantic.types -> lib/utilities/nested_settings.ml (Field_value module) 
+- pydantic.types -> lib/utilities/nested_settings.ml (Field_value module)
+
+Testing Tasks:
+- [x] Set up test directory structure
+- [x] Configure dune for testing with ppx_jane
+- [x] Add expect_test_helpers_core support
+- [ ] Add test coverage for all settings modules
+- [ ] Add test coverage for environment variable loading
+- [ ] Add test coverage for dotenv loading
+- [ ] Add test coverage for file loading/saving
+- [ ] Add test coverage for validation
+- [ ] Add test coverage for error handling
+- [ ] Add test coverage for logging configuration
+- [ ] Add test coverage for nested settings
+- [ ] Add test coverage for field validation
+- [ ] Add test coverage for JSON serialization
+- [ ] Add test coverage for deprecated features
+- [ ] Add test coverage for settings customization
+- [ ] Add test coverage for settings inheritance
+- [ ] Add test coverage for settings merging
+- [ ] Add test coverage for settings cloning
+- [ ] Add test coverage for settings comparison
+
+Missing Test Equivalents:
+- [ ] pytest.mark.parametrize - Using List.iter with test cases
+- [ ] pytest.fixture - Using helper functions and before/after hooks
+- [ ] pytest.raises - Using [%expect.unreachable] and error handling
+- [ ] pytest.approx - Using Float.equal_within for float comparisons
+- [ ] pytest.skip - Not directly supported, using conditional compilation
+- [ ] pytest.xfail - Not directly supported, using [%expect] with failure message
+- [ ] pytest.mark.slow - Using test tags and filtering
+- [ ] pytest.mark.integration - Using test tags and filtering
+- [ ] pytest.mark.asyncio - Using Async.Thread_safe for async tests
+- [ ] unittest.mock - Using custom mock modules or functions
+
+Test Infrastructure Tasks:
+- [x] Set up inline tests with ppx_jane
+- [x] Configure expect_test_helpers_core
+- [ ] Add test utilities module
+- [ ] Add mock module for external dependencies
+- [ ] Add test data fixtures
+- [ ] Add test environment setup/teardown
+- [ ] Add test coverage reporting
+- [ ] Add test documentation
+- [ ] Add test categorization (unit, integration, etc.)
+- [ ] Add test performance benchmarks
+- [ ] Add test failure reporting
+- [ ] Add test retry logic for flaky tests
+- [ ] Add test parallelization support
+- [ ] Add test result aggregation
+- [ ] Add test result reporting
+- [ ] Add test result analysis 

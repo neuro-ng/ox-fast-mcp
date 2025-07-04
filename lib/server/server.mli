@@ -2,6 +2,7 @@ open Core
 open Mcp.Types
 open Mcp.Shared
 open Lwt.Syntax
+open Async
 
 (** Cache management *)
 module Cache : sig
@@ -691,7 +692,13 @@ type t = {
   mutable lifespan: (t -> unit Lwt.t) option;
 }
 
-val create : ?name:string -> ?version:string -> ?instructions:string -> ?middleware:middleware list -> ?event_store:Event_store.t -> unit -> t 
+val create : unit -> t
+
+val list_tools : t -> Tool.t list Deferred.t
+
+val get_tools : t -> Tool.t list Deferred.t
+
+val call_tool : t -> string -> Yojson.Safe.t -> Content_block.t list Deferred.t
 
 (** Authentication System *)
 module Auth : sig

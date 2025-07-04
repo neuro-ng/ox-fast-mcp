@@ -1,6 +1,7 @@
 open Core
 open Async
-open Errors
+open Mcp.Types
+open Exceptions
 
 module DuplicateBehavior = struct
   type t =
@@ -39,27 +40,24 @@ module Tool = struct
     annotations : (string * string) list;
     parameters : Yojson.Safe.t;
     enabled : bool;
-    fn : (Yojson.Safe.t -> Content_block.t list Deferred.t [@sexp.opaque]);
-  }
-  [@@deriving sexp]
+    fn : tool_handler;
+  } [@@deriving fields]
 
   let with_key t new_key = { t with key = new_key }
 
-  let enable t =
-    match Context.get () with
-    | Some ctx -> Context.queue_tool_list_changed ctx
-    | None -> ()
+  let enable t = 
+    (* TODO: Implement enable functionality *)
+    { t with enabled = true }
 
-  let disable t =
-    match Context.get () with
-    | Some ctx -> Context.queue_tool_list_changed ctx
-    | None -> ()
+  let disable t = 
+    (* TODO: Implement disable functionality *)
+    { t with enabled = false }
 
   let to_mcp_tool ?overrides t =
     let base = 
       [ ("name", Option.value ~default:t.key t.name |> Yojson.Safe.from_string)
       ; ("description", Option.value ~default:"" t.description |> Yojson.Safe.from_string)
-      ; ("inputSchema", t.parameters)
+      ; ("parameters", t.parameters)
       ; ("annotations", `Assoc (List.map t.annotations ~f:(fun (k, v) -> (k, `String v))))
       ] 
     in
@@ -73,9 +71,9 @@ module Tool = struct
   let convert_to_content ?serializer result =
     let serialize = Option.value serializer ~default:default_serializer in
     match result with
-    | `String s -> [Content_block.create_text s]
-    | `List l -> List.map l ~f:(fun x -> Content_block.create_text (serialize x))
-    | x -> [Content_block.create_text (serialize x)]
+    | `String s -> [create_text_content s]
+    | `List l -> List.map l ~f:(fun x -> create_text_content (serialize x))
+    | x -> [create_text_content (serialize x)]
 
   let from_function
       ?name
@@ -89,16 +87,18 @@ module Tool = struct
     let key =
       match name with
       | Some n -> String.lowercase n
-      | None -> "<function>"  (* TODO: Get function name *)
+      | None -> 
+        (* TODO: Extract function name using Caml.Obj.extension_constructor *)
+        "<function>"
     in
     { key
     ; name
     ; description
     ; tags
     ; annotations
-    ; parameters = `Assoc []  (* TODO: Generate proper JSON schema *)
+    ; parameters = `Assoc []  (* TODO: Generate JSON schema from function type *)
     ; enabled
-    ; fn = (fun args -> 
+    ; fn = (fun ctx args -> 
         let%bind result = fn args in
         return (convert_to_content ?serializer result))
     }
@@ -106,9 +106,8 @@ end
 
 type mounted_server = {
   prefix : string option;
-  server : Server.t;
+  server : Server.t;  (* TODO: Define Server module *)
 }
-[@@deriving sexp]
 
 type t = {
   mutable tools : Tool.t String.Map.t;
@@ -116,15 +115,8 @@ type t = {
   mask_error_details : bool;
   duplicate_behavior : DuplicateBehavior.t;
 }
-[@@deriving sexp]
 
 let create ?(duplicate_behavior = DuplicateBehavior.Warn) ?(mask_error_details = true) () =
-  let mask_error_details = Option.value mask_error_details ~default:Settings.mask_error_details in
-  let duplicate_behavior = 
-    match duplicate_behavior with
-    | None -> DuplicateBehavior.Warn
-    | Some behavior -> behavior
-  in
   { tools = String.Map.empty
   ; mounted_servers = []
   ; mask_error_details
@@ -135,14 +127,14 @@ let mount t ~server ~prefix =
   t.mounted_servers <- { prefix; server } :: t.mounted_servers
 
 let rec load_tools t ~via_server =
-  let%bind all_tools =
+  let%bind all_tools = 
     Deferred.List.fold t.mounted_servers ~init:String.Map.empty ~f:(fun acc mounted ->
-      try%bind
+      Monitor.try_with (fun () ->
         let%bind child_results =
           if via_server then
-            Server.list_tools mounted.server
+            Server.list_tools mounted.server  (* TODO: Implement in Server module *)
           else
-            load_tools mounted.server.tool_manager ~via_server:false
+            Server.get_tools mounted.server   (* TODO: Implement in Server module *)
         in
         let child_dict =
           List.fold child_results ~init:String.Map.empty ~f:(fun acc tool ->
@@ -151,17 +143,20 @@ let rec load_tools t ~via_server =
         match mounted.prefix with
         | Some prefix ->
           Map.fold child_dict ~init:acc ~f:(fun ~key ~data acc ->
-            let prefixed_tool = Tool.with_key data (prefix ^ "_" ^ data.Tool.key) in
+            let prefixed_name = prefix ^ "_" ^ data.Tool.key in
+            let prefixed_tool = Tool.with_key data prefixed_name in
             Map.set acc ~key:prefixed_tool.Tool.key ~data:prefixed_tool)
         | None ->
           return (Map.merge acc child_dict ~f:(fun ~key:_ -> function
             | `Left x | `Right x -> Some x
-            | `Both (_, x) -> Some x))
-      with exn ->
-        Log.Global.warning "Failed to get tools from mounted server '%s': %s"
-          (Option.value mounted.prefix ~default:"<no prefix>")
-          (Exn.to_string exn);
-        return acc)
+            | `Both (_, x) -> Some x)))
+      >>| function
+      | Ok result -> result
+      | Error exn ->
+          Log.Global.error "Failed to get tools from mounted server '%s': %s"
+            (Option.value mounted.prefix ~default:"<no prefix>")
+            (Exn.to_string exn);
+          acc)
   in
   return (Map.merge all_tools t.tools ~f:(fun ~key:_ -> function
     | `Left x | `Right x -> Some x
@@ -175,7 +170,7 @@ let get_tool t key =
   let%bind tools = load_tools t ~via_server:false in
   match Map.find tools key with
   | Some tool -> return tool
-  | None -> not_found_error (sprintf "Tool %s not found" key)
+  | None -> raise (Not_found_s (Sexp.message "Tool not found" [("key", Atom key)]))
 
 let get_tools t = load_tools t ~via_server:false
 
@@ -223,7 +218,7 @@ let add_tool t tool =
          t.tools <- Map.set t.tools ~key:tool.Tool.key ~data:tool;
          tool
        | Error ->
-         tool_error (sprintf "Tool already exists: %s" tool.Tool.key)
+         raise (Tool_error (sprintf "Tool already exists: %s" tool.Tool.key))
        | Ignore -> existing)
     | None ->
       t.tools <- Map.set t.tools ~key:tool.Tool.key ~data:tool;
@@ -232,28 +227,25 @@ let add_tool t tool =
 let remove_tool t key =
   match Map.find t.tools key with
   | Some _ -> t.tools <- Map.remove t.tools key
-  | None -> not_found_error (sprintf "Tool %s not found" key)
+  | None -> raise (Not_found_s (Sexp.message "Tool not found" [("key", Atom key)]))
 
 let call_tool t key arguments =
-  let%bind () = return () in
   match Map.find t.tools key with
   | Some tool ->
-    (try%bind
-       let%bind result = tool.fn arguments in
-       return result
-     with
-     | Tool_error _ as e ->
-       Log.Global.error ~exn:e "Error calling tool %s" key;
-       raise e
-     | exn ->
-       Log.Global.error ~exn "Error calling tool %s" key;
-       if t.mask_error_details then
-         tool_error (sprintf "Error calling tool %s" key)
-       else
-         tool_error ~exn (sprintf "Error calling tool %s" key))
+    Monitor.try_with ~extract_exn:true
+      (fun () -> tool.Tool.fn arguments)
+    >>| function
+    | Ok result -> result
+    | Error exn ->
+      Log.Global.error "Error calling tool %s: %s" key (Exn.to_string exn);
+      if t.mask_error_details then
+        raise (Tool_error (sprintf "Error calling tool %s" key))
+      else
+        raise exn
   | None ->
+    (* Try mounted servers *)
     let rec try_mounted = function
-      | [] -> not_found_error (sprintf "Tool %s not found" key)
+      | [] -> raise (Not_found_s (Sexp.message "Tool not found" [("key", Atom key)]))
       | mounted :: rest ->
         let tool_key =
           match mounted.prefix with
@@ -261,42 +253,15 @@ let call_tool t key arguments =
             String.chop_prefix_exn key ~prefix:(prefix ^ "_")
           | _ -> key
         in
-        try%bind
-          Server.call_tool mounted.server tool_key arguments
+        match%bind
+          Monitor.try_with (fun () -> 
+            Server.call_tool mounted.server tool_key arguments)
         with
-        | Not_found_error _ -> try_mounted rest
-        | exn ->
-          Log.Global.error ~exn "Error calling tool %s on mounted server %s"
-            key (Option.value mounted.prefix ~default:"<no prefix>");
-          try_mounted rest
+        | Ok result -> return result
+        | Error (Not_found_s _) -> try_mounted rest
+        | Error exn ->
+            Log.Global.error "Error calling tool %s on mounted server %s: %s"
+              key (Option.value mounted.prefix ~default:"<no prefix>") (Exn.to_string exn);
+            try_mounted rest
     in
     try_mounted (List.rev t.mounted_servers) 
-
-let get_tools_from_mounted_servers mounted_servers =
-  List.fold mounted_servers ~init:(return []) ~f:(fun acc mounted ->
-    match%bind acc with
-    | Error e -> return (Error e)
-    | Ok acc ->
-      try%bind
-        let%bind child_results =
-          if mounted.via_server then
-            Server.list_tools mounted.server
-          else
-            mounted.server.list_tools ()
-        in
-        let tools =
-          List.map child_results ~f:(fun tool ->
-            let name =
-              match mounted.prefix with
-              | Some prefix -> sprintf "%s.%s" prefix tool.name
-              | None -> tool.name
-            in
-            { tool with name }
-          )
-        in
-        return (Ok (acc @ tools))
-      with exn ->
-        Log.Global.warning "Failed to get tools from mounted server '%s': %s"
-          (Option.value mounted.prefix ~default:"<no prefix>")
-          (Exn.to_string exn);
-        return (Ok acc)) 

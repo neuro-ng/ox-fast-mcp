@@ -1,12 +1,14 @@
 open Core
 open Types
 
+(** Error types and utilities for MCP *)
+
 (** Error data type for MCP errors *)
 type error_data = {
-  code : string;  (** Error code *)
+  code : int;  (** Error code *)
   message : string;  (** Error message *)
-  details : Yojson.Safe.t option;  (** Optional error details *)
-}
+  data : Yojson.Safe.t option;  (** Optional error details *)
+} [@@deriving yojson]
 
 (** MCP error type *)
 type t = [

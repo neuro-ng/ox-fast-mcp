@@ -10,6 +10,10 @@ module Settings = struct
   }
 
   let default = create ()
+
+  let get_deprecation_warnings t = t.deprecation_warnings
+
+  let set_deprecation_warnings _t value = { deprecation_warnings = value }
 end
 
 let settings = Settings.default

@@ -6,7 +6,7 @@ open Core
 exception Parameter_validation_error of string
 
 (** Function signature error *)
-exception Function_signature_error of string
+exception Template_function_signature_error of string
 
 (** Lambda function error *)
 exception Lambda_function_error of string
@@ -21,7 +21,7 @@ type parameter_type =
 [@@deriving sexp, compare]
 
 (** Function signature *)
-type function_signature = {
+type template_function_signature = {
   parameters : parameter_type list;
   docstring : string option;
   is_async : bool;
@@ -29,10 +29,10 @@ type function_signature = {
 
 (** Function type *)
 type ('ctx, 'params, 'result) function_type =
-  | Normal of (?ctx:'ctx -> 'params -> 'result Lwt.t) * function_signature
-  | Static of (?ctx:'ctx -> 'params -> 'result Lwt.t) * function_signature
-  | Method of (?ctx:'ctx -> 'params -> 'result Lwt.t) * function_signature
-  | Class_method of (?ctx:'ctx -> 'params -> 'result Lwt.t) * function_signature
+  | Normal of (?ctx:'ctx -> 'params -> 'result Lwt.t) * template_function_signature
+  | Static of (?ctx:'ctx -> 'params -> 'result Lwt.t) * template_function_signature
+  | Method of (?ctx:'ctx -> 'params -> 'result Lwt.t) * template_function_signature
+  | Class_method of (?ctx:'ctx -> 'params -> 'result Lwt.t) * template_function_signature
 
 (** Function metadata *)
 type function_metadata = {
@@ -41,7 +41,7 @@ type function_metadata = {
   is_static : bool;
   is_method : bool;
   is_class_method : bool;
-  signature : function_signature;
+  signature : template_function_signature;
 } [@@deriving sexp]
 
 (** Resource template type *)
@@ -68,7 +68,7 @@ type ('ctx, 'a) function_template = {
 val get_function_metadata : ('ctx, 'params, 'result) function_type -> function_metadata
 
 (** Extract required and optional parameters from function signature *)
-val extract_parameters : function_signature -> String.Set.t * String.Set.t
+val extract_parameters : template_function_signature -> String.Set.t * String.Set.t
 
 (** Extract parameter names from URI template *)
 val extract_uri_parameters : string -> String.Set.t
@@ -78,7 +78,7 @@ val validate_function_parameters :
   uri_template:string ->
   required_params:String.Set.t ->
   optional_params:String.Set.t ->
-  signature:function_signature ->
+  signature:template_function_signature ->
   unit
 
 (** Match URI against template and extract parameters *)

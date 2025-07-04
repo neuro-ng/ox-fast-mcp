@@ -6,30 +6,17 @@
 
 (package
  (name ox-fast-mcp)
- (synopsis "Fast MCP implementation in OCaml")
- (description "Fast MCP implementation in OCaml")
+ (synopsis "OCaml implementation of FastMCP")
+ (description "OCaml implementation of FastMCP using Jane Street libraries")
  (depends
   (ocaml (>= 4.14.0))
-  dune
-  core
-  yojson
-  uri
-  re
-  logs
-  lwt
-  lwt_ppx
-  ppx_fields_conv
-  ppx_jane
-  ppx_deriving
-  ppx_deriving_yojson
-  cohttp-lwt-unix
-  base64
-  fmt
-  (alcotest :with-test)
-  (alcotest-async :with-test)
-  (odoc :with-doc))
-  (license MIT)
-  (authors "Norwen Gonio")
-  (maintainers "neuro-ng@github.com")
- (source (github neuro-ng/ox-fast-mcp)))
+  (dune (>= 3.0))
+  (core (>= v0.16.0))
+  (core_unix (>= v0.16.0))
+  (async (>= v0.16.0))
+  (ppx_jane (>= v0.16.0))
+  (ppx_yojson_conv (>= v0.16.0))
+  (yojson (>= 2.1.0))
+  (expect_test_helpers_core :with-test)
+  (ppx_expect :with-test)))
  

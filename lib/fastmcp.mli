@@ -11,6 +11,12 @@ module Settings : sig
 
   val default : t
   (** Default settings instance *)
+
+  val get_deprecation_warnings : t -> bool
+  (** Get the current value of deprecation_warnings *)
+
+  val set_deprecation_warnings : t -> bool -> t
+  (** Set the value of deprecation_warnings *)
 end
 
 (** Global settings instance *)
