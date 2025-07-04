@@ -5,7 +5,7 @@
   core_unix.time_float_unix
   async
   expect_test_helpers_core
-  ox-fast-mcp.utilities)
+  utilities)
  (inline_tests)
  (preprocess
   (pps ppx_jane ppx_expect))

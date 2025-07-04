@@ -113,4 +113,9 @@ end
 
 module Image = Stable.V1.Image
 module Audio = Stable.V1.Audio
-module File = Stable.V1.File 
+module File = Stable.V1.File
+
+(** Type inspection functions *)
+val is_class_member_of_type : 'a option -> 'b option -> bool
+val issubclass_safe : 'a option -> 'b option -> bool
+val find_kwarg_by_type : 'a -> 'b option -> string option 

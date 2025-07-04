@@ -252,4 +252,41 @@ end
 
 module Image = Stable.V1.Image
 module Audio = Stable.V1.Audio
-module File = Stable.V1.File 
+module File = Stable.V1.File
+
+(** Type inspection functions *)
+let rec is_class_member_of_type type_to_check base_type =
+  match type_to_check with
+  | None -> false
+  | Some t ->
+    try
+      let open Ppx_yojson_conv_lib.Yojson_conv.Primitives in
+      match t with
+      | `Union types -> List.exists types ~f:(fun t -> is_class_member_of_type (Some t) base_type)
+      | `Annotated (t, _) -> is_class_member_of_type (Some t) base_type
+      | `Class c -> Poly.equal c base_type || issubclass_safe c base_type
+      | _ -> false
+    with _ -> false
+
+and issubclass_safe sub super =
+  match sub, super with
+  | None, _ | _, None -> false
+  | Some s, Some p ->
+    try
+      let open Ppx_yojson_conv_lib.Yojson_conv.Primitives in
+      match s, p with
+      | `Class s, `Class p -> Poly.equal s p || Poly.equal (Obj.magic s) (Obj.magic p)
+      | _ -> false
+    with _ -> false
+
+let find_kwarg_by_type func target_type =
+  let open Ppx_yojson_conv_lib.Yojson_conv.Primitives in
+  try
+    let params = Obj.magic (Obj.repr func) in
+    let param_names = List.filter_map params ~f:(fun (name, type_) ->
+      if is_class_member_of_type (Some type_) target_type
+      then Some name
+      else None)
+    in
+    List.hd param_names
+  with _ -> None 
