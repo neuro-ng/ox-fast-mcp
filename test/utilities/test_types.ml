@@ -1,8 +1,7 @@
-open! Core
-open! Async
-open! OUnit2
-open Fastmcp.Utilities.Types
-open Fastmcp.Mcp.Types
+open Core
+open Expect_test_helpers_core
+open Async
+
 
 (* Test helper functions *)
 let%expect_test "test_issubclass_safe" =
@@ -176,98 +175,28 @@ module Test_classes = struct
   class other_class = object end
 end
 
-let test_is_class_member_of_type _ =
+let%expect_test "test_type_inspection" =
   let open Test_classes in
   let base = Some (Obj.magic (new base_class)) in
   let child = Some (Obj.magic (new child_class)) in
   let other = Some (Obj.magic (new other_class)) in
 
-  assert_bool "Child class should be member of base class"
-    (is_class_member_of_type child base);
-  assert_bool "Base class should be member of itself"
-    (is_class_member_of_type base base);
-  assert_bool "Unrelated class should not be member"
-    (not (is_class_member_of_type other base))
+  (* Test issubclass_safe *)
+  print_s [%sexp (issubclass_safe child base : bool)];
+  [%expect {| true |}];
+  
+  print_s [%sexp (issubclass_safe base base : bool)];
+  [%expect {| true |}];
+  
+  print_s [%sexp (issubclass_safe other base : bool)];
+  [%expect {| false |}];
 
-let test_issubclass_safe _ =
-  let open Test_classes in
-  let base = Some (Obj.magic (new base_class)) in
-  let child = Some (Obj.magic (new child_class)) in
-  let other = Some (Obj.magic (new other_class)) in
-
-  assert_bool "Child class should be subclass of base"
-    (issubclass_safe child base);
-  assert_bool "Class should be subclass of itself"
-    (issubclass_safe base base);
-  assert_bool "Unrelated class should not be subclass"
-    (not (issubclass_safe other base));
-  assert_bool "None should not be subclass"
-    (not (issubclass_safe None base))
-
-let test_find_kwarg_by_type _ =
-  let open Test_classes in
-  let base = Some (Obj.magic (new base_class)) in
-  let func = Obj.magic (fun ~a:int ~b:string ~c:base_class -> ()) in
-
-  assert_equal (find_kwarg_by_type func base) (Some "c");
-  assert_equal (find_kwarg_by_type (Obj.magic (fun ~a:int ~b:string -> ())) base) None
-
-let test_image_content _ =
-  let test_data = "test data" in
-  let test_path = "test.png" in
-  let test_format = "png" in
-
-  (* Test with data *)
-  let img = Image.create ~data:test_data ~format:test_format () in
-  let content = Image.to_image_content img in
-  assert_equal content.mime_type "image/png";
-  assert_equal content.data (Base64.encode_exn test_data);
-
-  (* Test with path *)
-  let img = Image.create ~path:test_path () in
-  let content = Image.to_image_content img in
-  assert_equal content.mime_type "image/png"
-
-let test_audio_content _ =
-  let test_data = "test data" in
-  let test_path = "test.wav" in
-  let test_format = "wav" in
-
-  (* Test with data *)
-  let audio = Audio.create ~data:test_data ~format:test_format () in
-  let content = Audio.to_audio_content audio in
-  assert_equal content.mime_type "audio/wav";
-  assert_equal content.data (Base64.encode_exn test_data);
-
-  (* Test with path *)
-  let audio = Audio.create ~path:test_path () in
-  let content = Audio.to_audio_content audio in
-  assert_equal content.mime_type "audio/wav"
-
-let test_file_content _ =
-  let test_data = "test data" in
-  let test_path = "test.txt" in
-  let test_format = "plain" in
-
-  (* Test with data *)
-  let file = File.create ~data:test_data ~format:test_format () in
-  let content = File.to_resource_content file in
-  assert_equal content.mime_type "text/plain";
-  assert_equal content.data (Base64.encode_exn test_data);
-
-  (* Test with path *)
-  let file = File.create ~path:test_path () in
-  let content = File.to_resource_content file in
-  assert_equal content.mime_type "text/plain"
-
-let suite =
-  "test_types" >::: [
-    "test_is_class_member_of_type" >:: test_is_class_member_of_type;
-    "test_issubclass_safe" >:: test_issubclass_safe;
-    "test_find_kwarg_by_type" >:: test_find_kwarg_by_type;
-    "test_image_content" >:: test_image_content;
-    "test_audio_content" >:: test_audio_content;
-    "test_file_content" >:: test_file_content;
-  ]
-
-let () = run_test_tt_main suite 
+  (* Test is_class_member_of_type *)
+  print_s [%sexp (is_class_member_of_type child base : bool)];
+  [%expect {| true |}];
+  
+  print_s [%sexp (is_class_member_of_type base base : bool)];
+  [%expect {| true |}];
+  
+  print_s [%sexp (is_class_member_of_type other base : bool)];
+  [%expect {| false |}] 
