@@ -1,40 +1,42 @@
-(** JSON Schema manipulation utilities *)
+open! Core
+open! Async
 
-open Yojson.Safe
+(** Property type for JSON schema *)
+type property = {
+  name : string;
+  value : Yojson.Safe.t;
+} [@@deriving yojson]
 
-(** Remove a parameter from a JSON schema
-    @param schema The schema to modify
-    @param param The parameter name to remove
-    @return A new schema with the parameter removed *)
-val prune_param : t -> string -> t
+(** JSON schema type *)
+type json_schema = {
+  properties : property list option [@yojson.option];
+  required : string list option [@yojson.option];
+  defs : property list option [@yojson.option] [@key "$defs"];
+  additional_properties : bool option [@yojson.option];
+  title : string option [@yojson.option];
+} [@@deriving yojson]
 
-(** Remove unused definitions from a JSON schema
-    @param schema The schema to modify
-    @return A new schema with unused definitions removed *)
-val prune_unused_defs : t -> t
+(** Prune a parameter from a schema *)
+val prune_param : Yojson.Safe.t -> string -> Yojson.Safe.t
 
-(** Walk through a schema and optionally remove titles and additionalProperties
-    @param prune_titles Whether to remove title fields
-    @param prune_additional_properties Whether to remove additionalProperties: false
-    @param schema The schema to modify
-    @return A new schema with requested fields removed *)
-val walk_and_prune : ?prune_titles:bool -> ?prune_additional_properties:bool -> t -> t
+(** Walk schema and track def references *)
+val find_referenced_defs : Yojson.Safe.t -> string list
 
-(** Remove additionalProperties: false from a schema
-    @param schema The schema to modify
-    @return A new schema with additionalProperties: false removed *)
-val prune_additional_properties : t -> t
+(** Prune unused definitions from schema *)
+val prune_unused_defs : Yojson.Safe.t -> Yojson.Safe.t
 
-(** Compress a JSON schema by removing specified elements
-    @param prune_params List of parameter names to remove
-    @param prune_defs Whether to remove unused definitions
-    @param prune_additional_properties Whether to remove additionalProperties: false
-    @param prune_titles Whether to remove title fields
-    @param schema The schema to modify
-    @return A new compressed schema *)
+(** Walk schema and optionally prune titles and additionalProperties *)
+val walk_and_prune :
+  ?prune_titles:bool ->
+  ?prune_additional_properties:bool ->
+  Yojson.Safe.t ->
+  Yojson.Safe.t
+
+(** Compress schema by pruning specified elements *)
 val compress_schema :
   ?prune_params:string list ->
   ?prune_defs:bool ->
   ?prune_additional_properties:bool ->
   ?prune_titles:bool ->
-  t -> t 
+  Yojson.Safe.t ->
+  Yojson.Safe.t 

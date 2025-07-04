@@ -1,0 +1,43 @@
+Missing ML equivalents from Python imports:
+- copy module -> Using Core's copy functionality (not needed in OCaml due to immutable data structures)
+- defaultdict -> Using Core's Hashtbl.create with add_multi
+- collections.defaultdict -> Using Core's Hashtbl module
+
+Missing functionality:
+1. Deep copy implementation for Yojson.Safe.t
+   - Python uses copy.deepcopy
+   - Need to implement proper deep copy for JSON values
+
+2. Schema validation
+   - Add validation for schema structure
+   - Add type checking for schema values
+
+3. Error handling
+   - Add proper error types and handling
+   - Add validation error reporting
+
+4. Testing
+   - Add unit tests for all functions
+   - Add property-based tests for schema manipulation
+   - Add test cases from Python implementation
+
+5. Documentation
+   - Add more detailed documentation
+   - Add examples
+   - Add usage guidelines
+
+6. Performance optimizations
+   - Consider using Hash_set.t for faster lookups
+   - Consider using Map.t for schema properties
+   - Profile and optimize JSON traversal
+
+7. Additional features
+   - Add support for schema merging
+   - Add support for schema diff
+   - Add support for schema validation
+   - Add support for schema generation from types
+
+8. Safety improvements
+   - Add runtime checks for schema structure
+   - Add validation for JSON references
+   - Add cycle detection in schema references 
