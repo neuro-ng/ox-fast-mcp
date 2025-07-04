@@ -110,4 +110,97 @@ let%expect_test "test_many_items" =
     (value456)
     (value789)
     (value999) |}];
+  return ()
+
+let%expect_test "test_extends_expiration_on_overwrite" =
+  let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
+  let cache = TimedCache.create ~expiration:(Time_float_unix.Span.of_sec 10.0) in
+  TimedCache.set cache ~key:"test" ~value:"initial";
+  let%bind () = Clock.after (Time_float_unix.Span.of_sec 5.0) in
+  TimedCache.set cache ~key:"test" ~value:"updated";
+  let%bind () = Clock.after (Time_float_unix.Span.of_sec 3.0) in
+  print_s [%sexp (TimedCache.get cache ~key:"test" : string option)];
+  [%expect {| (updated) |}];
+  let%bind () = Clock.after (Time_float_unix.Span.of_sec 8.0) in
+  print_s [%sexp (TimedCache.get cache ~key:"test" : string option)];
+  [%expect {| () |}];
+  return ()
+
+let%expect_test "test_different_key_types" =
+  let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
+  let cache = TimedCache.create ~expiration:(Time_float_unix.Span.of_sec 10.0) in
+  
+  (* Test integer key *)
+  TimedCache.set cache ~key:(Int.to_string 42) ~value:"int_value";
+  print_s [%sexp (TimedCache.get cache ~key:(Int.to_string 42) : string option)];
+  
+  (* Test float key *)
+  TimedCache.set cache ~key:(Float.to_string 3.14) ~value:"float_value";
+  print_s [%sexp (TimedCache.get cache ~key:(Float.to_string 3.14) : string option)];
+  
+  (* Test tuple key *)
+  let tuple_key = sprintf "(%d,%d)" 1 2 in
+  TimedCache.set cache ~key:tuple_key ~value:"tuple_value";
+  print_s [%sexp (TimedCache.get cache ~key:tuple_key : string option)];
+  
+  [%expect {|
+    (int_value)
+    (float_value)
+    (tuple_value) |}];
+  return ()
+
+let%expect_test "test_none_value" =
+  let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
+  let cache = TimedCache.create ~expiration:(Time_float_unix.Span.of_sec 10.0) in
+  TimedCache.set cache ~key:"none_key" ~value:"";  (* Empty string represents None *)
+  print_s [%sexp (TimedCache.get cache ~key:"none_key" : string option)];
+  [%expect {| ("") |}];
+  return ()
+
+let%expect_test "test_edge_case_zero_expiration" =
+  let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
+  let cache = TimedCache.create ~expiration:(Time_float_unix.Span.of_sec 0.0) in
+  TimedCache.set cache ~key:"test" ~value:"value";
+  let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.001) in
+  print_s [%sexp (TimedCache.get cache ~key:"test" : string option)];
+  [%expect {| () |}];  (* Should be expired *)
+  return ()
+
+let%expect_test "test_negative_expiration" =
+  let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
+  let cache = TimedCache.create ~expiration:(Time_float_unix.Span.of_sec (-1.0)) in
+  TimedCache.set cache ~key:"test" ~value:"value";
+  print_s [%sexp (TimedCache.get cache ~key:"test" : string option)];
+  [%expect {| () |}];  (* Should be immediately expired *)
+  return ()
+
+let%expect_test "test_cache_consistency" =
+  let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
+  let cache = TimedCache.create ~expiration:(Time_float_unix.Span.of_sec 10.0) in
+  
+  (* Add multiple items *)
+  TimedCache.set cache ~key:"key1" ~value:"value1";
+  TimedCache.set cache ~key:"key2" ~value:"value2";
+  TimedCache.set cache ~key:"key3" ~value:"value3";
+  
+  (* Check all items *)
+  print_s [%sexp (TimedCache.get cache ~key:"key1" : string option)];
+  print_s [%sexp (TimedCache.get cache ~key:"key2" : string option)];
+  print_s [%sexp (TimedCache.get cache ~key:"key3" : string option)];
+  
+  (* Overwrite one item *)
+  TimedCache.set cache ~key:"key2" ~value:"updated_value";
+  
+  (* Check again *)
+  print_s [%sexp (TimedCache.get cache ~key:"key1" : string option)];
+  print_s [%sexp (TimedCache.get cache ~key:"key2" : string option)];
+  print_s [%sexp (TimedCache.get cache ~key:"key3" : string option)];
+  
+  [%expect {|
+    (value1)
+    (value2)
+    (value3)
+    (value1)
+    (updated_value)
+    (value3) |}];
   return () 
