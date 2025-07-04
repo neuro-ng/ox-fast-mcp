@@ -1,0 +1,69 @@
+Completed test cases:
+1. Prune Parameter Tests
+   - test_prune_param_nonexistent: Test pruning a parameter that doesn't exist
+   - test_prune_param_exists: Test pruning a parameter that exists
+   - test_prune_param_last_property: Test pruning the only/last parameter
+   - test_prune_param_from_required: Test pruning a parameter that's in the required list
+   - test_prune_param_last_required: Test pruning the last required parameter
+
+2. Prune Unused Definitions Tests
+   - test_prune_unused_defs_removes_unreferenced: Test removing unreferenced definitions
+   - test_prune_unused_defs_nested_references_kept: Test keeping nested referenced definitions
+
+3. Walk and Prune Tests
+   - test_walk_and_prune_additional_properties: Test removing additionalProperties when false
+   - test_walk_and_prune_titles: Test removing title fields at all levels
+
+4. Compress Schema Tests
+   - test_compress_schema_all_features: Test all pruning operations together
+
+Missing ML equivalents from Python test imports:
+- pytest -> Using expect_test_helpers_core and ppx_expect
+- pytest.raises -> Using [%expect_test] and [%expect_exact] for exception testing
+
+Missing test functionality:
+1. Property-based testing
+   - Add property tests using Core.Quickcheck
+   - Add property tests for schema manipulation
+   - Add property tests for JSON validation
+
+2. Additional test cases
+   - Add tests for array references
+   - Add tests for nested references removal
+   - Add tests for schema validation
+   - Add tests for error handling
+   - Add tests for edge cases
+
+3. Test organization
+   - Group tests by functionality
+   - Add test helpers for common operations
+   - Add test fixtures
+
+4. Test coverage
+   - Add tests for all functions
+   - Add tests for all code paths
+   - Add tests for error conditions
+   - Add tests for boundary conditions
+
+5. Test documentation
+   - Add test descriptions
+   - Add test categories
+   - Add test requirements
+
+6. Test improvements
+   - Add performance tests
+   - Add stress tests
+   - Add regression tests
+   - Add integration tests
+
+7. Test utilities
+   - Add schema generators
+   - Add schema validators
+   - Add test data generators
+   - Add test helpers
+
+8. Test infrastructure
+   - Add test runner
+   - Add test reporting
+   - Add test coverage reporting
+   - Add test automation 
