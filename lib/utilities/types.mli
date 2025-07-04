@@ -116,6 +116,19 @@ module Audio = Stable.V1.Audio
 module File = Stable.V1.File
 
 (** Type inspection functions *)
-val is_class_member_of_type : 'a option -> 'b option -> bool
-val issubclass_safe : 'a option -> 'b option -> bool
-val find_kwarg_by_type : 'a -> 'b option -> string option 
+val is_class_member_of_type :
+  ([> `Annotated of 'a * 'b
+   | `Class of ([> `Class of 'd ] as 'c) option
+   | `Union of 'a list ] as 'a) option
+  -> 'c option
+  -> bool
+
+val issubclass_safe :
+  ([> `Class of 'b ] as 'a) option
+  -> 'a option
+  -> bool
+
+val find_kwarg_by_type :
+  'a
+  -> [> `Class of 'b ] option
+  -> string option 
