@@ -1,13 +1,17 @@
 (library
  (name utilities)
  (public_name ox-fast-mcp.utilities)
- (modules cache json_schema)
- (wrapped false)
+ (modules cache json_schema http)
+ (wrapped false) 
  (libraries
   core
-  core_unix.time_float_unix
   async
-  yojson
-  ppx_yojson_conv)
+  core_unix.command_unix
+  core_unix.time_float_unix
+  ppx_compare.runtime-lib
+  yojson)
  (preprocess
-  (pps ppx_jane ppx_yojson_conv))) 
+  (pps ppx_jane ppx_yojson_conv))
+ (instrumentation
+  (backend bisect_ppx)))
+  

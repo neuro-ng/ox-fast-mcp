@@ -1,0 +1,22 @@
+# HTTP Module Translation TODOs
+
+## Implementation Notes
+- Python's socket module functionality translated to OCaml's Unix module
+- Using Core.Unix instead of the standard library Unix module for Jane Street style
+- Socket handling is more explicit in OCaml compared to Python's context manager
+
+## Missing Functionality
+None - all functionality from the Python version has been implemented in OCaml
+
+## Python to OCaml Module Mappings
+- Python `socket` → OCaml `Core.Unix`
+  - `socket.socket()` → `Unix.socket`
+  - `socket.AF_INET` → `Unix.PF_INET`
+  - `socket.SOCK_STREAM` → `Unix.SOCK_STREAM`
+  - `socket.bind()` → `Unix.bind`
+  - `socket.getsockname()` → `Unix.getsockname`
+
+## Additional Considerations
+- OCaml implementation includes explicit socket closure with `Unix.close`
+- Error handling is more explicit in OCaml with pattern matching on address type
+- Used labeled arguments in OCaml for better readability and type safety 

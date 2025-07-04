@@ -1,7 +1,3 @@
-(** HTTP utilities for FastMCP *)
-
-(** Find an available port by letting the OS assign one.
-    @return The port number assigned by the OS.
-    @raise Failure if unable to get an INET socket address.
-    @raise Unix_error for other socket-related errors. *)
+(** [find_available_port ()] finds an available port by letting the OS assign one.
+    Returns the port number assigned by the OS. *)
 val find_available_port : unit -> int 

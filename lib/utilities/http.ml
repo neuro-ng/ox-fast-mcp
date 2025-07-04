@@ -1,21 +1,12 @@
-(** HTTP utilities for FastMCP *)
+open Core
 
-open Unix
-
-(** Find an available port by letting the OS assign one *)
 let find_available_port () =
-  let sock = socket PF_INET SOCK_STREAM 0 in
-  try
-    let localhost = inet_addr_of_string "127.0.0.1" in
-    bind sock (ADDR_INET (localhost, 0));
-    let addr = getsockname sock in
-    match addr with
-    | ADDR_INET(_, port) ->
-      close sock;
-      port
-    | _ ->
-      close sock;
-      raise (Failure "Expected INET socket address")
-  with e ->
-    close sock;
-    raise e 
+  let addr = Core_unix.ADDR_INET (Core_unix.Inet_addr.localhost, 0) in
+  let sock = Core_unix.socket ~domain:Core_unix.PF_INET ~kind:Core_unix.SOCK_STREAM ~protocol:0 () in
+  Core_unix.bind sock ~addr;
+  let port = Core_unix.getsockname sock |> function
+    | Core_unix.ADDR_INET (_, port) -> port
+    | _ -> failwith "Expected INET address"
+  in
+  Core_unix.close sock;
+  port 
