@@ -1,0 +1,28 @@
+# HTTP Test Module TODOs
+
+## Implementation Notes
+- Using Jane Street's expect_test framework for testing
+- Tests cover basic port availability and uniqueness
+- Using Core_unix for socket operations in tests
+
+## Test Coverage
+Current coverage:
+- ✓ Basic port number validation
+- ✓ Port availability verification
+- ✓ Unique port allocation
+
+Potential additional tests to consider:
+- Error handling for socket operations
+- Concurrent port allocation testing
+- Performance testing for multiple consecutive calls
+
+## Python to OCaml Test Framework Mappings
+- Python `unittest` → OCaml `expect_test_helpers_core`
+- Python `self.assert*` → OCaml `[%test_result]` and `[%expect]`
+- Python context managers → OCaml explicit resource management
+
+## Additional Considerations
+- Tests use Jane Street's sexp-based output validation
+- Explicit port range validation (1-65535)
+- Resource cleanup with explicit socket closure
+- Non-deterministic port allocation handled appropriately in expect tests 

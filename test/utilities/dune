@@ -1,14 +1,16 @@
 (library
  (name test_utilities)
- (modules test_json_schema test_cache)
+ (modules test_json_schema test_cache test_http test_types)
  (libraries
   core
+  core_unix
+  core_unix.command_unix
   core_unix.time_float_unix
   async
   yojson
   ppx_yojson_conv
   expect_test_helpers_core
-  ox-fast-mcp.utilities)
+  utilities)
  (inline_tests)
  (preprocess
   (pps ppx_jane ppx_expect)))
