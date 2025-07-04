@@ -1,11 +1,13 @@
 (library
  (name ox_fast_mcp)
  (public_name ox-fast-mcp)
+ (modules utilities)
  (libraries
   core
   core_unix.time_float_unix
   async
   yojson
-  ppx_yojson_conv_lib)
+  ppx_yojson_conv_lib
+  utilities)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))

@@ -2,6 +2,7 @@
  (name utilities)
  (public_name ox-fast-mcp.utilities)
  (modules cache)
+ (wrapped false)
  (libraries
   core
   core_unix.time_float_unix
