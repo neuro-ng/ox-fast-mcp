@@ -1,7 +1,6 @@
 (library
- (name utilities)
+ (name oxfmcp_utils)
  (public_name ox-fast-mcp.utilities)
- (modules cache json_schema http types)
  (wrapped false) 
  (libraries
   core
