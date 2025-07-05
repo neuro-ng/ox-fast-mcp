@@ -44,18 +44,20 @@ let%expect_test "Log_level comparison works correctly" =
   in
   test_comparison "DEBUG" "INFO";
   [%expect {|
-    ((level1 DEBUG)
-     (level2 INFO)
-     (equal false)
-     (less_than true)
-     (greater_than false)) |}];
+    ((level1       DEBUG)
+     (level2       INFO)
+     (equal        false)
+     (less_than    true)
+     (greater_than false))
+    |}];
   test_comparison "ERROR" "WARNING";
   [%expect {|
-    ((level1 ERROR)
-     (level2 WARNING)
-     (equal false)
-     (less_than false)
-     (greater_than true)) |}];
+    ((level1       ERROR)
+     (level2       WARNING)
+     (equal        false)
+     (less_than    false)
+     (greater_than true))
+    |}];
   return ()
 
 let%expect_test "Logger.create sets correct defaults" =
@@ -78,7 +80,7 @@ let%expect_test "Logger handles messages based on level" =
   handler.instance.log <- (fun ~level:_ ~msg -> Queue.enqueue buffer msg);
   Logger.info logger "test message";
   print_s [%sexp (Queue.to_list buffer : string list)];
-  [%expect {| (test_message) |}];
+  [%expect {| ("test message") |}];
   return ()
 
 let%expect_test "Rich_handler formats messages correctly" =
@@ -96,7 +98,8 @@ let%expect_test "configure_logging sets up logger correctly" =
     ; has_handlers = (not (List.is_empty (Logger.get_handlers logger)) : bool)
     }];
   [%expect {|
-    ((name FastMCP)
-     (level INFO)
-     (has_handlers true)) |}];
+    ((name         FastMCP)
+     (level        INFO)
+     (has_handlers true))
+    |}];
   return () 

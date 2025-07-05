@@ -54,18 +54,10 @@ let%expect_test "test_stats" =
   ignore (Cache.TimedCache.get cache ~key:"nonexistent");
   print_s [%sexp (Cache.TimedCache.get_stats cache : Cache.cache_stats)];
   [%expect {|
-    ((hits   0)
-     (misses 0)
-     (sets   0))
-    ((hits   0)
-     (misses 0)
-     (sets   1))
-    ((hits   1)
-     (misses 0)
-     (sets   1))
-    ((hits   1)
-     (misses 1)
-     (sets   1))
+    ((hits 0) (misses 0) (sets 0))
+    ((hits 0) (misses 0) (sets 1))
+    ((hits 1) (misses 0) (sets 1))
+    ((hits 1) (misses 1) (sets 1))
     |}];
   return ()
 

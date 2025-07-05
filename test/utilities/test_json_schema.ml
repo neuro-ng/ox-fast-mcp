@@ -112,29 +112,26 @@ let%expect_test "test_prune_unused_defs_removes_unreferenced" =
 
 let%expect_test "test_prune_unused_defs_nested_references_kept" =
   let schema = `Assoc [
-    "properties", `Assoc [
-      "foo", `Assoc ["$ref", `String "#/$defs/foo_def"]
-    ];
-    "$defs", `Assoc [
-      "foo_def", `Assoc [
-        "type", `String "object";
-        "properties", `Assoc [
-          "nested", `Assoc ["$ref", `String "#/$defs/nested_def"]
-        ]
-      ];
-      "nested_def", `Assoc ["type", `String "string"];
-      "unused_def", `Assoc ["type", `String "integer"]
-    ]
+    ("properties", `Assoc [
+      ("foo", `Assoc [("$ref", `String "#/$defs/foo_def")])
+    ]);
+    ("$defs", `Assoc [
+      ("foo_def", `Assoc [
+        ("type", `String "object");
+        ("properties", `Assoc [
+          ("nested", `Assoc [("$ref", `String "#/$defs/nested_def")])
+        ])
+      ]);
+      ("nested_def", `Assoc [("type", `String "string")]);
+      ("unused_def", `Assoc [("type", `String "number")])
+    ])
   ] in
-  let%bind () = 
-    let result = prune_unused_defs schema in
-    print_json result
-  in
+  let%bind () = print_json (prune_unused_defs schema) in
   [%expect {|
     ((properties ((foo (($ref #/$defs/foo_def)))))
-     ($defs (
-       (foo_def (
-         (type object) (properties ((nested (($ref #/$defs/nested_def)))))))
+     ($defs
+      ((foo_def
+        ((type object) (properties ((nested (($ref #/$defs/nested_def)))))))
        (nested_def ((type string))))))
     |}];
   return ()

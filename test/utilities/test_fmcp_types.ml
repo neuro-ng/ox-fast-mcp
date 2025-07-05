@@ -166,8 +166,10 @@ let%expect_test "test_file_to_resource_content_text" =
   print_s [%sexp (resource.resource : Fmcp_types.resource_contents)];
   [%expect {|
     Resource
-    (Text
-     ((uri file:///resource.plain) (mime_type text/plain) (text "hello world")))
+    (Text (
+      (uri       file:///resource.plain)
+      (mime_type text/plain)
+      (text      "hello world")))
     |}];
   return ()
 
@@ -180,9 +182,10 @@ let%expect_test "test_file_to_resource_content_binary" =
   print_s [%sexp (resource.resource : Fmcp_types.resource_contents)];
   [%expect {|
     Resource
-    (Blob
-     ((uri file:///resource.pdf) (mime_type application/pdf)
-      (blob YmluYXJ5IGRhdGE=)))
+    (Blob (
+      (uri       file:///resource.pdf)
+      (mime_type application/pdf)
+      (blob      YmluYXJ5IGRhdGE=)))
     |}];
   return ()
 
@@ -195,8 +198,10 @@ let%expect_test "test_file_to_resource_content_with_name" =
   print_s [%sexp (resource.resource : Fmcp_types.resource_contents)];
   [%expect {|
     Resource
-    (Blob
-     ((uri file:///custom.pdf) (mime_type application/pdf) (blob dGVzdCBkYXRh)))
+    (Blob (
+      (uri       file:///custom.pdf)
+      (mime_type application/pdf)
+      (blob      dGVzdCBkYXRh)))
     |}];
   return ()
 
