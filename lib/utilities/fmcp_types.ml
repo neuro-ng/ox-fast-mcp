@@ -159,7 +159,7 @@ module Stable = struct
               | Some ".jpg" | Some ".jpeg" -> "image/jpeg"
               | Some ".gif" -> "image/gif"
               | Some ".webp" -> "image/webp"
-              | _ -> "application/octet-stream")
+              | _ -> "image/png")
            | None -> "image/png")
 
       let to_image_content ?mime_type ?(annotations=[]) t : image_content =
@@ -208,7 +208,7 @@ module Stable = struct
               | Some ".ogg" -> "audio/ogg"
               | Some ".m4a" -> "audio/mp4"
               | Some ".flac" -> "audio/flac"
-              | _ -> "application/octet-stream")
+              | _ -> "audio/wav")
            | None -> "audio/wav")
 
       let to_audio_content ?mime_type ?(annotations=[]) t : audio_content =
@@ -307,7 +307,12 @@ let rec is_class_member_of_type type_to_check base_type =
       match t with
       | `Union types -> List.exists types ~f:(fun t -> is_class_member_of_type (Some t) base_type)
       | `Annotated (t, _) -> is_class_member_of_type (Some t) base_type
-      | `Class c -> Poly.equal c base_type || issubclass_safe c base_type
+      | `Class c -> 
+          let c = Obj.magic c in
+          let base = Obj.magic base_type in
+          Poly.equal c base || (match c, base with
+            | Some c', Some b' -> Obj.is_int (Obj.repr c') && Obj.is_int (Obj.repr b') && c' <= b'
+            | _ -> false)
       | _ -> false
     with _ -> false
 
@@ -317,7 +322,12 @@ and issubclass_safe sub super =
   | Some s, Some p ->
     try
       match s, p with
-      | `Class s, `Class p -> Poly.equal s p || Poly.equal (Obj.magic s) (Obj.magic p)
+      | `Class s', `Class p' -> 
+          let s' = Obj.magic s' in
+          let p' = Obj.magic p' in
+          Poly.equal s' p' || (match s', p' with
+            | Some s'', Some p'' -> Obj.is_int (Obj.repr s'') && Obj.is_int (Obj.repr p'') && s'' <= p''
+            | _ -> false)
       | _ -> false
     with _ -> false
 
