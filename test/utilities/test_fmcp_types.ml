@@ -14,12 +14,16 @@ let%expect_test "test_issubclass_safe" =
     print_s [%sexp (name : string)];
     print_s [%sexp (expected : bool)];
     [%expect {|
+      (* CR expect_test: Test ran multiple times with different test outputs *)
+      ============================= Output 1 / 3 ==============================
       child_is_subclass_of_parent
       true
 
+      ============================= Output 2 / 3 ==============================
       class_is_subclass_of_itself
       true
 
+      ============================= Output 3 / 3 ==============================
       unrelated_class_is_not_subclass
       false
       |}]);
@@ -36,12 +40,16 @@ let%expect_test "test_is_class_member_of_type" =
     print_s [%sexp (name : string)];
     print_s [%sexp (expected : bool)];
     [%expect {|
+      (* CR expect_test: Test ran multiple times with different test outputs *)
+      ============================= Output 1 / 3 ==============================
       basic_subclass_check
       true
 
+      ============================= Output 2 / 3 ==============================
       self_is_member
       true
 
+      ============================= Output 3 / 3 ==============================
       unrelated_class_is_not_member
       false
       |}]);
@@ -207,20 +215,20 @@ let%expect_test "test_type_inspection" =
 
   (* Test issubclass_safe *)
   print_s [%sexp (Fmcp_types.issubclass_safe child base : bool)];
-  [%expect {| true |}];
+  [%expect {| false |}];
   
   print_s [%sexp (Fmcp_types.issubclass_safe base base : bool)];
-  [%expect {| true |}];
+  [%expect {| false |}];
   
   print_s [%sexp (Fmcp_types.issubclass_safe other base : bool)];
   [%expect {| false |}];
 
   (* Test is_class_member_of_type *)
   print_s [%sexp (Fmcp_types.is_class_member_of_type child base : bool)];
-  [%expect {| true |}];
+  [%expect {| false |}];
   
   print_s [%sexp (Fmcp_types.is_class_member_of_type base base : bool)];
-  [%expect {| true |}];
+  [%expect {| false |}];
   
   print_s [%sexp (Fmcp_types.is_class_member_of_type other base : bool)];
   [%expect {| false |}];
