@@ -13,7 +13,16 @@ let%expect_test "test_issubclass_safe" =
   List.iter test_cases ~f:(fun (name, expected) ->
     print_s [%sexp (name : string)];
     print_s [%sexp (expected : bool)];
-    [%expect {||}]);
+    [%expect {|
+      child_is_subclass_of_parent
+      true
+
+      class_is_subclass_of_itself
+      true
+
+      unrelated_class_is_not_subclass
+      false
+      |}]);
   return ()
 
 let%expect_test "test_is_class_member_of_type" =
@@ -26,7 +35,16 @@ let%expect_test "test_is_class_member_of_type" =
   List.iter test_cases ~f:(fun (name, expected) ->
     print_s [%sexp (name : string)];
     print_s [%sexp (expected : bool)];
-    [%expect {||}]);
+    [%expect {|
+      basic_subclass_check
+      true
+
+      self_is_member
+      true
+
+      unrelated_class_is_not_member
+      false
+      |}]);
   return ()
 
 (* Test Image module *)
@@ -140,7 +158,9 @@ let%expect_test "test_file_to_resource_content_text" =
   print_s [%sexp (resource.resource : Fmcp_types.resource_contents)];
   [%expect {|
     Resource
-    (Text ((text "hello world") (mime_type text/plain) (uri "file:///resource.plain"))) |}];
+    (Text
+     ((uri file:///resource.plain) (mime_type text/plain) (text "hello world")))
+    |}];
   return ()
 
 let%expect_test "test_file_to_resource_content_binary" =
@@ -152,7 +172,10 @@ let%expect_test "test_file_to_resource_content_binary" =
   print_s [%sexp (resource.resource : Fmcp_types.resource_contents)];
   [%expect {|
     Resource
-    (Blob ((blob "YmluYXJ5IGRhdGE=") (mime_type application/pdf) (uri "file:///resource.pdf"))) |}];
+    (Blob
+     ((uri file:///resource.pdf) (mime_type application/pdf)
+      (blob YmluYXJ5IGRhdGE=)))
+    |}];
   return ()
 
 let%expect_test "test_file_to_resource_content_with_name" =
@@ -164,7 +187,9 @@ let%expect_test "test_file_to_resource_content_with_name" =
   print_s [%sexp (resource.resource : Fmcp_types.resource_contents)];
   [%expect {|
     Resource
-    (Blob ((blob "dGVzdCBkYXRh") (mime_type application/pdf) (uri "file:///custom.pdf"))) |}];
+    (Blob
+     ((uri file:///custom.pdf) (mime_type application/pdf) (blob dGVzdCBkYXRh)))
+    |}];
   return ()
 
 (** Test classes for type inspection tests *)
