@@ -1,9 +1,20 @@
-open Core
-open Async
+open! Core
+open! Async
+open Yojson.Safe
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 (** Basic JSON representation with proper OCaml types *)
-type json = Yojson.Safe.t
+type json = Yojson.Safe.t [@@deriving yojson]
+
+type json_value = [
+  | `Null
+  | `Bool of bool
+  | `Int of int
+  | `Float of float
+  | `String of string
+  | `List of json_value list
+  | `Assoc of (string * json_value) list
+] [@@deriving yojson]
 
 (** Latest protocol version *)
 let latest_protocol_version = "2025-06-18"
@@ -150,25 +161,36 @@ type resource_template = {
 } [@@deriving yojson]
 
 (** Resource contents *)
-type resource_contents = {
+type blob_resource_contents = {
   uri : string;
-  mime_type : string option; [@key "mimeType"] [@yojson.option]
-  meta : json option; [@key "_meta"] [@yojson.option]
-} [@@deriving yojson]
+  mime_type : string;
+  blob : string;  (* Base64 encoded data *)
+} [@@deriving yojson, compare]
 
 type text_resource_contents = {
   uri : string;
-  mime_type : string option; [@key "mimeType"] [@yojson.option]
-  meta : json option; [@key "_meta"] [@yojson.option]
+  mime_type : string;
   text : string;
-} [@@deriving yojson]
+} [@@deriving yojson, compare]
 
-type blob_resource_contents = {
-  uri : string;
-  mime_type : string option; [@key "mimeType"] [@yojson.option]
-  meta : json option; [@key "_meta"] [@yojson.option]
-  blob : string;
-} [@@deriving yojson]
+type resource_contents =
+  | Blob of blob_resource_contents
+  | Text of text_resource_contents
+[@@deriving yojson, compare]
+
+let create_blob_resource ~uri ~mime_type ~blob () =
+  Blob { uri; mime_type; blob }
+
+let create_text_resource ~uri ~mime_type ~text () =
+  Text { uri; mime_type; text }
+
+let get_mime_type = function
+  | Blob { mime_type; _ } -> mime_type
+  | Text { mime_type; _ } -> mime_type
+
+let get_uri = function
+  | Blob { uri; _ } -> uri
+  | Text { uri; _ } -> uri
 
 (** Tool types *)
 type tool_annotations = (string * string) list [@@deriving yojson]
@@ -585,9 +607,3 @@ type unsubscribe_request_params = {
 
 (** Deprecated resource reference type *)
 type resource_reference = resource_template_reference [@@deriving sexp, yojson] [@@deprecated "Use resource_template_reference instead"]
-
-(** Helper functions for common operations *)
-
-let create_text_content text = { text = Some text; image = None; error = None }
-let create_image_content image = { text = None; image = Some image; error = None }
-let create_error_content error = { text = None; image = None; error = Some error }

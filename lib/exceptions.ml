@@ -15,7 +15,7 @@ exception Validation_error of string
 exception Resource_error of string
 
 (** Error in tool operations *)
-exception Tool_error of string
+exception Tool_error of string * exn option
 
 (** Error in prompt operations *)
 exception Prompt_error of string
@@ -36,11 +36,11 @@ exception Disabled_error of string
 let fast_mcp_error msg = Fast_mcp_error msg
 let validation_error msg = Validation_error msg
 let resource_error msg = Resource_error msg
-let tool_error msg = Tool_error msg
+let tool_error ?exn msg = raise (Tool_error (msg, exn))
 let prompt_error msg = Prompt_error msg
 let invalid_signature msg = Invalid_signature msg
 let client_error msg = Client_error msg
-let not_found_error msg = Not_found_error msg
+let not_found_error msg = raise (Not_found_error msg)
 let disabled_error msg = Disabled_error msg
 
 (** Helper functions to convert exceptions to strings *)
@@ -48,7 +48,8 @@ let error_to_string = function
   | Fast_mcp_error msg -> sprintf "FastMCP error: %s" msg
   | Validation_error msg -> sprintf "Validation error: %s" msg
   | Resource_error msg -> sprintf "Resource error: %s" msg
-  | Tool_error msg -> sprintf "Tool error: %s" msg
+  | Tool_error (msg, Some exn) -> sprintf "Tool error: %s (%s)" msg (Exn.to_string exn)
+  | Tool_error (msg, None) -> sprintf "Tool error: %s" msg
   | Prompt_error msg -> sprintf "Prompt error: %s" msg
   | Invalid_signature msg -> sprintf "Invalid signature: %s" msg
   | Client_error msg -> sprintf "Client error: %s" msg
@@ -60,8 +61,9 @@ exception Not_found_s of Sexp.t
 
 let () =
   Caml.Printexc.register_printer (function
-    | Tool_error msg -> Some (sprintf "Tool error: %s" msg)
-    | Not_found_s sexp -> Some (sprintf "Not found: %s" (Sexp.to_string_hum sexp))
+    | Tool_error (msg, Some exn) -> Some (sprintf "Tool error: %s (%s)" msg (Exn.to_string exn))
+    | Tool_error (msg, None) -> Some (sprintf "Tool error: %s" msg)
+    | Not_found_error msg -> Some (sprintf "Not found: %s" msg)
     | _ -> None)
 
 module Exception_group = struct

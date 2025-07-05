@@ -87,7 +87,7 @@ Dependencies Added:
 - logs.fmt: For log formatting
 - fmt: For pretty printing
 - fmt.tty: For terminal output
-- core_unix: For file operations
+- core_unix: For file operations 
 - re: For pattern validation
 - re.str: For string pattern matching
 

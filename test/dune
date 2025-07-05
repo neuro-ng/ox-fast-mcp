@@ -1,5 +1,5 @@
 (library
- (name test_ox_fast_mcp)
+ (name test_ox_fmcp_utilities)
  (libraries
   core
   core_unix

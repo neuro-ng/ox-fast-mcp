@@ -1,3 +1,6 @@
+open! Core
+open! Async
+
 (** Latest protocol version *)
 val latest_protocol_version : string
 
@@ -143,25 +146,27 @@ type resource_template = {
 } [@@deriving yojson]
 
 (** Resource contents *)
-type resource_contents = {
+type blob_resource_contents = {
   uri : string;
-  mime_type : string option; [@key "mimeType"] [@yojson.option]
-  meta : Yojson.Safe.t option; [@key "_meta"] [@yojson.option]
-} [@@deriving yojson]
+  mime_type : string;
+  blob : string;  (* Base64 encoded data *)
+} [@@deriving yojson, compare]
 
 type text_resource_contents = {
   uri : string;
-  mime_type : string option; [@key "mimeType"] [@yojson.option]
-  meta : Yojson.Safe.t option; [@key "_meta"] [@yojson.option]
+  mime_type : string;
   text : string;
-} [@@deriving yojson]
+} [@@deriving yojson, compare]
 
-type blob_resource_contents = {
-  uri : string;
-  mime_type : string option; [@key "mimeType"] [@yojson.option]
-  meta : Yojson.Safe.t option; [@key "_meta"] [@yojson.option]
-  blob : string;
-} [@@deriving yojson]
+type resource_contents =
+  | Blob of blob_resource_contents
+  | Text of text_resource_contents
+[@@deriving yojson, compare]
+
+val create_blob_resource : uri:string -> mime_type:string -> blob:string -> unit -> resource_contents
+val create_text_resource : uri:string -> mime_type:string -> text:string -> unit -> resource_contents
+val get_mime_type : resource_contents -> string
+val get_uri : resource_contents -> string
 
 (** Tool types *)
 type tool_annotations = (string * string) list [@@deriving yojson]

@@ -230,3 +230,55 @@ Implementation Progress: 56% complete
 - Additional test helpers for complex scenarios
 
 The implementation is now at 56% completion with solid foundation for error handling and validation. The next major milestone is implementing the forward/forward_raw context management system. 
+
+# Tool Transform Tests TODO
+
+## Implemented Tests
+- [x] Basic tool creation and management
+- [x] Tool execution with sync and async handlers
+- [x] Tool parameter validation
+- [x] Tool enable/disable functionality
+- [x] Server integration tests
+- [x] Error handling tests
+- [x] Duplicate behavior tests
+
+## Missing Python to OCaml Equivalents
+- [ ] datetime.timedelta -> Time_float_unix.Span
+- [ ] datetime.datetime.now -> Time_float_unix.now
+- [ ] unittest.mock.patch -> No direct equivalent, use Async.Clock.after
+- [ ] dict -> Core.Map or Core.Hashtbl
+- [ ] frozenset -> Core.Set
+- [ ] None -> Option.none
+- [ ] NotImplemented -> Not_found_s or Tool_error
+
+## Missing Tests
+- [ ] Test tool with streaming response
+- [ ] Test tool with binary response
+- [ ] Test tool with JSON response
+- [ ] Test tool parameter validation with complex schemas
+- [ ] Test tool with custom serializer
+- [ ] Test tool with custom error handling
+- [ ] Test tool with custom middleware
+- [ ] Test tool with custom annotations
+- [ ] Test tool with custom tags
+- [ ] Test tool with custom validation
+
+## Missing Functionality
+- [ ] Implement proper JSON schema generation in Tool.from_function
+- [ ] Add function name extraction using Caml.Obj.extension_constructor
+- [ ] Complete enable/disable functions with proper context handling
+- [ ] Add validation for tool parameters against JSON schema
+- [ ] Fix type errors in function_signature handling
+- [ ] Resolve ambiguity between template and utilities function_signature types
+
+## Server Integration
+- [ ] Implement server communication in load_tools
+- [ ] Add proper server tool fetching in get_tools_from_mounted_servers
+- [ ] Complete server mounting functionality
+- [ ] Add server health checks and error recovery
+
+## Type Conversions
+- [ ] Add proper type conversion between Python and OCaml types
+- [ ] Add proper error handling for type conversion failures
+- [ ] Add proper validation for type conversion
+- [ ] Add proper serialization for type conversion

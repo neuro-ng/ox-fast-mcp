@@ -2,7 +2,9 @@
  (name test_tools)
  (libraries
   core
+  core_unix
   async
+  async_unix
   yojson
   ppx_yojson_conv_lib
   tools
@@ -11,5 +13,6 @@
   expect_test_helpers_core
   expect_test_helpers_async)
  (preprocess
-  (pps ppx_jane ppx_yojson_conv))
- (inline_tests))
+  (pps ppx_jane ppx_yojson_conv ppx_expect))
+ (inline_tests
+  (deps (glob_files ../../lib/tools/*.ml))))

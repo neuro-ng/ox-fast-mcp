@@ -2,15 +2,11 @@
  (name mcp)
  (public_name ox-fast-mcp.mcp)
  (libraries
-  base
   core
   async
   yojson
-  uri
-  cohttp
-  cohttp-async
-  ppx_yojson_conv
-  ppx_yojson_conv_lib)
+  ppx_yojson_conv_lib
+  mcp_types)
  (modules
   mcp_error
   types
