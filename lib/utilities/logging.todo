@@ -11,6 +11,8 @@
 [x] Fix level comparison and type issues
 [x] Integrate with Async_log for actual logging
 [x] Support different log levels (Debug, Info, Warning, Error, Critical)
+[x] Fix format string and level handling in Log.Global calls
+[x] Clean up module interfaces and remove unused code
 
 ## Missing ML Equivalents
 [ ] Rich tracebacks (currently just using basic error printing)
@@ -30,4 +32,12 @@
 [ ] Add support for contextual logging (request ID, trace ID, etc.)
 [ ] Add support for log formatting templates
 [ ] Add support for log colorization
-[ ] Add support for log buffering and batching 
+[ ] Add support for log buffering and batching
+
+## Recent Changes
+- Fixed format string usage in Log.Global calls
+- Simplified log handler interface by removing unnecessary module type
+- Fixed level comparison functions in Log_types
+- Improved warning level handling in async logging
+- Added proper handling for Critical level (mapping to Error in Async_log)
+- Fixed unused variable warnings in logging configuration 
