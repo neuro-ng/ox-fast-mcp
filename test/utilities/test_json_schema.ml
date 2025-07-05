@@ -1,7 +1,6 @@
 open! Core
 open! Async
 open! Json_schema
-open! Expect_test_helpers_core
 
 let rec sexp_of_yojson (json : Yojson.Safe.t) : Sexp.t =
   match json with

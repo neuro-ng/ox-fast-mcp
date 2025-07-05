@@ -1,6 +1,5 @@
 open! Core
 open! Async
-open Expect_test_helpers_core
 
 let%expect_test "find_available_port returns a valid port number" =
   let port = Http.find_available_port () in

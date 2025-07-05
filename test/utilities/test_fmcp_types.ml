@@ -1,6 +1,6 @@
-open Core
-open Expect_test_helpers_core
-open Async
+open! Core
+open! Async
+open! Expect_test_helpers_core
 
 (* Test helper functions *)
 let%expect_test "test_issubclass_safe" =

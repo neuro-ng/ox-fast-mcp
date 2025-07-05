@@ -1,6 +1,5 @@
 open! Core
 open! Async
-open! Expect_test_helpers_core
 
 let%expect_test "test_init" =
   let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
