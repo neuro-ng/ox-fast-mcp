@@ -331,5 +331,3 @@ let find_kwarg_by_type func target_type =
     in
     List.hd param_names
   with _ -> None 
-
-module Time = Time_float_unix

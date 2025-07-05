@@ -28,7 +28,7 @@ type resource_content = {
   name : string option;
   annotations : (string * json) list;
   format : string option;
-} [@@deriving yojson]
+} [@@deriving yojson, sexp]
 
 type content_type =
   | Text of string
