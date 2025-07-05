@@ -13,9 +13,13 @@ let format t ~level ~msg =
 
 let log t ~level ~msg =
   let formatted = format t ~level ~msg in
-  match Log_types.Level.to_level level with
+  let alog_level = Log_types.Level.to_level level in
+
+  (* Use the level-specific _s (sexp) functions from Log.Global *)
+  match alog_level with
   | `Debug -> Log.Global.debug "%s" formatted
   | `Info -> Log.Global.info "%s" formatted
-  | `Warning -> Log.Global.info ~level:Async_log_kernel__Level.Warning "%s" formatted
+  | `Warning -> Log.Global.info "%s" formatted
   | `Error -> Log.Global.error "%s" formatted
-  | `Critical -> Log.Global.error "%s" formatted  (* Log doesn't have Critical, using Error *) 
+  (* Map `Critical` to `Error` for Async_log as it doesn't have a specific `Critical` level *)
+  | `Critical -> Log.Global.error "%s" formatted

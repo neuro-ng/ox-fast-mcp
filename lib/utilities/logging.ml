@@ -103,8 +103,9 @@ let configure_logging
     ?(enable_rich_tracebacks = true)
     ?logger
     () =
-  let logger = Option.value logger ~default:(Logger.create "FastMCP") in
+  let logger = Option.value logger ~default:(Logger.create ~level "FastMCP") in
   Logger.clear_handlers logger;
-  let handler = Rich_handler.create ~enable_rich_tracebacks () in
+  let rich_handler = Rich_handler.create ~enable_rich_tracebacks () in
+  ignore (rich_handler : Rich_handler.t);  (* Will be used when we implement proper rich handling *)
   Logger.add_handler logger (module Rich_handler);
   logger 
