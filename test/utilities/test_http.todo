@@ -26,3 +26,24 @@ Potential additional tests to consider:
 - Explicit port range validation (1-65535)
 - Resource cleanup with explicit socket closure
 - Non-deterministic port allocation handled appropriately in expect tests 
+
+Changes made to test_http.ml:
+
+✓ Fixed expect test for port number validation
+  - Changed to check port validity boolean instead of specific port number
+  - Removed dependency on actual port numbers which vary between runs
+  - Maintained socket binding test for port availability
+
+✓ Fixed expect test for consecutive port calls
+  - Changed to check ports_are_different boolean instead of specific port numbers
+  - Simplified test to focus on port uniqueness rather than actual values
+
+✓ Code cleanup
+  - Added proper open directives with ! for Core and Async
+  - Consistent formatting and semicolon usage
+  - Clear comments explaining test behavior
+
+Future considerations:
+- Consider adding tests for concurrent port allocation
+- Consider adding tests for specific port ranges
+- Consider adding tests for error cases (e.g., no available ports) 
