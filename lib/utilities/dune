@@ -1,15 +1,19 @@
 (library
- (name oxfmcp_utils)
+ (name utilities)
  (public_name ox-fast-mcp.utilities)
- (wrapped false) 
+ (wrapped false)
+ (modules_without_implementation)
  (libraries
   core
   async
+  async_log
+  core_unix
   core_unix.command_unix
   core_unix.time_float_unix
   ppx_compare.runtime-lib
   base64
   magic-mime
+  ppx_yojson_conv
   yojson)
  (preprocess
   (pps ppx_jane ppx_yojson_conv))
