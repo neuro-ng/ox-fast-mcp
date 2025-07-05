@@ -51,6 +51,10 @@ module Logger = struct
   let get_logger name =
     create ~level:Log_types.Level.Info (sprintf "FastMCP.%s" name)
 
+  let get_name t = t.name
+  let get_level t = t.level
+  let get_handlers t = t.handlers
+
   let add_handler t handler_module =
     let handler = {
       module_instance = handler_module;

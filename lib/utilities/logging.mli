@@ -17,9 +17,16 @@ end
 
 module Logger : sig
   type t
+  type handler = private {
+    module_instance : (module Log_types.Handler);
+    instance : Log_handler.t;
+  }
 
   val create : ?level:Log_types.Level.t -> string -> t
   val get_logger : string -> t
+  val get_name : t -> string
+  val get_level : t -> Log_types.Level.t
+  val get_handlers : t -> handler list
   val add_handler : t -> (module Log_types.Handler) -> unit
   val remove_handler : t -> (module Log_types.Handler) -> unit
   val clear_handlers : t -> unit
