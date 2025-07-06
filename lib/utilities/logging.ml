@@ -49,7 +49,7 @@ module Logger = struct
     { name; level; handlers = [] }
 
   let get_logger name =
-    create ~level:Log_types.Level.Info (sprintf "FastMCP.%s" name)
+    create ~level:Log_types.Level.Info (sprintf "OxFastMCP.%s" name)
 
   let get_name t = t.name
   let get_level t = t.level
@@ -107,7 +107,7 @@ let configure_logging
     ?(enable_rich_tracebacks = true)
     ?logger
     () =
-  let logger = Option.value logger ~default:(Logger.create ~level "FastMCP") in
+  let logger = Option.value logger ~default:(Logger.create ~level "OxFastMCP") in
   Logger.clear_handlers logger;
   let rich_handler = Rich_handler.create ~enable_rich_tracebacks () in
   ignore (rich_handler : Rich_handler.t);  (* Will be used when we implement proper rich handling *)

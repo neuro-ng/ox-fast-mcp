@@ -69,7 +69,7 @@ let%expect_test "Logger.create sets correct defaults" =
 let%expect_test "Logger.get_logger creates nested loggers" =
   let logger = Logger.get_logger "test" in
   print_s [%sexp (Logger.get_name logger : string)];
-  [%expect {| FastMCP.test |}];
+  [%expect {| OxFastMCP.test |}];
   return ()
 
 let%expect_test "Logger handles messages based on level" =
@@ -98,7 +98,7 @@ let%expect_test "configure_logging sets up logger correctly" =
     ; has_handlers = (not (List.is_empty (Logger.get_handlers logger)) : bool)
     }];
   [%expect {|
-    ((name         FastMCP)
+    ((name         OxFastMCP)
      (level        INFO)
      (has_handlers true))
     |}];
