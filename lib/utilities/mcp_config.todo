@@ -1,0 +1,45 @@
+OCaml Implementation TODOs for mcp_config:
+
+Missing ML equivalents from Python imports:
+[ ] httpx.Auth -> Need to implement Client.Auth module
+[ ] pydantic.AnyUrl -> Using string type instead, consider implementing URL validation
+[ ] fastmcp.client -> not implemented yet
+[x] pydantic.ConfigDict -> Not needed in OCaml due to different type system
+[x] pydantic.Field -> Using ppx attributes instead
+[x] FastMCPBaseModel -> Not needed in OCaml due to different type system
+
+Implementation TODOs:
+[x] Basic type definitions
+  [x] Transport_type module
+  [x] Stdio_mcp_server module
+  [x] Remote_mcp_server module
+  [x] Mcp_config module
+
+[x] URL handling
+  [x] Using Uri module for URL parsing
+  [x] Basic URL validation
+  [x] SSE path detection
+
+[ ] Transport implementation
+  [ ] Need to implement Client.Transports module
+  [ ] Need to implement transport creation functions:
+    [ ] create_stdio_transport
+    [ ] create_sse_transport
+    [ ] create_streamable_http_transport
+
+[ ] Authentication handling
+  [ ] Need to implement Client.Auth module
+  [ ] Need to implement custom auth serialization
+  [ ] Need to implement OAuth authentication flow
+
+[ ] Testing
+  [ ] Add unit tests for URL parsing
+  [ ] Add unit tests for transport type inference
+  [ ] Add unit tests for config parsing
+  [ ] Add integration tests with transport creation
+
+Future Enhancements:
+[ ] Consider adding validation for URLs beyond basic prefix check
+[ ] Consider adding more robust error handling for config parsing
+[ ] Consider adding support for environment variable expansion in config
+[ ] Consider adding support for config file includes/references 

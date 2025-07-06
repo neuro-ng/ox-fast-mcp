@@ -10,8 +10,9 @@
   cohttp-lwt-unix
   logs
   lwt
+  ppx_yojson_conv
   base64)
  (modules
   resource)
  (preprocess
-  (pps ppx_jane lwt_ppx))) 
+  (pps ppx_jane lwt_ppx ppx_yojson_conv))) 

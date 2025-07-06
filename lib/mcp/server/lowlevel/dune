@@ -13,4 +13,4 @@
  (modules
   helper_types)
  (preprocess
-  (pps ppx_jane ppx_deriving_yojson))) 
+  (pps ppx_jane ppx_yojson_conv))) 

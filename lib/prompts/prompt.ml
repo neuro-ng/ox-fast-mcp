@@ -1,6 +1,6 @@
 (** Prompt implementation for FastMCP OCaml *)
 
-open Utilities.Types
+open Fmcp_types
 
 (** Prompt handler signature *)
 type prompt_handler = execution_context -> (string * json) list -> prompt_message list Lwt.t

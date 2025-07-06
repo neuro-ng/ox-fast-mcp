@@ -1,6 +1,6 @@
 (** CLI implementation for FastMCP OCaml *)
 
-open Utilities.Types
+open Fmcp_types
 
 (** CLI configuration options *)
 type cli_config = {
