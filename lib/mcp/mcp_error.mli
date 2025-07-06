@@ -1,5 +1,5 @@
-open Core
-open Types
+open! Core
+open! Types
 
 (** Error types and utilities for MCP *)
 
@@ -30,12 +30,6 @@ exception Mcp_error of error_data
     @return A new MCP error exception
 *)
 val create : error_data -> exn
-
-(** Get the error data from an MCP error
-    @param exn The exception to extract error data from
-    @return The error data if the exception is an MCP error, None otherwise
-*)
-val to_error_data : exn -> error_data option
 
 (** Convert error to error_data *)
 val to_error_data : t -> error_data

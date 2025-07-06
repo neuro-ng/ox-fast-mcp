@@ -2,8 +2,8 @@
     This module defines a wrapper type that combines JSONRPCMessage with metadata
     to support transport-specific features like resumability. *)
 
-open Core
-open Lwt.Syntax
+open! Core
+open! Lwt.Syntax
 
 (** Type alias for resumption token *)
 type resumption_token = string
