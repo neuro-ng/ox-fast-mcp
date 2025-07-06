@@ -51,4 +51,12 @@ val configure_logging :
   ?enable_rich_tracebacks:bool ->
   ?logger:Logger.t ->
   unit ->
-  Logger.t 
+  Logger.t
+
+module Global : sig
+  val debug : string -> unit
+  val info : string -> unit
+  val warning : string -> unit
+  val error : string -> unit
+  val critical : string -> unit
+end 

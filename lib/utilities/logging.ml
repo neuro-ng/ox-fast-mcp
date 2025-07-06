@@ -112,4 +112,18 @@ let configure_logging
   let rich_handler = Rich_handler.create ~enable_rich_tracebacks () in
   ignore (rich_handler : Rich_handler.t);  (* Will be used when we implement proper rich handling *)
   Logger.add_handler logger (module Rich_handler);
-  logger 
+  logger
+
+module Global = struct
+  let default_logger = lazy (
+    let logger = Logger.create "OxFastMCP.Global" in
+    Logger.add_handler logger (module Rich_handler);
+    logger
+  )
+
+  let debug msg = Logger.debug (Lazy.force default_logger) msg
+  let info msg = Logger.info (Lazy.force default_logger) msg
+  let warning msg = Logger.warning (Lazy.force default_logger) msg
+  let error msg = Logger.error (Lazy.force default_logger) msg
+  let critical msg = Logger.critical (Lazy.force default_logger) msg
+end 

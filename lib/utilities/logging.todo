@@ -13,6 +13,7 @@
 [x] Support different log levels (Debug, Info, Warning, Error, Critical)
 [x] Fix format string and level handling in Log.Global calls
 [x] Clean up module interfaces and remove unused code
+[x] Add support for Logging.Global
 
 ## Missing ML Equivalents
 [ ] Rich tracebacks (currently just using basic error printing)
