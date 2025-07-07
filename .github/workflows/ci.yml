@@ -32,7 +32,7 @@ jobs:
         mkdir -p /workspace
         cp -r . /workspace/
         cd /workspace
-        la -al
+        l -al
 
     - name: Build project
       working-directory: /workspace
