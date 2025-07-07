@@ -1,6 +1,4 @@
 (test
  (name test_client)
  (modules test_client)
- (libraries
-  base
-  stdio))
+ (libraries base stdio))

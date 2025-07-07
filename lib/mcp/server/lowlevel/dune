@@ -1,16 +1,7 @@
 (library
  (name lowlevel)
  (public_name ox-fast-mcp.mcp.server.lowlevel)
- (libraries
-  base
-  core
-  async
-  yojson
-  uri
-  cohttp-lwt-unix
-  logs
-  lwt)
- (modules
-  helper_types)
+ (libraries base core async yojson uri cohttp-lwt-unix logs lwt)
+ (modules helper_types)
  (preprocess
-  (pps ppx_jane ppx_yojson_conv))) 
+  (pps ppx_jane ppx_yojson_conv)))
