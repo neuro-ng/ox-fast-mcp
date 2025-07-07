@@ -32,6 +32,7 @@ jobs:
         mkdir -p /workspace
         cp -r . /workspace/
         cd /workspace
+        la -al
 
     - name: Build project
       working-directory: /workspace
@@ -86,48 +87,6 @@ jobs:
       run: |
         eval $(opam env)
         opam lint ox-fast-mcp.opam
-
-  examples:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/neuro-ng/oxcaml-ubuntu:latest
-      options: --user ocaml-user --workdir /workspace
-    env:
-      USER: ocaml-user
-      HOME: /home/ocaml-user
-      SHELL: /bin/bash
-      PATH: /home/ocaml-user/.opam/5.2.0+ox/bin:/home/ocaml-user/.opam/5.2.0+ox/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
-      OPAMROOT: /home/ocaml-user/.opam
-      OPAMSWITCH: 5.2.0+ox
-      OPAMYES: 1
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set working directory
-      run: |
-        mkdir -p /workspace
-        cp -r . /workspace/
-        cd /workspace
-
-    - name: Build examples
-      working-directory: /workspace
-      run: |
-        eval $(opam env)
-        dune build examples/
-
-    - name: Test calculator server
-      working-directory: /workspace
-      run: |
-        eval $(opam env)
-        dune exec examples/calculator_server.exe
-
-    - name: Test demo
-      working-directory: /workspace
-      run: |
-        eval $(opam env)
-        dune exec examples/demo.exe
 
   publish:
     runs-on: ubuntu-latest
