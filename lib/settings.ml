@@ -119,7 +119,7 @@ module Settings = struct
   }
   [@@deriving compare, equal, sexp, yojson]
 
-  let env_prefixes = ["FASTMCP_"; "FASTMCP_SERVER_"]
+  let env_prefixes = ["OXFASTMCP_"; "OXFASTMCP_SERVER_"]
   let env_nested_delimiter = "__"
   let env_file = ".env"
 
@@ -226,6 +226,15 @@ module Settings = struct
         Deferred.Or_error.error_string (sprintf "Invalid port number: %d" t.port)
       else
         Deferred.Or_error.return ()
+
+    let%bind () = Sys.dir_exists t.home
+      |> Deferred.Or_error.error_string (sprintf "Home directory %s does not exist" t.home)
+    in
+    Deferred.return (Ok ())
+
+  let settings t =
+    Logging.Global.warning "Using settings.settings is deprecated. Use settings directly instead.";
+    t
     in
     Deferred.return (Ok ())
 
