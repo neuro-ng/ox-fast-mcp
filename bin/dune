@@ -1,4 +1,4 @@
 (executable
  (public_name oxfastmcp)
  (name main)
- (libraries cli utilities tools)) 
+ (libraries utilities)) 
