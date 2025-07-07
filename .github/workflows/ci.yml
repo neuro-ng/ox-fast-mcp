@@ -101,7 +101,7 @@ jobs:
       OPAMROOT: /home/ocaml-user/.opam
       OPAMSWITCH: 5.2.0+ox
       OPAMYES: 1
-    needs: [build-and-test, lint, examples]
+    needs: [build-and-test, lint]
     if: github.event_name == 'release'
     
     steps:
