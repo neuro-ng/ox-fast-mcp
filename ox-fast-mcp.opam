@@ -1,7 +1,7 @@
 opam-version: "2.0"
 name: "ox-fast-mcp"
 version: "0.1.0"
-maintainer: "Norwen Gonio <neuro-ng@github.com>"
+maintainer: "Norwen Gonio <neu.gonio@gmail.com>"
 authors: ["Norwen Gonio"]
 license: "Apache-2.0"
 homepage: "https://github.com/neuro-ng/ox-fast-mcp"
