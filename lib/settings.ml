@@ -186,10 +186,24 @@ module Settings = struct
 
   let warn_if_deprecated prefix value =
     if String.equal prefix "OX_FASTMCP_SERVER_" then
-      Logging.Global.warning "Using `OX_FASTMCP_SERVER_` environment variables is deprecated. Use `OX_FASTMCP_` instead."
+      Logging.Global.warning "Using `OX_FASTMCP_SERVER_` environment variables is deprecated. Use `OXFASTMCP_` instead."
     else
       ();
     value
+
+  let parse_bool_or_error value var_name =
+    match String.lowercase value with
+    | "true" | "1" -> Ok true
+    | "false" | "0" -> Ok false
+    | _ -> Or_error.error_string (sprintf "Invalid boolean value for %s: '%s'. Expected 'true'/'false' or '1'/'0'." var_name value)
+
+  let parse_int_or_error value var_name =
+    try Ok (Int.of_string value)
+    with _ -> Or_error.error_string (sprintf "Invalid integer value for %s: '%s'." var_name value)
+
+  let parse_float_or_error value var_name =
+    try Ok (Float.of_string value)
+    with _ -> Or_error.error_string (sprintf "Invalid float value for %s: '%s'." var_name value)
 
   let load_from_env t =
     let open Or_error.Let_syntax in
@@ -197,9 +211,24 @@ module Settings = struct
       List.find_map env_prefixes ~f:(fun prefix ->
         let full_name = prefix ^ var_name in
         match Sys.getenv full_name with
-        | Some value -> Some (warn_if_deprecated prefix value)
-        | None -> None)
+        | Some value -> 
+          Some (warn_if_deprecated prefix value)
+        | None -> 
+          None)
     in
+    
+    let%bind home =
+      match try_prefixes "HOME" with
+      | Some value -> Ok value
+      | None -> Ok t.home
+    in
+
+    let%bind test_mode =
+      match try_prefixes "TEST_MODE" with
+      | Some value -> parse_bool_or_error value "TEST_MODE"
+      | None -> Ok t.test_mode
+    in
+
     let%bind log_level =
       try
         match try_prefixes "LOG_LEVEL" with
@@ -207,19 +236,143 @@ module Settings = struct
         | None -> Ok t.log_level
       with Failure msg -> Or_error.error_string msg
     in
+
+    let%bind enable_rich_tracebacks =
+      match try_prefixes "ENABLE_RICH_TRACEBACKS" with
+      | Some value -> parse_bool_or_error value "ENABLE_RICH_TRACEBACKS"
+      | None -> Ok t.enable_rich_tracebacks
+    in
+
+    let%bind deprecation_warnings =
+      match try_prefixes "DEPRECATION_WARNINGS" with
+      | Some value -> parse_bool_or_error value "DEPRECATION_WARNINGS"
+      | None -> Ok t.deprecation_warnings
+    in
+
+    let%bind client_raise_first_exceptiongroup_error =
+      match try_prefixes "CLIENT_RAISE_FIRST_EXCEPTIONGROUP_ERROR" with
+      | Some value -> parse_bool_or_error value "CLIENT_RAISE_FIRST_EXCEPTIONGROUP_ERROR"
+      | None -> Ok t.client_raise_first_exceptiongroup_error
+    in
+
     let%bind resource_prefix_format =
       match try_prefixes "RESOURCE_PREFIX_FORMAT" with
       | Some value -> Resource_prefix_format.of_string value
       | None -> Ok t.resource_prefix_format
     in
+
+    let%bind client_init_timeout =
+      match try_prefixes "CLIENT_INIT_TIMEOUT" with
+      | Some value ->
+        let%bind f = parse_float_or_error value "CLIENT_INIT_TIMEOUT" in
+        Ok (Some f)
+      | None -> Ok t.client_init_timeout (* Keep existing option state *)
+    in
+
+    let%bind host =
+      match try_prefixes "HOST" with
+      | Some value -> Ok value
+      | None -> Ok t.host
+    in
+
+    let%bind port =
+      match try_prefixes "PORT" with
+      | Some value -> parse_int_or_error value "PORT"
+      | None -> Ok t.port
+    in
+
+    let%bind sse_path =
+      match try_prefixes "SSE_PATH" with
+      | Some value -> Ok value
+      | None -> Ok t.sse_path
+    in
+
+    let%bind message_path =
+      match try_prefixes "MESSAGE_PATH" with
+      | Some value -> Ok value
+      | None -> Ok t.message_path
+    in
+
+    let%bind streamable_http_path =
+      match try_prefixes "STREAMABLE_HTTP_PATH" with
+      | Some value -> Ok value
+      | None -> Ok t.streamable_http_path
+    in
+
+    let%bind debug =
+      match try_prefixes "DEBUG" with
+      | Some value -> parse_bool_or_error value "DEBUG"
+      | None -> Ok t.debug
+    in
+
+    let%bind mask_error_details =
+      match try_prefixes "MASK_ERROR_DETAILS" with
+      | Some value -> parse_bool_or_error value "MASK_ERROR_DETAILS"
+      | None -> Ok t.mask_error_details
+    in
+
+    let%bind server_dependencies =
+      match try_prefixes "SERVER_DEPENDENCIES" with
+      | Some value -> Ok (String.split ~on:',' value |> List.map ~f:String.strip)
+      | None -> Ok t.server_dependencies
+    in
+
+    let%bind json_response =
+      match try_prefixes "JSON_RESPONSE" with
+      | Some value -> parse_bool_or_error value "JSON_RESPONSE"
+      | None -> Ok t.json_response
+    in
+
+    let%bind stateless_http =
+      match try_prefixes "STATELESS_HTTP" with
+      | Some value -> parse_bool_or_error value "STATELESS_HTTP"
+      | None -> Ok t.stateless_http
+    in
+
     let%bind default_auth_provider =
       match try_prefixes "DEFAULT_AUTH_PROVIDER" with
-      | Some value -> 
+      | Some value ->
         let%bind provider = Auth_provider.of_string value in
         Ok (Some provider)
       | None -> Ok t.default_auth_provider
     in
-    Ok { t with log_level; resource_prefix_format; default_auth_provider }
+
+    let%bind include_tags =
+      match try_prefixes "INCLUDE_TAGS" with
+      | Some value -> Ok (Some (String.split ~on:',' value |> List.map ~f:String.strip))
+      | None -> Ok t.include_tags (* Keep existing option state *)
+    in
+
+    let%bind exclude_tags =
+      match try_prefixes "EXCLUDE_TAGS" with
+      | Some value -> Ok (Some (String.split ~on:',' value |> List.map ~f:String.strip))
+      | None -> Ok t.exclude_tags (* Keep existing option state *)
+    in
+
+    (* Construct the new record with all updated fields *)
+    Ok {
+      home;
+      test_mode;
+      log_level;
+      enable_rich_tracebacks;
+      deprecation_warnings;
+      client_raise_first_exceptiongroup_error;
+      resource_prefix_format;
+      client_init_timeout;
+      host;
+      port;
+      sse_path;
+      message_path;
+      streamable_http_path;
+      debug;
+      mask_error_details;
+      server_dependencies;
+      json_response;
+      stateless_http;
+      default_auth_provider;
+      include_tags;
+      exclude_tags;
+    }
 
   let load_from_dotenv t =
     let%bind exists = Sys.file_exists env_file in
