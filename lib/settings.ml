@@ -244,6 +244,13 @@ module Settings = struct
   let validate t =
     let open Deferred.Or_error.Let_syntax in 
     let%bind () =
+      if String.equal t.home "" then
+        Deferred.Or_error.error_string (sprintf "Home path cannot be empty")
+      else
+        Deferred.Or_error.return ()
+    in
+
+    let%bind () =
       if t.port < 0 || t.port > 65535 then
         Deferred.Or_error.error_string (sprintf "Invalid port number: %d" t.port)
       else
