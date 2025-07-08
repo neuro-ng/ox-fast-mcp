@@ -19,7 +19,7 @@ module Duplicate_behavior = struct
     | "error" -> Ok Error
     | "replace" -> Ok Replace
     | "ignore" -> Ok Ignore
-    | s -> Or_error.error_string ("Invalid duplicate behavior: " ^ s)
+    | s -> failwith (sprintf "Invalid duplicate behavior: %s" s)
 
   let to_string = function
     | Warn -> "warn"
@@ -37,7 +37,7 @@ module Resource_prefix_format = struct
   let of_string = function
     | "protocol" -> Ok Protocol
     | "path" -> Ok Path
-    | s -> Or_error.error_string ("Invalid resource prefix format: " ^ s)
+    | s -> failwith (sprintf "Invalid resource prefix format: %s" s)
 
   let to_string = function
     | Protocol -> "protocol"
@@ -398,14 +398,14 @@ module Settings = struct
     let open Deferred.Or_error.Let_syntax in 
     let%bind () =
       if String.equal t.home "" then
-        Deferred.Or_error.error_string (sprintf "Home path cannot be empty")
+        failwith (sprintf "Home path cannot be empty")
       else
         Deferred.Or_error.return ()
     in
 
     let%bind () =
       if t.port < 0 || t.port > 65535 then
-        Deferred.Or_error.error_string (sprintf "Invalid port number: %d" t.port)
+        failwith (sprintf "Invalid port number: %d" t.port)
       else
         Deferred.Or_error.return ()
     in
