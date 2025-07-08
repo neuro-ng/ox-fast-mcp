@@ -1,20 +1,6 @@
 open! Core
 open! Async
 
-module Log_level : sig
-  type t =
-    | Debug
-    | Info
-    | Warning
-    | Error
-    | Critical
-  [@@deriving sexp, compare, yojson]
-
-  val of_string : string -> t
-  val to_string : t -> string
-  val to_level : t -> [> `Debug | `Info | `Warning | `Error | `Critical ]
-end
-
 module Logger : sig
   type t
   type handler = private {

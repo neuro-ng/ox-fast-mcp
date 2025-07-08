@@ -1,38 +1,6 @@
 open! Core
 open! Async
 
-module Log_level = struct
-  type t =
-    | Debug
-    | Info
-    | Warning
-    | Error
-    | Critical
-  [@@deriving sexp, compare, yojson]
-
-  let of_string = function
-    | "DEBUG" -> Debug
-    | "INFO" -> Info
-    | "WARNING" -> Warning
-    | "ERROR" -> Error
-    | "CRITICAL" -> Critical
-    | s -> failwith (sprintf "Invalid log level: %s" s)
-
-  let to_string = function
-    | Debug -> "DEBUG"
-    | Info -> "INFO"
-    | Warning -> "WARNING"
-    | Error -> "ERROR"
-    | Critical -> "CRITICAL"
-
-  let to_level = function
-    | Debug -> `Debug
-    | Info -> `Info
-    | Warning -> `Warning
-    | Error -> `Error
-    | Critical -> `Critical
-end
-
 module Logger = struct
   type handler = {
     module_instance : (module Log_types.Handler);
