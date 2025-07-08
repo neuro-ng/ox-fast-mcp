@@ -218,7 +218,7 @@ module Settings = struct
       default_auth_provider = override.default_auth_provider;
       (* Add other fields as needed *)
     }
-
+ 
   let validate t =
     let open Deferred.Or_error.Let_syntax in 
     let%bind () =
@@ -226,17 +226,9 @@ module Settings = struct
         Deferred.Or_error.error_string (sprintf "Invalid port number: %d" t.port)
       else
         Deferred.Or_error.return ()
-
-    let%bind () = Sys.dir_exists t.home
-      |> Deferred.Or_error.error_string (sprintf "Home directory %s does not exist" t.home)
     in
-    Deferred.return (Ok ())
-
-  let settings t =
-    Logging.Global.warning "Using settings.settings is deprecated. Use settings directly instead.";
-    t
-    in
-    Deferred.return (Ok ())
+    
+  Deferred.return (Ok ())
 
   let settings t =
     Logging.Global.warning "Using settings.settings is deprecated. Use settings directly instead.";
