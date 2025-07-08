@@ -87,7 +87,27 @@ module Settings : sig
   }
   [@@deriving compare, equal, sexp, yojson]
 
-  val create : unit -> t
+ val create : ?home:string -> 
+    ?test_mode:bool ->
+    ?log_level:Log_level.t ->
+    ?enable_rich_tracebacks:bool ->
+    ?deprecation_warnings:bool ->
+    ?client_raise_first_exceptiongroup_error:bool ->
+    ?resource_prefix_format:Resource_prefix_format.t ->
+    ?client_init_timeout:float option ->
+    ?host:string ->
+    ?port:int ->
+    ?sse_path:string ->
+    ?message_path:string ->
+    ?streamable_http_path:string ->
+    ?debug:bool ->
+    ?mask_error_details:bool ->
+    ?server_dependencies:string list ->
+    ?json_response:bool ->
+    ?stateless_http:bool ->
+    ?default_auth_provider:Auth_provider.t option ->
+    ?include_tags:string list option ->
+    ?exclude_tags:string list option -> unit -> t
   val configure_logging : t -> Logging.Logger.t
 
   (** Environment variable handling *)

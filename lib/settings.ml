@@ -123,32 +123,54 @@ module Settings = struct
   let env_nested_delimiter = "__"
   let env_file = ".env"
 
-  let create () =
-    let home = match Sys.getenv "HOME" with
-      | Some home -> Filename.concat home ".oxfastmcp"
-      | None -> Filename.concat "/tmp" ".oxfastmcp" in
+  let create 
+      ?(home =
+        match Sys.getenv "HOME" with
+        | Some home -> Filename.concat home ".oxfastmcp"
+        | None -> Filename.concat "/tmp" ".oxfastmcp")
+      ?(test_mode = false) 
+      ?(log_level = Log_level.Info) 
+      ?(enable_rich_tracebacks = true) 
+      ?(deprecation_warnings = true) 
+      ?(client_raise_first_exceptiongroup_error = true) 
+      ?(resource_prefix_format = Resource_prefix_format.Path) 
+      ?(client_init_timeout = None) 
+      ?(host = "127.0.0.1") 
+      ?(port = 8000) 
+      ?(sse_path = "/sse/") 
+      ?(message_path = "/messages/") 
+      ?(streamable_http_path = "/mcp/") 
+      ?(debug = false) 
+      ?(mask_error_details = false) 
+      ?(server_dependencies = []) 
+      ?(json_response = false) 
+      ?(stateless_http = false) 
+      ?(default_auth_provider = None) 
+      ?(include_tags = None) 
+      ?(exclude_tags = None) 
+      () =  
     {
-      home;
-      test_mode = false;
-      log_level = Log_level.Info;
-      enable_rich_tracebacks = true;
-      deprecation_warnings = true;
-      client_raise_first_exceptiongroup_error = true;
-      resource_prefix_format = Resource_prefix_format.Path;
-      client_init_timeout = None;
-      host = "127.0.0.1";
-      port = 8000;
-      sse_path = "/sse/";
-      message_path = "/messages/";
-      streamable_http_path = "/mcp/";
-      debug = false;
-      mask_error_details = false;
-      server_dependencies = [];
-      json_response = false;
-      stateless_http = false;
-      default_auth_provider = None;
-      include_tags = None;
-      exclude_tags = None;
+      home; 
+      test_mode;
+      log_level;
+      enable_rich_tracebacks;
+      deprecation_warnings;
+      client_raise_first_exceptiongroup_error;
+      resource_prefix_format;
+      client_init_timeout;
+      host;
+      port;
+      sse_path;
+      message_path;
+      streamable_http_path;
+      debug;
+      mask_error_details;
+      server_dependencies;
+      json_response;
+      stateless_http;
+      default_auth_provider;
+      include_tags;
+      exclude_tags;
     }
 
   let configure_logging t =
