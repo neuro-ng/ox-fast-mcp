@@ -2,52 +2,52 @@ open Core
 open Cohttp
 open Lwt
 
-
-(** Application type *)
 type app = {
-  routes: route_list;
-  middleware: middleware_list;
-  debug: bool;
-  lifespan: (unit -> unit Lwt.t) option;
+  routes : route_list;
+  middleware : middleware_list;
+  debug : bool;
+  lifespan : (unit -> unit Lwt.t) option;
 }
+(** Application type *)
 
-(** Route type *)
 and route = {
-  path: string;
-  methods: string list;
-  handler: (Request.t -> (Response.t * Body.t) Lwt.t);
+  path : string;
+  methods : string list;
+  handler : Request.t -> (Response.t * Body.t) Lwt.t;
 }
+(** Route type *)
 
 and route_list = route list
 
-(** Middleware type *)
 and middleware = {
-  name: string;
-  handler: (Request.t -> (Response.t * Body.t) Lwt.t) -> (Request.t -> (Response.t * Body.t) Lwt.t);
+  name : string;
+  handler :
+    (Request.t -> (Response.t * Body.t) Lwt.t) ->
+    (Request.t -> (Response.t * Body.t) Lwt.t);
 }
+(** Middleware type *)
 
-and middleware_list = middleware list 
+and middleware_list = middleware list
 
-(** Current HTTP request context *)
 val current_http_request : Request.t option Lwt.key
+(** Current HTTP request context *)
 
-(** Set the current HTTP request in context *)
 val with_http_request : Request.t -> (unit -> 'a Lwt.t) -> 'a Lwt.t
+(** Set the current HTTP request in context *)
 
-(** Setup auth middleware and routes *)
 val setup_auth_middleware_and_routes :
   auth:Mcp.Server.Auth.Provider.oauth_provider ->
   middleware_list * route_list * string list
+(** Setup auth middleware and routes *)
 
-(** Create a base application with common middleware and routes *)
 val create_base_app :
   routes:route_list ->
   middleware:middleware_list ->
   ?debug:bool ->
   ?lifespan:(unit -> unit Lwt.t) ->
   app
+(** Create a base application with common middleware and routes *)
 
-(** Create an SSE application *)
 val create_sse_app :
   server:Mcp.Server.server ->
   message_path:string ->
@@ -58,8 +58,8 @@ val create_sse_app :
   ?middleware:middleware_list ->
   unit ->
   app
+(** Create an SSE application *)
 
-(** Create a streamable HTTP application *)
 val create_streamable_http_app :
   server:Mcp.Server.server ->
   streamable_http_path:string ->
@@ -72,3 +72,4 @@ val create_streamable_http_app :
   ?middleware:middleware_list ->
   unit ->
   app
+(** Create a streamable HTTP application *)
