@@ -549,8 +549,9 @@ type unsubscribe_request_params = {
   meta : meta option; [@key "_meta"] [@yojson.option]
 } [@@deriving yojson]
 
-(** Resource reference type (deprecated) *)
+
 [@@@ocaml.warning "-3"]
+(** Resource reference type (deprecated) *)
 type resource_reference = resource_template_reference [@@deriving yojson]
 [@@deprecated "Use resource_template_reference instead"]
 [@@@ocaml.warning "+3"]
