@@ -1,6 +1,12 @@
 (library
  (name test_ox_fmcp)
- (libraries core core_unix async expect_test_helpers_core ox_fast_mcp ox-fast-mcp.utilities)
+ (libraries
+  core
+  core_unix
+  async
+  expect_test_helpers_core
+  ox_fast_mcp
+  ox-fast-mcp.utilities)
  (inline_tests)
  (preprocess
   (pps ppx_jane ppx_expect)))
