@@ -123,7 +123,7 @@ module Settings : sig
   val merge : t -> t -> t
 
   (** Validation *)
-  val validate : t -> unit Async_kernel__Deferred_or_error.t
+  val validate : t -> unit Or_error.t
 
   (** Deprecated functionality *)
   val settings : t -> t

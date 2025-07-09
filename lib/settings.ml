@@ -395,22 +395,13 @@ module Settings = struct
     }
  
   let validate t =
-    let open Deferred.Or_error.Let_syntax in 
-    let%bind () =
-      if String.equal t.home "" then
-        failwith (sprintf "Home path cannot be empty")
-      else
-        Deferred.Or_error.return ()
-    in
-
-    let%bind () =
-      if t.port < 0 || t.port > 65535 then
-        failwith (sprintf "Invalid port number: %d" t.port)
-      else
-        Deferred.Or_error.return ()
-    in
-    
-  Deferred.return (Ok ())
+    (* Validate home path *)
+    if String.equal t.home "" then
+      failwith "Home path cannot be empty"
+    else if t.port < 0 || t.port > 65535 then
+      failwith (sprintf "Invalid port number: %d" t.port)
+    else
+      Ok ()
 
   let settings t =
     Logging.Global.warning "Using settings.settings is deprecated. Use settings directly instead.";
