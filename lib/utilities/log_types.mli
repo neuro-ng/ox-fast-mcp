@@ -5,18 +5,13 @@ module type Handler = sig
 end
 
 module Level : sig
-  type t =
-    | Debug
-    | Info
-    | Warning
-    | Error
-    | Critical
+  type t = Debug | Info | Warning | Error | Critical
   [@@deriving sexp, compare, yojson]
 
   val of_string : string -> t
   val to_string : t -> string
   val to_level : t -> [> `Debug | `Info | `Warning | `Error | `Critical ]
-  
+
   include Comparable.S with type t := t
 
   val compare_level : t -> t -> int
@@ -25,4 +20,4 @@ module Level : sig
   val level_gt : t -> t -> bool
   val level_lt : t -> t -> bool
   val level_eq : t -> t -> bool
-end 
+end

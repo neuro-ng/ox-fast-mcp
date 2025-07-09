@@ -5,15 +5,18 @@ open! Expect_test_helpers_core
 (* Test helper functions *)
 let%expect_test "test_issubclass_safe" =
   let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
-  let test_cases = [
-    ("child_is_subclass_of_parent", true);
-    ("class_is_subclass_of_itself", true);
-    ("unrelated_class_is_not_subclass", false);
-  ] in
+  let test_cases =
+    [
+      ("child_is_subclass_of_parent", true);
+      ("class_is_subclass_of_itself", true);
+      ("unrelated_class_is_not_subclass", false);
+    ]
+  in
   List.iter test_cases ~f:(fun (name, expected) ->
-    print_s [%sexp (name : string)];
-    print_s [%sexp (expected : bool)];
-    [%expect {|
+      print_s [%sexp (name : string)];
+      print_s [%sexp (expected : bool)];
+      [%expect
+        {|
       (* CR expect_test: Test ran multiple times with different test outputs *)
       ============================= Output 1 / 3 ==============================
       child_is_subclass_of_parent
@@ -31,15 +34,18 @@ let%expect_test "test_issubclass_safe" =
 
 let%expect_test "test_is_class_member_of_type" =
   let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
-  let test_cases = [
-    ("basic_subclass_check", true);
-    ("self_is_member", true);
-    ("unrelated_class_is_not_member", false);
-  ] in
+  let test_cases =
+    [
+      ("basic_subclass_check", true);
+      ("self_is_member", true);
+      ("unrelated_class_is_not_member", false);
+    ]
+  in
   List.iter test_cases ~f:(fun (name, expected) ->
-    print_s [%sexp (name : string)];
-    print_s [%sexp (expected : bool)];
-    [%expect {|
+      print_s [%sexp (name : string)];
+      print_s [%sexp (expected : bool)];
+      [%expect
+        {|
       (* CR expect_test: Test ran multiple times with different test outputs *)
       ============================= Output 1 / 3 ==============================
       basic_subclass_check
@@ -95,7 +101,8 @@ let%expect_test "test_missing_data_and_path_raises_error" =
 
 let%expect_test "test_both_data_and_path_raises_error" =
   let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
-  show_raise (fun () -> Fmcp_types.Image.create ~path:"test.png" ~data:"test" ());
+  show_raise (fun () ->
+      Fmcp_types.Image.create ~path:"test.png" ~data:"test" ());
   [%expect {| (raised (Failure "Only one of path or data can be provided")) |}];
   return ()
 
@@ -162,9 +169,10 @@ let%expect_test "test_file_to_resource_content_text" =
   let test_data = "hello world" in
   let file = Fmcp_types.File.create ~data:test_data ~format:"plain" () in
   let resource = Fmcp_types.File.to_resource_content file in
-  print_s [%sexp (resource.type_ : [`Resource])];
+  print_s [%sexp (resource.type_ : [ `Resource ])];
   print_s [%sexp (resource.resource : Fmcp_types.resource_contents)];
-  [%expect {|
+  [%expect
+    {|
     Resource
     (Text (
       (uri       file:///resource.plain)
@@ -178,9 +186,10 @@ let%expect_test "test_file_to_resource_content_binary" =
   let test_data = "binary data" in
   let file = Fmcp_types.File.create ~data:test_data ~format:"pdf" () in
   let resource = Fmcp_types.File.to_resource_content file in
-  print_s [%sexp (resource.type_ : [`Resource])];
+  print_s [%sexp (resource.type_ : [ `Resource ])];
   print_s [%sexp (resource.resource : Fmcp_types.resource_contents)];
-  [%expect {|
+  [%expect
+    {|
     Resource
     (Blob (
       (uri       file:///resource.pdf)
@@ -192,11 +201,14 @@ let%expect_test "test_file_to_resource_content_binary" =
 let%expect_test "test_file_to_resource_content_with_name" =
   let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
   let test_data = "test data" in
-  let file = Fmcp_types.File.create ~data:test_data ~format:"pdf" ~name:"custom" () in
+  let file =
+    Fmcp_types.File.create ~data:test_data ~format:"pdf" ~name:"custom" ()
+  in
   let resource = Fmcp_types.File.to_resource_content file in
-  print_s [%sexp (resource.type_ : [`Resource])];
+  print_s [%sexp (resource.type_ : [ `Resource ])];
   print_s [%sexp (resource.resource : Fmcp_types.resource_contents)];
-  [%expect {|
+  [%expect
+    {|
     Resource
     (Blob (
       (uri       file:///custom.pdf)
@@ -208,7 +220,12 @@ let%expect_test "test_file_to_resource_content_with_name" =
 (** Test classes for type inspection tests *)
 module Test_classes = struct
   class base_class = object end
-  class child_class = object inherit base_class end
+
+  class child_class =
+    object
+      inherit base_class
+    end
+
   class other_class = object end
 end
 
@@ -221,22 +238,20 @@ let%expect_test "test_type_inspection" =
   (* Test issubclass_safe *)
   print_s [%sexp (Fmcp_types.issubclass_safe child base : bool)];
   [%expect {| false |}];
-  
+
   print_s [%sexp (Fmcp_types.issubclass_safe base base : bool)];
   [%expect {| false |}];
-  
+
   print_s [%sexp (Fmcp_types.issubclass_safe other base : bool)];
   [%expect {| false |}];
 
   (* Test is_class_member_of_type *)
   print_s [%sexp (Fmcp_types.is_class_member_of_type child base : bool)];
   [%expect {| false |}];
-  
+
   print_s [%sexp (Fmcp_types.is_class_member_of_type base base : bool)];
   [%expect {| false |}];
-  
+
   print_s [%sexp (Fmcp_types.is_class_member_of_type other base : bool)];
   [%expect {| false |}];
   return ()
-
-

@@ -23,8 +23,9 @@ val create :
   ?transform_errors:bool ->
   unit ->
   t
-(** Create error handling middleware 
-    @param logger Logger instance for error logging. If None, uses 'fastmcp.errors'
+(** Create error handling middleware
+    @param logger
+      Logger instance for error logging. If None, uses 'fastmcp.errors'
     @param include_traceback Whether to include full traceback in error logs
     @param error_callback Optional callback function called for each error
     @param transform_errors Whether to transform non-MCP errors to McpError *)
@@ -61,12 +62,13 @@ module Retry : sig
     ?logger:Logger.t ->
     unit ->
     t
-  (** Create retry middleware 
+  (** Create retry middleware
       @param max_retries Maximum number of retry attempts
       @param base_delay Initial delay between retries in seconds
       @param max_delay Maximum delay between retries in seconds
       @param backoff_multiplier Multiplier for exponential backoff
-      @param retry_exceptions List of predicates that determine if an exception should trigger retries
+      @param retry_exceptions
+        List of predicates that determine if an exception should trigger retries
       @param logger Logger for retry attempts *)
 
   val should_retry : t -> exn -> bool
@@ -77,4 +79,4 @@ module Retry : sig
 
   val on_request : t -> context -> call_next -> 'a Deferred.t
   (** Implement retry logic for requests *)
-end 
+end

@@ -1,13 +1,11 @@
-(**
-   Exceptions Module
+(** Exceptions Module
 
-   This module provides exception types used throughout the MCP framework.
-*)
+    This module provides exception types used throughout the MCP framework. *)
 
 open Mcp.Types
 
-(** Exception type raised when an error arrives over an MCP connection *)
 exception Mcp_error of error_data
+(** Exception type raised when an error arrives over an MCP connection *)
 
 (** Create a new MCP error exception *)
 let create_error error = Mcp_error error
@@ -20,4 +18,4 @@ let get_error = function
 (** Get the error message from an MCP error exception *)
 let get_error_message = function
   | Mcp_error error -> error.message
-  | _ -> failwith "Not an MCP error" 
+  | _ -> failwith "Not an MCP error"

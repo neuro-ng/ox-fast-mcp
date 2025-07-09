@@ -1,41 +1,36 @@
 open! Core
 open! Async
-
 module Time = Time_float_unix
 
+type cache_stats = { hits : int; misses : int; sets : int } [@@deriving sexp]
 (** Cache statistics type *)
-type cache_stats = {
-  hits: int;
-  misses: int;
-  sets: int;
-} [@@deriving sexp]
 
-(** A cache that automatically expires entries after a specified duration *)
 type 'a t
+(** A cache that automatically expires entries after a specified duration *)
 
-(** Create a new timed cache with the specified expiration duration *)
 val create : expiration:Time.Span.t -> 'a t
+(** Create a new timed cache with the specified expiration duration *)
 
-(** Set a value in the cache *)
 val set : 'a t -> key:string -> value:'a -> unit
+(** Set a value in the cache *)
 
-(** Get a value from the cache. Returns None if not found or expired *)
 val get : 'a t -> key:string -> 'a option
+(** Get a value from the cache. Returns None if not found or expired *)
 
-(** Clear all entries from the cache *)
 val clear : 'a t -> unit
+(** Clear all entries from the cache *)
 
-(** Get the current cache statistics *)
 val get_stats : 'a t -> cache_stats
+(** Get the current cache statistics *)
 
-(** Get the time-to-live (TTL) for a key in seconds *)
 val get_ttl : 'a t -> string -> Time.Span.t option
+(** Get the time-to-live (TTL) for a key in seconds *)
 
-(** Get the current size of the cache *)
 val size : 'a t -> int
+(** Get the current size of the cache *)
 
-(** Get the expiration time of the cache *)
 val get_expiration : 'a t -> Time.Span.t
+(** Get the expiration time of the cache *)
 
 (** Module interface matching the Python TimedCache class *)
 module TimedCache : sig
@@ -50,4 +45,4 @@ module TimedCache : sig
   val size : 'a t -> int
   val get_expiration : 'a t -> Time.Span.t
   val now : unit -> Time.t
-end 
+end

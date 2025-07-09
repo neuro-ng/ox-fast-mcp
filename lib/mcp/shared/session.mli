@@ -1,18 +1,18 @@
 open Core
 open Lwt.Syntax
 
-(** Progress notification callback type *)
 type progress_fn = float -> float option -> string option -> unit Lwt.t
+(** Progress notification callback type *)
 
 (** Request responder module *)
 module Request_responder : sig
   type ('req, 'res) t = {
-    request_id: Mcp.Types.request_id;
-    request_meta: Mcp.Types.request_params_meta option;
-    request: 'req;
-    message_metadata: Message.message_metadata option;
-    mutable completed: bool;
-    mutable cancel_scope: unit -> unit;  (* Simplified cancel scope *)
+    request_id : Mcp.Types.request_id;
+    request_meta : Mcp.Types.request_params_meta option;
+    request : 'req;
+    message_metadata : Message.message_metadata option;
+    mutable completed : bool;
+    mutable cancel_scope : unit -> unit; (* Simplified cancel scope *)
   }
 
   val create :
@@ -23,32 +23,33 @@ module Request_responder : sig
     on_complete:(('req, 'res) t -> unit Lwt.t) ->
     ('req, 'res) t
 
-  val with_responder : ('req, 'res) t -> (('req, 'res) t -> 'a Lwt.t) -> 'a Lwt.t
+  val with_responder :
+    ('req, 'res) t -> (('req, 'res) t -> 'a Lwt.t) -> 'a Lwt.t
 
   val respond : ('req, 'res) t -> 'res -> unit Lwt.t
-
   val cancel : ('req, 'res) t -> unit Lwt.t
-
   val in_flight : ('req, 'res) t -> bool
-
   val is_cancelled : ('req, 'res) t -> bool
 end
 
 (** Base session module *)
 module Base_session : sig
   type ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t = {
-    read_stream: (Message.session_message, [> `Msg of string]) result Lwt_stream.t;
-    write_stream: Message.session_message -> unit Lwt.t;
-    mutable request_id: int;
-    receive_request_type: 'recv_req;  (* Type info for request validation *)
-    receive_notification_type: 'recv_notif;  (* Type info for notification validation *)
-    read_timeout: float option;
-    mutable in_flight: ('recv_req, 'send_res) Request_responder.t list;
-    mutable progress_callbacks: (Mcp.Types.request_id, progress_fn) Hashtbl.t;
+    read_stream :
+      (Message.session_message, [> `Msg of string ]) result Lwt_stream.t;
+    write_stream : Message.session_message -> unit Lwt.t;
+    mutable request_id : int;
+    receive_request_type : 'recv_req; (* Type info for request validation *)
+    receive_notification_type : 'recv_notif;
+        (* Type info for notification validation *)
+    read_timeout : float option;
+    mutable in_flight : ('recv_req, 'send_res) Request_responder.t list;
+    mutable progress_callbacks : (Mcp.Types.request_id, progress_fn) Hashtbl.t;
   }
 
   val create :
-    read_stream:(Message.session_message, [> `Msg of string]) result Lwt_stream.t ->
+    read_stream:
+      (Message.session_message, [> `Msg of string ]) result Lwt_stream.t ->
     write_stream:(Message.session_message -> unit Lwt.t) ->
     receive_request_type:'recv_req ->
     receive_notification_type:'recv_notif ->
@@ -86,11 +87,11 @@ module Base_session : sig
     unit ->
     unit Lwt.t
 
-  (** Protected methods that can be overridden by inheritors *)
   val received_request :
     ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t ->
     ('recv_req, 'send_res) Request_responder.t ->
     unit Lwt.t
+  (** Protected methods that can be overridden by inheritors *)
 
   val received_notification :
     ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t ->
@@ -103,4 +104,4 @@ module Base_session : sig
     | `Notification of 'recv_notif
     | `Error of exn ] ->
     unit Lwt.t
-end 
+end

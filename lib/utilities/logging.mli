@@ -3,6 +3,7 @@ open! Async
 
 module Logger : sig
   type t
+
   type handler = private {
     module_instance : (module Log_types.Handler);
     instance : Log_handler.t;
@@ -16,7 +17,6 @@ module Logger : sig
   val add_handler : t -> (module Log_types.Handler) -> unit
   val remove_handler : t -> (module Log_types.Handler) -> unit
   val clear_handlers : t -> unit
-
   val debug : t -> string -> unit
   val info : t -> string -> unit
   val warning : t -> string -> unit
@@ -45,4 +45,4 @@ module Global : sig
   val warning : string -> unit
   val error : string -> unit
   val critical : string -> unit
-end 
+end

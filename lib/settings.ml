@@ -7,11 +7,7 @@ open! Logging
 module Log_level = Log_types.Level
 
 module Duplicate_behavior = struct
-  type t =
-    | Warn
-    | Error
-    | Replace
-    | Ignore
+  type t = Warn | Error | Replace | Ignore
   [@@deriving compare, equal, sexp, yojson]
 
   let of_string = function
@@ -29,10 +25,7 @@ module Duplicate_behavior = struct
 end
 
 module Resource_prefix_format = struct
-  type t =
-    | Protocol
-    | Path
-  [@@deriving compare, equal, sexp, yojson]
+  type t = Protocol | Path [@@deriving compare, equal, sexp, yojson]
 
   let of_string = function
     | "protocol" -> Ok Protocol
@@ -45,9 +38,7 @@ module Resource_prefix_format = struct
 end
 
 module Auth_provider = struct
-  type t =
-    | Bearer_env
-  [@@deriving compare, equal, sexp, yojson]
+  type t = Bearer_env [@@deriving compare, equal, sexp, yojson]
 
   let of_string = function
     | "bearer_env" -> Ok Bearer_env
@@ -63,8 +54,8 @@ module Settings_error = struct
     | Invalid_duplicate_behavior of string
     | Invalid_resource_prefix_format of string
     | Invalid_auth_provider of string
-    | Invalid_env_value of string * string  (* var_name * value *)
-    | Missing_required_env of string        (* var_name *)
+    | Invalid_env_value of string * string (* var_name * value *)
+    | Missing_required_env of string (* var_name *)
   [@@deriving sexp, compare]
 
   exception Settings_error of t
@@ -72,18 +63,17 @@ module Settings_error = struct
   let to_string = function
     | Invalid_log_level s -> sprintf "Invalid log level: %s" s
     | Invalid_duplicate_behavior s -> sprintf "Invalid duplicate behavior: %s" s
-    | Invalid_resource_prefix_format s -> sprintf "Invalid resource prefix format: %s" s
+    | Invalid_resource_prefix_format s ->
+      sprintf "Invalid resource prefix format: %s" s
     | Invalid_auth_provider s -> sprintf "Invalid auth provider: %s" s
-    | Invalid_env_value (var, value) -> sprintf "Invalid value '%s' for environment variable %s" value var
-    | Missing_required_env var -> sprintf "Missing required environment variable: %s" var
+    | Invalid_env_value (var, value) ->
+      sprintf "Invalid value '%s' for environment variable %s" value var
+    | Missing_required_env var ->
+      sprintf "Missing required environment variable: %s" var
 end
 
 module Settings_source = struct
-  type t =
-    | Init
-    | Environment
-    | Dotenv
-    | File_secrets
+  type t = Init | Environment | Dotenv | File_secrets
   [@@deriving compare, equal, sexp]
 
   let priority = function
@@ -119,38 +109,28 @@ module Settings = struct
   }
   [@@deriving compare, equal, sexp, yojson]
 
-  let env_prefixes = ["OXFASTMCP_"; "OXFASTMCP_SERVER_"]
+  let env_prefixes = [ "OXFASTMCP_"; "OXFASTMCP_SERVER_" ]
   let env_nested_delimiter = "__"
   let env_file = ".env"
 
-  let create 
+  let create
       ?(home =
         match Sys.getenv "HOME" with
         | Some home -> Filename.concat home ".oxfastmcp"
-        | None -> Filename.concat "/tmp" ".oxfastmcp")
-      ?(test_mode = false) 
-      ?(log_level = Log_level.Info) 
-      ?(enable_rich_tracebacks = true) 
-      ?(deprecation_warnings = true) 
-      ?(client_raise_first_exceptiongroup_error = true) 
-      ?(resource_prefix_format = Resource_prefix_format.Path) 
-      ?(client_init_timeout = None) 
-      ?(host = "127.0.0.1") 
-      ?(port = 8000) 
-      ?(sse_path = "/sse/") 
-      ?(message_path = "/messages/") 
-      ?(streamable_http_path = "/mcp/") 
-      ?(debug = false) 
-      ?(mask_error_details = false) 
-      ?(server_dependencies = []) 
-      ?(json_response = false) 
-      ?(stateless_http = false) 
-      ?(default_auth_provider = None) 
-      ?(include_tags = None) 
-      ?(exclude_tags = None) 
-      () =  
+        | None -> Filename.concat "/tmp" ".oxfastmcp") ?(test_mode = false)
+      ?(log_level = Log_level.Info) ?(enable_rich_tracebacks = true)
+      ?(deprecation_warnings = true)
+      ?(client_raise_first_exceptiongroup_error = true)
+      ?(resource_prefix_format = Resource_prefix_format.Path)
+      ?(client_init_timeout = None) ?(host = "127.0.0.1") ?(port = 8000)
+      ?(sse_path = "/sse/") ?(message_path = "/messages/")
+      ?(streamable_http_path = "/mcp/") ?(debug = false)
+      ?(mask_error_details = false) ?(server_dependencies = [])
+      ?(json_response = false) ?(stateless_http = false)
+      ?(default_auth_provider = None) ?(include_tags = None)
+      ?(exclude_tags = None) () =
     {
-      home; 
+      home;
       test_mode;
       log_level;
       enable_rich_tracebacks;
@@ -174,49 +154,57 @@ module Settings = struct
     }
 
   let configure_logging t =
-    Logging.configure_logging
-      ~level:t.log_level
-      ~enable_rich_tracebacks:t.enable_rich_tracebacks
-      ()
+    Logging.configure_logging ~level:t.log_level
+      ~enable_rich_tracebacks:t.enable_rich_tracebacks ()
 
   let get_env_value var_name =
     match Sys.getenv var_name with
     | Some value -> Ok value
-    | None -> Or_error.error_string (sprintf "Environment variable %s not found" var_name)
+    | None ->
+      Or_error.error_string
+        (sprintf "Environment variable %s not found" var_name)
 
   let warn_if_deprecated prefix value =
     if String.equal prefix "OX_FASTMCP_SERVER_" then
-      Logging.Global.warning "Using `OX_FASTMCP_SERVER_` environment variables is deprecated. Use `OXFASTMCP_` instead."
-    else
-      ();
+      Logging.Global.warning
+        "Using `OX_FASTMCP_SERVER_` environment variables is deprecated. Use \
+         `OXFASTMCP_` instead."
+    else ();
     value
 
   let parse_bool_or_error value var_name =
     match String.lowercase value with
     | "true" | "1" -> Ok true
     | "false" | "0" -> Ok false
-    | _ -> Or_error.error_string (sprintf "Invalid boolean value for %s: '%s'. Expected 'true'/'false' or '1'/'0'." var_name value)
+    | _ ->
+      Or_error.error_string
+        (sprintf
+           "Invalid boolean value for %s: '%s'. Expected 'true'/'false' or \
+            '1'/'0'."
+           var_name value)
 
   let parse_int_or_error value var_name =
     try Ok (Int.of_string value)
-    with _ -> Or_error.error_string (sprintf "Invalid integer value for %s: '%s'." var_name value)
+    with _ ->
+      Or_error.error_string
+        (sprintf "Invalid integer value for %s: '%s'." var_name value)
 
   let parse_float_or_error value var_name =
     try Ok (Float.of_string value)
-    with _ -> Or_error.error_string (sprintf "Invalid float value for %s: '%s'." var_name value)
+    with _ ->
+      Or_error.error_string
+        (sprintf "Invalid float value for %s: '%s'." var_name value)
 
   let load_from_env t =
     let open Or_error.Let_syntax in
     let try_prefixes var_name =
       List.find_map env_prefixes ~f:(fun prefix ->
-        let full_name = prefix ^ var_name in
-        match Sys.getenv full_name with
-        | Some value -> 
-          Some (warn_if_deprecated prefix value)
-        | None -> 
-          None)
+          let full_name = prefix ^ var_name in
+          match Sys.getenv full_name with
+          | Some value -> Some (warn_if_deprecated prefix value)
+          | None -> None)
     in
-    
+
     let%bind home =
       match try_prefixes "HOME" with
       | Some value -> Ok value
@@ -251,7 +239,8 @@ module Settings = struct
 
     let%bind client_raise_first_exceptiongroup_error =
       match try_prefixes "CLIENT_RAISE_FIRST_EXCEPTIONGROUP_ERROR" with
-      | Some value -> parse_bool_or_error value "CLIENT_RAISE_FIRST_EXCEPTIONGROUP_ERROR"
+      | Some value ->
+        parse_bool_or_error value "CLIENT_RAISE_FIRST_EXCEPTIONGROUP_ERROR"
       | None -> Ok t.client_raise_first_exceptiongroup_error
     in
 
@@ -339,45 +328,48 @@ module Settings = struct
 
     let%bind include_tags =
       match try_prefixes "INCLUDE_TAGS" with
-      | Some value -> Ok (Some (String.split ~on:',' value |> List.map ~f:String.strip))
+      | Some value ->
+        Ok (Some (String.split ~on:',' value |> List.map ~f:String.strip))
       | None -> Ok t.include_tags (* Keep existing option state *)
     in
 
     let%bind exclude_tags =
       match try_prefixes "EXCLUDE_TAGS" with
-      | Some value -> Ok (Some (String.split ~on:',' value |> List.map ~f:String.strip))
+      | Some value ->
+        Ok (Some (String.split ~on:',' value |> List.map ~f:String.strip))
       | None -> Ok t.exclude_tags (* Keep existing option state *)
     in
 
     (* Construct the new record with all updated fields *)
-    Ok {
-      home;
-      test_mode;
-      log_level;
-      enable_rich_tracebacks;
-      deprecation_warnings;
-      client_raise_first_exceptiongroup_error;
-      resource_prefix_format;
-      client_init_timeout;
-      host;
-      port;
-      sse_path;
-      message_path;
-      streamable_http_path;
-      debug;
-      mask_error_details;
-      server_dependencies;
-      json_response;
-      stateless_http;
-      default_auth_provider;
-      include_tags;
-      exclude_tags;
-    }
+    Ok
+      {
+        home;
+        test_mode;
+        log_level;
+        enable_rich_tracebacks;
+        deprecation_warnings;
+        client_raise_first_exceptiongroup_error;
+        resource_prefix_format;
+        client_init_timeout;
+        host;
+        port;
+        sse_path;
+        message_path;
+        streamable_http_path;
+        debug;
+        mask_error_details;
+        server_dependencies;
+        json_response;
+        stateless_http;
+        default_auth_provider;
+        include_tags;
+        exclude_tags;
+      }
 
   let load_from_dotenv t =
     let%bind exists = Sys.file_exists env_file in
     match exists with
-    | `Yes -> 
+    | `Yes ->
       (* TODO: Implement .env file parsing *)
       return (Ok t)
     | _ -> return (Ok t)
@@ -387,25 +379,25 @@ module Settings = struct
     Ok t
 
   let merge base override =
-    { base with
+    {
+      base with
       log_level = override.log_level;
       resource_prefix_format = override.resource_prefix_format;
       default_auth_provider = override.default_auth_provider;
       (* Add other fields as needed *)
     }
- 
+
   let validate t =
     (* Validate home path *)
-    if String.equal t.home "" then
-      failwith "Home path cannot be empty"
+    if String.equal t.home "" then failwith "Home path cannot be empty"
     else if t.port < 0 || t.port > 65535 then
       failwith (sprintf "Invalid port number: %d" t.port)
-    else
-      Ok ()
+    else Ok ()
 
   let settings t =
-    Logging.Global.warning "Using settings.settings is deprecated. Use settings directly instead.";
+    Logging.Global.warning
+      "Using settings.settings is deprecated. Use settings directly instead.";
     t
 end
 
-let settings = Settings.create () 
+let settings = Settings.create ()

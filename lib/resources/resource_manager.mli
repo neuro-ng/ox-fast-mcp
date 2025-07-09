@@ -31,4 +31,4 @@ val is_enabled : t -> bool
 (** Check if the resource manager is enabled *)
 
 val clear : t -> unit Lwt.t
-(** Remove all resources from the manager *) 
+(** Remove all resources from the manager *)

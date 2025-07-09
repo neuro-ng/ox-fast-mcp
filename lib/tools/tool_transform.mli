@@ -2,13 +2,12 @@ open Core
 open Utilities.Types
 open Tool_types
 
-(** Forward arguments to parent tool with transformation *)
 val forward : execution_context -> json -> content_type list Lwt.t
+(** Forward arguments to parent tool with transformation *)
 
-(** Forward raw arguments to parent tool without transformation *)
 val forward_raw : execution_context -> json -> content_type list Lwt.t
+(** Forward raw arguments to parent tool without transformation *)
 
-(** Create a transformed tool from a parent tool *)
 val create_from_tool :
   ?name:string ->
   ?description:string ->
@@ -19,4 +18,5 @@ val create_from_tool :
   ?_serializer:'b ->
   ?enabled:bool ->
   function_tool ->
-  transformed 
+  transformed
+(** Create a transformed tool from a parent tool *)

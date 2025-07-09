@@ -1,7 +1,7 @@
 open Cohttp_lwt_unix
 
-(** Rate limit error *)
 exception Rate_limit_error of string
+(** Rate limit error *)
 
 (** Token bucket rate limiter *)
 module TokenBucketRateLimiter : sig
@@ -23,18 +23,19 @@ end
 module RateLimitingMiddleware : sig
   type t
 
-  val create : 
+  val create :
     ?max_requests_per_second:float ->
     ?burst_capacity:int option ->
     ?get_client_id:(Request.t -> string option) ->
     ?global_limit:bool ->
-    unit -> t
+    unit ->
+    t
 
-  val middleware : 
-    t -> 
+  val middleware :
+    t ->
     (Request.t -> Cohttp_lwt.Body.t -> (Response.t * Cohttp_lwt.Body.t) Lwt.t) ->
-    Request.t -> 
-    Cohttp_lwt.Body.t -> 
+    Request.t ->
+    Cohttp_lwt.Body.t ->
     (Response.t * Cohttp_lwt.Body.t) Lwt.t
 end
 
@@ -46,7 +47,8 @@ module SlidingWindowRateLimitingMiddleware : sig
     max_requests:int ->
     window_minutes:int ->
     ?get_client_id:(Request.t -> string option) ->
-    unit -> t
+    unit ->
+    t
 
   val middleware :
     t ->
@@ -54,4 +56,4 @@ module SlidingWindowRateLimitingMiddleware : sig
     Request.t ->
     Cohttp_lwt.Body.t ->
     (Response.t * Cohttp_lwt.Body.t) Lwt.t
-end 
+end

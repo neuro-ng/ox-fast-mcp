@@ -2,7 +2,6 @@
 
 open Core
 
-(** Base resource type *)
 type resource = {
   uri : Uri.t;
   name : string;
@@ -10,45 +9,33 @@ type resource = {
   description : string option;
   tags : string list;
   enabled : bool;
-} [@@deriving sexp, yojson]
+}
+[@@deriving sexp, yojson]
+(** Base resource type *)
 
+type text_resource = { base : resource; content : string }
+[@@deriving sexp, yojson]
 (** Text resource *)
-type text_resource = {
-  base : resource;
-  content : string;
-} [@@deriving sexp, yojson]
 
+type binary_resource = { base : resource; content : bytes }
+[@@deriving sexp, yojson]
 (** Binary resource *)
-type binary_resource = {
-  base : resource;
-  content : bytes;
-} [@@deriving sexp, yojson]
 
+type file_resource = { base : resource; path : string }
+[@@deriving sexp, yojson]
 (** File resource *)
-type file_resource = {
-  base : resource;
-  path : string;
-} [@@deriving sexp, yojson]
 
+type http_resource = { base : resource; url : Uri.t } [@@deriving sexp, yojson]
 (** HTTP resource *)
-type http_resource = {
-  base : resource;
-  url : Uri.t;
-} [@@deriving sexp, yojson]
 
+type directory_resource = { base : resource; path : string }
+[@@deriving sexp, yojson]
 (** Directory resource *)
-type directory_resource = {
-  base : resource;
-  path : string;
-} [@@deriving sexp, yojson]
 
+type 'a function_resource = { base : resource; fn : unit -> 'a Lwt.t }
+[@@deriving sexp]
 (** Function resource *)
-type 'a function_resource = {
-  base : resource;
-  fn : unit -> 'a Lwt.t;
-} [@@deriving sexp]
 
-(** Create a text resource *)
 val make_text_resource :
   ?name:string ->
   ?description:string ->
@@ -58,8 +45,8 @@ val make_text_resource :
   uri:Uri.t ->
   string ->
   text_resource
+(** Create a text resource *)
 
-(** Create a binary resource *)
 val make_binary_resource :
   ?name:string ->
   ?description:string ->
@@ -69,8 +56,8 @@ val make_binary_resource :
   uri:Uri.t ->
   bytes ->
   binary_resource
+(** Create a binary resource *)
 
-(** Create a file resource *)
 val make_file_resource :
   ?name:string ->
   ?description:string ->
@@ -80,8 +67,8 @@ val make_file_resource :
   uri:Uri.t ->
   string ->
   file_resource
+(** Create a file resource *)
 
-(** Create an HTTP resource *)
 val make_http_resource :
   ?name:string ->
   ?description:string ->
@@ -91,8 +78,8 @@ val make_http_resource :
   uri:Uri.t ->
   Uri.t ->
   http_resource
+(** Create an HTTP resource *)
 
-(** Create a directory resource *)
 val make_directory_resource :
   ?name:string ->
   ?description:string ->
@@ -102,8 +89,8 @@ val make_directory_resource :
   uri:Uri.t ->
   string ->
   directory_resource
+(** Create a directory resource *)
 
-(** Create a function resource *)
 val make_function_resource :
   ?name:string ->
   ?description:string ->
@@ -112,4 +99,5 @@ val make_function_resource :
   ?enabled:bool ->
   uri:Uri.t ->
   (unit -> 'a Lwt.t) ->
-  'a function_resource 
+  'a function_resource
+(** Create a function resource *)

@@ -4,7 +4,6 @@ open Async
 open Yojson.Safe
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
-(** Tool handler signature *)
 type execution_context = {
   request_id : string option;
   client_id : string option;
@@ -13,10 +12,10 @@ type execution_context = {
   mutable resources_changed : bool;
   mutable prompts_changed : bool;
 }
+(** Tool handler signature *)
 
 type tool_handler = execution_context -> json -> content_type list Lwt.t
 
-(** Base tool interface *)
 type base_tool = {
   name : string;
   description : string;
@@ -25,12 +24,10 @@ type base_tool = {
   tags : string list;
   annotations : (string * json) list option;
 }
+(** Base tool interface *)
 
+type function_tool = { base : base_tool; handler : tool_handler }
 (** Function tool definition *)
-type function_tool = {
-  base : base_tool;
-  handler : tool_handler;
-}
 
 (** Transformed tool arguments *)
 module Arg_transform = struct
@@ -46,43 +43,36 @@ module Arg_transform = struct
     examples : json option;
   }
 
-  let create
-      ?name
-      ?description
-      ?default
-      ?default_factory
-      ?type_
-      ?type_schema
-      ?(hide = false)
-      ?required
-      ?examples
-      () =
+  let create ?name ?description ?default ?default_factory ?type_ ?type_schema
+      ?(hide = false) ?required ?examples () =
     (* Validation *)
     if Option.is_some default && Option.is_some default_factory then
-      invalid_arg "Cannot specify both 'default' and 'default_factory' in ArgTransform";
+      invalid_arg
+        "Cannot specify both 'default' and 'default_factory' in ArgTransform";
     if Option.is_some default_factory && not hide then
       invalid_arg "default_factory can only be used with hide=True";
-    if Option.equal Bool.equal (Some true) required &&
-       (Option.is_some default || Option.is_some default_factory) then
-      invalid_arg "Required parameters cannot have defaults";
+    if
+      Option.equal Bool.equal (Some true) required
+      && (Option.is_some default || Option.is_some default_factory)
+    then invalid_arg "Required parameters cannot have defaults";
     if hide && Option.equal Bool.equal (Some true) required then
       invalid_arg "Hidden parameters cannot be required";
     if Option.equal Bool.equal (Some false) required then
       invalid_arg "Cannot specify 'required=false'. Set a default value instead";
 
-    { name
-    ; description
-    ; default
-    ; default_factory
-    ; type_
-    ; type_schema
-    ; hide
-    ; required
-    ; examples
+    {
+      name;
+      description;
+      default;
+      default_factory;
+      type_;
+      type_schema;
+      hide;
+      required;
+      examples;
     }
 end
 
-(** Transformed tool type *)
 type transformed = {
   base : base_tool;
   parent_tool : function_tool;
@@ -90,11 +80,10 @@ type transformed = {
   forwarding_fn : tool_handler;
   transform_args : Arg_transform.t Core.String.Map.t;
 }
+(** Transformed tool type *)
 
 (** Unified tool type *)
-type tool =
-  | Function of function_tool
-  | Transformed of transformed
+type tool = Function of function_tool | Transformed of transformed
 
 (** Helper functions for tool interface *)
 let get_base_tool = function
@@ -126,65 +115,78 @@ type content_block = {
   text : string option;
   image : string option;
   error : string option;
-} [@@deriving sexp, yojson_of]
+}
+[@@deriving sexp, yojson_of]
 
 let create_text_content text = { text = Some text; image = None; error = None }
-let create_image_content image = { text = None; image = Some image; error = None }
-let create_error_content error = { text = None; image = None; error = Some error }
+
+let create_image_content image =
+  { text = None; image = Some image; error = None }
+
+let create_error_content error =
+  { text = None; image = None; error = Some error }
 
 type t = {
   key : string;
-  name : string option [@yojson.option];
-  description : string option [@yojson.option];
+  name : string option; [@yojson.option]
+  description : string option; [@yojson.option]
   tags : string list;
   annotations : (string * string) list;
   parameters : Yojson.Safe.t;
   enabled : bool;
-  error : string option [@yojson.option];
+  error : string option; [@yojson.option]
   fn : tool_handler;
-} [@@deriving fields]
+}
+[@@deriving fields]
 
-let yojson_of_t t = 
-  `Assoc [
-    ("key", `String t.key);
-    ("name", match t.name with Some n -> `String n | None -> `Null);
-    ("description", match t.description with Some d -> `String d | None -> `Null);
-    ("tags", `List (List.map t.tags ~f:(fun s -> `String s)));
-    ("annotations", `List (List.map t.annotations ~f:(fun (k,v) -> `List [`String k; `String v])));
-    ("parameters", t.parameters);
-    ("enabled", `Bool t.enabled);
-    ("error", match t.error with Some e -> `String e | None -> `Null);
-  ]
+let yojson_of_t t =
+  `Assoc
+    [
+      ("key", `String t.key);
+      ( "name",
+        match t.name with
+        | Some n -> `String n
+        | None -> `Null );
+      ( "description",
+        match t.description with
+        | Some d -> `String d
+        | None -> `Null );
+      ("tags", `List (List.map t.tags ~f:(fun s -> `String s)));
+      ( "annotations",
+        `List
+          (List.map t.annotations ~f:(fun (k, v) ->
+               `List [ `String k; `String v ])) );
+      ("parameters", t.parameters);
+      ("enabled", `Bool t.enabled);
+      ( "error",
+        match t.error with
+        | Some e -> `String e
+        | None -> `Null );
+    ]
 
 let with_key t new_key = { t with key = new_key }
-
 let enable t = { t with enabled = true }
-
 let disable t = { t with enabled = false }
 
-let from_function
-    ?name
-    ?description
-    ?(tags = [])
-    ?(annotations = [])
-    ?(exclude_args = [])
-    ?serializer
-    ?(enabled = true)
-    fn =
+let from_function ?name ?description ?(tags = []) ?(annotations = [])
+    ?(exclude_args = []) ?serializer ?(enabled = true) fn =
   let key =
     match name with
     | Some n -> String.lowercase n
     | None -> "<function>"
   in
-  { key;
+  {
+    key;
     name;
     description;
     tags;
     annotations;
-    parameters = `Assoc [];  (* TODO: Generate JSON schema from function type *)
+    parameters = `Assoc [];
+    (* TODO: Generate JSON schema from function type *)
     enabled;
     error = None;
-    fn = (fun args -> 
-      let%bind result = fn args in
-      return result)
+    fn =
+      (fun args ->
+        let%bind result = fn args in
+        return result);
   }

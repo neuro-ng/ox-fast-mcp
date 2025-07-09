@@ -4,10 +4,7 @@ open Cohttp_lwt_unix
 module TimingMiddleware : sig
   type t
 
-  val create :
-    ?logger:Logs.src ->
-    ?log_level:Logs.level ->
-    unit -> t
+  val create : ?logger:Logs.src -> ?log_level:Logs.level -> unit -> t
 
   val middleware :
     t ->
@@ -21,10 +18,7 @@ end
 module DetailedTimingMiddleware : sig
   type t
 
-  val create :
-    ?logger:Logs.src ->
-    ?log_level:Logs.level ->
-    unit -> t
+  val create : ?logger:Logs.src -> ?log_level:Logs.level -> unit -> t
 
   val middleware :
     t ->
@@ -84,4 +78,4 @@ module DetailedTimingMiddleware : sig
     Request.t ->
     Cohttp_lwt.Body.t ->
     (Response.t * Cohttp_lwt.Body.t) Lwt.t
-end 
+end

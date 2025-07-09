@@ -5,11 +5,7 @@ open! Async
 module Log_level = Log_types.Level
 
 module Duplicate_behavior : sig
-  type t =
-    | Warn
-    | Error
-    | Replace
-    | Ignore
+  type t = Warn | Error | Replace | Ignore
   [@@deriving compare, equal, sexp, yojson]
 
   val of_string : string -> t Or_error.t
@@ -17,19 +13,14 @@ module Duplicate_behavior : sig
 end
 
 module Resource_prefix_format : sig
-  type t =
-    | Protocol
-    | Path
-  [@@deriving compare, equal, sexp, yojson]
+  type t = Protocol | Path [@@deriving compare, equal, sexp, yojson]
 
   val of_string : string -> t Or_error.t
   val to_string : t -> string
 end
 
 module Auth_provider : sig
-  type t =
-    | Bearer_env
-  [@@deriving compare, equal, sexp, yojson]
+  type t = Bearer_env [@@deriving compare, equal, sexp, yojson]
 
   val of_string : string -> t Or_error.t
   val to_string : t -> string
@@ -41,8 +32,8 @@ module Settings_error : sig
     | Invalid_duplicate_behavior of string
     | Invalid_resource_prefix_format of string
     | Invalid_auth_provider of string
-    | Invalid_env_value of string * string  (* var_name * value *)
-    | Missing_required_env of string        (* var_name *)
+    | Invalid_env_value of string * string (* var_name * value *)
+    | Missing_required_env of string (* var_name *)
   [@@deriving sexp, compare]
 
   exception Settings_error of t
@@ -51,11 +42,7 @@ module Settings_error : sig
 end
 
 module Settings_source : sig
-  type t =
-    | Init
-    | Environment
-    | Dotenv
-    | File_secrets
+  type t = Init | Environment | Dotenv | File_secrets
   [@@deriving compare, equal, sexp]
 
   val priority : t -> int
@@ -87,7 +74,8 @@ module Settings : sig
   }
   [@@deriving compare, equal, sexp, yojson]
 
- val create : ?home:string -> 
+  val create :
+    ?home:string ->
     ?test_mode:bool ->
     ?log_level:Log_level.t ->
     ?enable_rich_tracebacks:bool ->
@@ -107,27 +95,34 @@ module Settings : sig
     ?stateless_http:bool ->
     ?default_auth_provider:Auth_provider.t option ->
     ?include_tags:string list option ->
-    ?exclude_tags:string list option -> unit -> t
+    ?exclude_tags:string list option ->
+    unit ->
+    t
+
   val configure_logging : t -> Logging.Logger.t
 
-  (** Environment variable handling *)
   val get_env_value : string -> (string, Base.Error.t) result
+  (** Environment variable handling *)
+
   val env_prefixes : string list
   val env_nested_delimiter : string
   val env_file : string
 
-  (** Settings source customization *)
   val load_from_env : t -> t Or_error.t
+  (** Settings source customization *)
+
   val load_from_dotenv : t -> (t, Core.Error.t) result Async.Deferred.t
   val load_from_file_secrets : t -> t Or_error.t
   val merge : t -> t -> t
 
-  (** Validation *)
   val validate : t -> unit Or_error.t
+  (** Validation *)
 
-  (** Deprecated functionality *)
   val settings : t -> t
-  [@@deprecated "[since 2.8.0] Use the settings value directly instead of accessing through settings property"]
+  [@@deprecated
+    "[since 2.8.0] Use the settings value directly instead of accessing \
+     through settings property"]
+  (** Deprecated functionality *)
 end
 
-val settings : Settings.t 
+val settings : Settings.t

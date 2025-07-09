@@ -24,22 +24,22 @@ module Logger = struct
   let get_handlers t = t.handlers
 
   let add_handler t handler_module =
-    let handler = {
-      module_instance = handler_module;
-      instance = Log_handler.create ();
-    } in
+    let handler =
+      { module_instance = handler_module; instance = Log_handler.create () }
+    in
     t.handlers <- handler :: t.handlers
 
   let remove_handler t handler_module =
-    t.handlers <- List.filter t.handlers ~f:(fun h -> not (phys_equal h.module_instance handler_module))
+    t.handlers <-
+      List.filter t.handlers ~f:(fun h ->
+          not (phys_equal h.module_instance handler_module))
 
-  let clear_handlers t =
-    t.handlers <- []
+  let clear_handlers t = t.handlers <- []
 
   let log t level msg =
     if Log_types.Level.compare_level level t.level >= 0 then
       List.iter t.handlers ~f:(fun handler ->
-        Log_handler.log handler.instance ~level ~msg)
+          Log_handler.log handler.instance ~level ~msg)
 
   let debug t msg = log t Log_types.Level.Debug msg
   let info t msg = log t Log_types.Level.Info msg
@@ -49,49 +49,41 @@ module Logger = struct
 end
 
 module Rich_handler = struct
-  type t = {
-    enable_rich_tracebacks : bool;
-    formatter : Log_formatter.t;
-  }
+  type t = { enable_rich_tracebacks : bool; formatter : Log_formatter.t }
 
   let create ?(enable_rich_tracebacks = true) () =
-    { enable_rich_tracebacks
-    ; formatter = Log_formatter.create "%(message)s"
-    }
+    { enable_rich_tracebacks; formatter = Log_formatter.create "%(message)s" }
 
-  let format t ~level ~msg =
-    Log_formatter.format t.formatter ~level ~msg
+  let format t ~level ~msg = Log_formatter.format t.formatter ~level ~msg
 
   let log t ~level ~msg =
     let formatted = format t ~level ~msg in
-    if t.enable_rich_tracebacks then
-      eprintf "%s\n%!" formatted
-    else
-      eprintf "%s\n%!" formatted
+    if t.enable_rich_tracebacks then eprintf "%s\n%!" formatted
+    else eprintf "%s\n%!" formatted
 end
 
-let configure_logging
-    ?(level = Log_types.Level.Info)
-    ?(enable_rich_tracebacks = true)
-    ?logger
-    () =
-  let logger = Option.value logger ~default:(Logger.create ~level "OxFastMCP") in
+let configure_logging ?(level = Log_types.Level.Info)
+    ?(enable_rich_tracebacks = true) ?logger () =
+  let logger =
+    Option.value logger ~default:(Logger.create ~level "OxFastMCP")
+  in
   Logger.clear_handlers logger;
   let rich_handler = Rich_handler.create ~enable_rich_tracebacks () in
-  ignore (rich_handler : Rich_handler.t);  (* Will be used when we implement proper rich handling *)
+  ignore (rich_handler : Rich_handler.t);
+  (* Will be used when we implement proper rich handling *)
   Logger.add_handler logger (module Rich_handler);
   logger
 
 module Global = struct
-  let default_logger = lazy (
-    let logger = Logger.create "OxFastMCP.Global" in
-    Logger.add_handler logger (module Rich_handler);
-    logger
-  )
+  let default_logger =
+    lazy
+      (let logger = Logger.create "OxFastMCP.Global" in
+       Logger.add_handler logger (module Rich_handler);
+       logger)
 
   let debug msg = Logger.debug (Lazy.force default_logger) msg
   let info msg = Logger.info (Lazy.force default_logger) msg
   let warning msg = Logger.warning (Lazy.force default_logger) msg
   let error msg = Logger.error (Lazy.force default_logger) msg
   let critical msg = Logger.critical (Lazy.force default_logger) msg
-end 
+end

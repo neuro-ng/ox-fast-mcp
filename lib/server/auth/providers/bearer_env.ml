@@ -12,22 +12,21 @@ module Bearer_settings = struct
   }
 
   let env_prefix = "FASTMCP_AUTH_BEARER_"
-
-  let get_env_opt name =
-    Sys.getenv_opt (env_prefix ^ name)
+  let get_env_opt name = Sys.getenv_opt (env_prefix ^ name)
 
   let get_env_list_opt name =
     get_env_opt name
     |> Option.map ~f:(String.split ~on:',')
     |> Option.map ~f:(List.map ~f:String.strip)
 
-  let load () = {
-    public_key = get_env_opt "PUBLIC_KEY";
-    jwks_uri = get_env_opt "JWKS_URI";
-    issuer = get_env_opt "ISSUER";
-    audience = get_env_list_opt "AUDIENCE";
-    required_scopes = get_env_list_opt "REQUIRED_SCOPES";
-  }
+  let load () =
+    {
+      public_key = get_env_opt "PUBLIC_KEY";
+      jwks_uri = get_env_opt "JWKS_URI";
+      issuer = get_env_opt "ISSUER";
+      audience = get_env_list_opt "AUDIENCE";
+      required_scopes = get_env_list_opt "REQUIRED_SCOPES";
+    }
 end
 
 module Env_bearer_auth_provider = struct
@@ -38,6 +37,7 @@ module Env_bearer_auth_provider = struct
       ?jwks_uri:(Option.first_some jwks_uri settings.jwks_uri)
       ?issuer:(Option.first_some issuer settings.issuer)
       ?audience:(Option.first_some audience settings.audience)
-      ?required_scopes:(Option.first_some required_scopes settings.required_scopes)
+      ?required_scopes:
+        (Option.first_some required_scopes settings.required_scopes)
       ()
-end 
+end

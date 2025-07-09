@@ -1,16 +1,15 @@
 open Core
 open Async
 
-(** Exception raised when a tool call fails *)
 exception Tool_error of string
+(** Exception raised when a tool call fails *)
 
-(** Exception raised when server session is closed *)
 exception Closed_resource_error of string
+(** Exception raised when server session is closed *)
 
-(** Exception raised when initialization fails *)
 exception Init_error of string
+(** Exception raised when initialization fails *)
 
-(** Client type parameterized by transport type *)
 type 'transport t = {
   transport : 'transport;
   mutable session : Types.client_session option;
@@ -25,62 +24,55 @@ type 'transport t = {
   stop_event : unit Ivar.t;
   monitor : Monitor.t;
 }
+(** Client type parameterized by transport type *)
 
 (** Session runner that manages the lifecycle of a session *)
 let session_runner t session =
   let rec run () =
-    match%bind 
-      Monitor.try_with ~extract_exn:true
-        (fun () -> 
+    match%bind
+      Monitor.try_with ~extract_exn:true (fun () ->
           let%bind () = Clock.after (Time.Span.of_sec 1.0) in
-          if Ivar.is_full t.stop_event then
-            return `Stop
-          else
-            return `Continue)
+          if Ivar.is_full t.stop_event then return `Stop else return `Continue)
     with
     | Ok `Stop -> return ()
     | Ok `Continue -> run ()
     | Error (Closed_resource_error _ as e) ->
-        t.session <- None;
-        t.initialize_result <- None;
-        raise e
+      t.session <- None;
+      t.initialize_result <- None;
+      raise e
     | Error e ->
-        Log.error "Session error: %s" (Exn.to_string e);
-        t.session <- None;
-        t.initialize_result <- None;
-        run ()
+      Log.error "Session error: %s" (Exn.to_string e);
+      t.session <- None;
+      t.initialize_result <- None;
+      run ()
   in
   run ()
 
-let create
-    ?roots
-    ?sampling_handler
-    ?log_handler
-    ?message_handler
-    ?progress_handler
-    ?timeout
-    ?init_timeout
-    ?client_info
-    ?auth
-    transport =
-  let progress_handler = Option.value progress_handler ~default:Progress.default_handler in
+let create ?roots ?sampling_handler ?log_handler ?message_handler
+    ?progress_handler ?timeout ?init_timeout ?client_info ?auth transport =
+  let progress_handler =
+    Option.value progress_handler ~default:Progress.default_handler
+  in
   let log_handler = Option.value log_handler ~default:Logging.default_handler in
-  let init_timeout = match init_timeout with
+  let init_timeout =
+    match init_timeout with
     | Some t -> Some t
     | None -> Some (Time.Span.of_sec Settings.client_init_timeout)
   in
-  let session_kwargs = {
-    Types.sampling_callback = Option.map sampling_handler ~f:Sampling.create_callback;
-    list_roots_callback = Option.map roots ~f:Roots.create_callback;
-    logging_callback = Logging.create_callback log_handler;
-    message_handler;
-    read_timeout = timeout;
-    client_info;
-  } in
+  let session_kwargs =
+    {
+      Types.sampling_callback =
+        Option.map sampling_handler ~f:Sampling.create_callback;
+      list_roots_callback = Option.map roots ~f:Roots.create_callback;
+      logging_callback = Logging.create_callback log_handler;
+      message_handler;
+      read_timeout = timeout;
+      client_info;
+    }
+  in
   Option.iter auth ~f:(fun a -> Transports.set_auth transport a);
   let monitor = Monitor.create ~name:"client_monitor" () in
-  Monitor.handle_errors monitor
-    ~rest:(fun exn ->
+  Monitor.handle_errors monitor ~rest:(fun exn ->
       match exn with
       | Tool_error msg -> Log.error "Tool error: %s" msg
       | Closed_resource_error msg -> Log.error "Closed resource: %s" msg
@@ -112,20 +104,23 @@ let initialize_result t =
   | None -> failwith "Client is not connected. Use connect first."
 
 let set_roots t roots =
-  t.session_kwargs <- { t.session_kwargs with
-    list_roots_callback = Some (Roots.create_callback roots)
-  }
+  t.session_kwargs <-
+    {
+      t.session_kwargs with
+      list_roots_callback = Some (Roots.create_callback roots);
+    }
 
 let set_sampling_callback t handler =
-  t.session_kwargs <- { t.session_kwargs with
-    sampling_callback = Some (Sampling.create_callback handler)
-  }
+  t.session_kwargs <-
+    {
+      t.session_kwargs with
+      sampling_callback = Some (Sampling.create_callback handler);
+    }
 
 let is_connected t = Option.is_some t.session
 
 let with_error_handling t f =
-  Monitor.try_with ~monitor:t.monitor
-    ~extract_exn:true
+  Monitor.try_with ~monitor:t.monitor ~extract_exn:true
     ~rest:(function
       | Closed_resource_error _ as e -> raise e
       | Init_error _ as e -> raise e
@@ -135,67 +130,64 @@ let with_error_handling t f =
 
 let connect t =
   with_error_handling t (fun () ->
-    Mutex.critical_section t.context_lock ~f:(fun () ->
-      let need_to_start = match t.session_task with
-        | None -> true
-        | Some task -> Deferred.is_determined task
-      in
-      if need_to_start then begin
-        t.stop_event <- Ivar.create ();
-        t.ready_event <- Ivar.create ();
-        t.session_task <- Some (
-          let%bind session = Transports.connect_session t.transport t.session_kwargs in
-          t.session <- Some session;
-          match t.init_timeout with
-          | Some timeout ->
-            let%bind () = Clock.with_timeout timeout
-              (let%bind result = Types.initialize session in
-               t.initialize_result <- Some result;
-               Ivar.fill t.ready_event ();
-               return ())
-            in
-            begin match%map Ivar.read t.stop_event with
-            | `Timeout -> raise (Init_error "Failed to initialize server session")
-            | `Result () -> 
-                let%bind () = session_runner t session in
-                return ()
-            end
-          | None ->
-            let%bind result = Types.initialize session in
-            t.initialize_result <- Some result;
-            Ivar.fill t.ready_event ();
-            let%bind () = session_runner t session in
-            Ivar.read t.stop_event
-        )
-      end;
-      let%bind () = Ivar.read t.ready_event in
-      t.nesting_counter <- t.nesting_counter + 1;
-      return ()
-    ))
+      Mutex.critical_section t.context_lock ~f:(fun () ->
+          let need_to_start =
+            match t.session_task with
+            | None -> true
+            | Some task -> Deferred.is_determined task
+          in
+          if need_to_start then (
+            t.stop_event <- Ivar.create ();
+            t.ready_event <- Ivar.create ();
+            t.session_task <-
+              Some
+                (let%bind session =
+                   Transports.connect_session t.transport t.session_kwargs
+                 in
+                 t.session <- Some session;
+                 match t.init_timeout with
+                 | Some timeout -> (
+                   let%bind () =
+                     Clock.with_timeout timeout
+                       (let%bind result = Types.initialize session in
+                        t.initialize_result <- Some result;
+                        Ivar.fill t.ready_event ();
+                        return ())
+                   in
+                   match%map Ivar.read t.stop_event with
+                   | `Timeout ->
+                     raise (Init_error "Failed to initialize server session")
+                   | `Result () ->
+                     let%bind () = session_runner t session in
+                     return ())
+                 | None ->
+                   let%bind result = Types.initialize session in
+                   t.initialize_result <- Some result;
+                   Ivar.fill t.ready_event ();
+                   let%bind () = session_runner t session in
+                   Ivar.read t.stop_event));
+          let%bind () = Ivar.read t.ready_event in
+          t.nesting_counter <- t.nesting_counter + 1;
+          return ()))
 
-let disconnect ?(force=false) t =
+let disconnect ?(force = false) t =
   Mutex.critical_section t.context_lock ~f:(fun () ->
-    if force then
-      t.nesting_counter <- 0
-    else
-      t.nesting_counter <- max 0 (t.nesting_counter - 1);
-    
-    if t.nesting_counter > 0 then
-      return ()
-    else begin
-      match t.session_task with
-      | None -> return ()
-      | Some task ->
-        Ivar.fill t.stop_event ();
-        t.session_task <- None;
-        let%bind () = task in
-        t.stop_event <- Ivar.create ();
-        t.ready_event <- Ivar.create ();
-        t.session <- None;
-        t.initialize_result <- None;
-        return ()
-    end
-  )
+      if force then t.nesting_counter <- 0
+      else t.nesting_counter <- max 0 (t.nesting_counter - 1);
+
+      if t.nesting_counter > 0 then return ()
+      else
+        match t.session_task with
+        | None -> return ()
+        | Some task ->
+          Ivar.fill t.stop_event ();
+          t.session_task <- None;
+          let%bind () = task in
+          t.stop_event <- Ivar.create ();
+          t.ready_event <- Ivar.create ();
+          t.session <- None;
+          t.initialize_result <- None;
+          return ())
 
 let close t =
   let%bind () = disconnect ~force:true t in
@@ -208,35 +200,29 @@ let ping t =
   | _ -> false
 
 let cancel t ~request_id ?reason () =
-  let notification = Types.Client_notification (
-    Types.Cancelled_notification {
-      method_ = "notifications/cancelled";
-      params = {
-        request_id;
-        reason;
-      }
-    }
-  ) in
+  let notification =
+    Types.Client_notification
+      (Types.Cancelled_notification
+         {
+           method_ = "notifications/cancelled";
+           params = { request_id; reason };
+         })
+  in
   Types.send_notification (session t) notification
 
 let progress t ~progress_token ~progress ?total ?message () =
-  Types.send_progress_notification (session t) progress_token progress total message
+  Types.send_progress_notification (session t) progress_token progress total
+    message
 
-let set_logging_level t level =
-  Types.set_logging_level (session t) level
-
-let send_roots_list_changed t =
-  Types.send_roots_list_changed (session t)
-
-let list_resources_mcp t =
-  Types.list_resources (session t)
+let set_logging_level t level = Types.set_logging_level (session t) level
+let send_roots_list_changed t = Types.send_roots_list_changed (session t)
+let list_resources_mcp t = Types.list_resources (session t)
 
 let list_resources t =
   let%map result = list_resources_mcp t in
   result.resources
 
-let list_resource_templates_mcp t =
-  Types.list_resource_templates (session t)
+let list_resource_templates_mcp t = Types.list_resource_templates (session t)
 
 let list_resource_templates t =
   let%map result = list_resource_templates_mcp t in
@@ -250,8 +236,7 @@ let read_resource t ~uri =
   let%map result = read_resource_mcp t ~uri in
   result.contents
 
-let list_prompts_mcp t =
-  Types.list_prompts (session t)
+let list_prompts_mcp t = Types.list_prompts (session t)
 
 let list_prompts t =
   let%map result = list_prompts_mcp t in
@@ -260,11 +245,8 @@ let list_prompts t =
 (* Helper for serializing arguments *)
 let serialize_arguments arguments =
   List.map arguments ~f:(fun (key, value) ->
-    if String.is_valid_utf8 (Yojson.Safe.to_string value) then
-      (key, value)
-    else
-      (key, `String (Yojson.Safe.to_string value))
-  )
+      if String.is_valid_utf8 (Yojson.Safe.to_string value) then (key, value)
+      else (key, `String (Yojson.Safe.to_string value)))
 
 (* Resource Subscription Methods *)
 let subscribe_resource t ~uri =
@@ -280,37 +262,40 @@ let get_prompt_mcp t ~name ?arguments () =
   let serialized_arguments = Option.map arguments ~f:serialize_arguments in
   Types.get_prompt (session t) name serialized_arguments
 
-let get_prompt t ~name ?arguments () =
-  get_prompt_mcp t ~name ?arguments ()
+let get_prompt t ~name ?arguments () = get_prompt_mcp t ~name ?arguments ()
 
 let create_prompt_reference ~name ~arguments =
   let serialized_arguments = Option.map arguments ~f:serialize_arguments in
   Types.Prompt_reference { name; arguments = serialized_arguments }
 
 let call_tool_mcp t ~name ?arguments ?timeout ?progress_handler () =
-  let timeout = Option.map timeout ~f:(fun t ->
-    if Time.Span.to_sec t > 0.0 then Some t else None
-  ) in
-  let progress_handler = Option.value progress_handler ~default:t.progress_handler in
-  let arguments = Option.value_map arguments ~default:[] ~f:serialize_arguments in
-  Types.call_tool (session t)
-    ~name
-    ~arguments
-    ~timeout
+  let timeout =
+    Option.map timeout ~f:(fun t ->
+        if Time.Span.to_sec t > 0.0 then Some t else None)
+  in
+  let progress_handler =
+    Option.value progress_handler ~default:t.progress_handler
+  in
+  let arguments =
+    Option.value_map arguments ~default:[] ~f:serialize_arguments
+  in
+  Types.call_tool (session t) ~name ~arguments ~timeout
     ~progress_callback:progress_handler
 
 let call_tool t ~name ?arguments ?timeout ?progress_handler () =
-  let%map result = call_tool_mcp t ~name ?arguments ?timeout ?progress_handler () in
+  let%map result =
+    call_tool_mcp t ~name ?arguments ?timeout ?progress_handler ()
+  in
   if result.is_error then
     match List.hd_exn result.content with
     | Types.Text_content { text; _ } -> raise (Tool_error text)
     | _ -> raise (Tool_error "Tool call failed")
-  else
-    result.content
+  else result.content
 
 let with_client t f =
   let%bind () = connect t in
-  Monitor.protect ~finally:(fun () -> disconnect t ~force:false)
+  Monitor.protect
+    ~finally:(fun () -> disconnect t ~force:false)
     (fun () -> with_error_handling t f)
 
 let call_tool t ~name ?arguments ?timeout ?progress_handler () =
@@ -319,22 +304,19 @@ let call_tool t ~name ?arguments ?timeout ?progress_handler () =
     match List.hd_exn result.content with
     | Types.Text_content { text; _ } -> raise (Tool_error text)
     | _ -> raise (Tool_error "Tool call failed")
-  else
-    result.content
+  else result.content
 
 (* Resource Reference Helpers *)
 let create_resource_reference ~uri =
   Types.Resource_reference { uri = Uri.of_string uri }
 
-let complete_mcp t ~ref ~argument =
-  Types.complete (session t) ref argument
+let complete_mcp t ~ref ~argument = Types.complete (session t) ref argument
 
 let complete t ~ref ~argument =
   let%map result = complete_mcp t ~ref ~argument in
   result.completion
 
-let list_tools_mcp t =
-  Types.list_tools (session t)
+let list_tools_mcp t = Types.list_tools (session t)
 
 let list_tools t =
   let%map result = list_tools_mcp t in
@@ -346,4 +328,4 @@ let complete_resource t ~uri ~argument =
 
 let complete_prompt t ~name ?arguments ~argument () =
   let ref = create_prompt_reference ~name ~arguments in
-  complete t ~ref ~argument 
+  complete t ~ref ~argument

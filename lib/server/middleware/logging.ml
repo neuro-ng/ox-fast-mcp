@@ -11,13 +11,9 @@ module Logging = struct
     methods : string list option;
   }
 
-  let create
-      ?(logger = Logger.create "fastmcp.requests")
-      ?(log_level = Logger.Level.Info)
-      ?(include_payloads = false)
-      ?(max_payload_length = 1000)
-      ?(methods = None)
-      () =
+  let create ?(logger = Logger.create "fastmcp.requests")
+      ?(log_level = Logger.Level.Info) ?(include_payloads = false)
+      ?(max_payload_length = 1000) ?(methods = None) () =
     { logger; log_level; include_payloads; max_payload_length; methods }
 
   let format_message t context =
@@ -32,7 +28,11 @@ module Logging = struct
       if t.include_payloads then
         match Yojson.Safe.to_string_pretty context.message with
         | payload when String.length payload > t.max_payload_length ->
-          parts @ [ sprintf "payload=%s..." (String.prefix payload t.max_payload_length) ]
+          parts
+          @ [
+              sprintf "payload=%s..."
+                (String.prefix payload t.max_payload_length);
+            ]
         | payload -> parts @ [ sprintf "payload=%s" payload ]
       else parts
     in
@@ -41,7 +41,8 @@ module Logging = struct
   let on_message t context call_next =
     let%bind () =
       match t.methods with
-      | Some methods when not (List.mem methods context.method_ ~equal:String.equal) ->
+      | Some methods
+        when not (List.mem methods context.method_ ~equal:String.equal) ->
         return ()
       | _ ->
         let message_info = format_message t context in
@@ -49,8 +50,7 @@ module Logging = struct
             sprintf "Processing message: %s" message_info);
         return ()
     in
-    Monitor.try_with (fun () -> call_next context)
-    >>= function
+    Monitor.try_with (fun () -> call_next context) >>= function
     | Ok result ->
       Logger.log t.logger t.log_level (fun () ->
           sprintf "Completed message: %s"
@@ -72,12 +72,9 @@ module Structured_logging = struct
     methods : string list option;
   }
 
-  let create
-      ?(logger = Logger.create "fastmcp.structured")
-      ?(log_level = Logger.Level.Info)
-      ?(include_payloads = false)
-      ?(methods = None)
-      () =
+  let create ?(logger = Logger.create "fastmcp.structured")
+      ?(log_level = Logger.Level.Info) ?(include_payloads = false)
+      ?(methods = None) () =
     { logger; log_level; include_payloads; methods }
 
   let create_log_entry t context event extra_fields =
@@ -91,8 +88,7 @@ module Structured_logging = struct
       ]
     in
     let fields =
-      if t.include_payloads then
-        base_fields @ [ ("payload", context.message) ]
+      if t.include_payloads then base_fields @ [ ("payload", context.message) ]
       else base_fields
     in
     `Assoc (fields @ extra_fields)
@@ -100,7 +96,8 @@ module Structured_logging = struct
   let on_message t context call_next =
     let%bind () =
       match t.methods with
-      | Some methods when not (List.mem methods context.method_ ~equal:String.equal) ->
+      | Some methods
+        when not (List.mem methods context.method_ ~equal:String.equal) ->
         return ()
       | _ ->
         let start_entry = create_log_entry t context "request_start" [] in
@@ -108,8 +105,7 @@ module Structured_logging = struct
             Yojson.Safe.to_string start_entry);
         return ()
     in
-    Monitor.try_with (fun () -> call_next context)
-    >>= function
+    Monitor.try_with (fun () -> call_next context) >>= function
     | Ok result ->
       let success_entry =
         create_log_entry t context "request_success"
@@ -119,8 +115,9 @@ module Structured_logging = struct
                 (match result with
                 | None -> "None"
                 | Some _ -> "Some"
-                | _ -> Obj.Extension_constructor.of_val result |> Obj.Extension_constructor.name)
-            );
+                | _ ->
+                  Obj.Extension_constructor.of_val result
+                  |> Obj.Extension_constructor.name) );
           ]
       in
       Logger.log t.logger t.log_level (fun () ->
@@ -137,4 +134,4 @@ module Structured_logging = struct
       Logger.log t.logger Logger.Level.Error (fun () ->
           Yojson.Safe.to_string error_entry);
       raise exn
-end 
+end
