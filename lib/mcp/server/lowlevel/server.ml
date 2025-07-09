@@ -139,7 +139,7 @@ let get_capabilities t notification_options experimental_capabilities =
   in
   let logging_capability =
     if Map.mem t.request_handlers "set_level" then
-      Some {}
+      Some { set_level = true }
     else None
   in
   { prompts = prompts_capability;

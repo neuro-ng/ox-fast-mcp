@@ -49,7 +49,7 @@ let setup_auth_middleware_and_routes ~auth =
     { name = "bearer_auth";
       handler = (fun next request ->
         let* auth_result = Bearer_auth_backend.authenticate 
-          { token_verifier = (module auth : TOKEN_VERIFIER) }
+          { token_verifier = auth.token_verifier_impl }
           request
         in
         Auth_context_middleware.handle auth_result request (next request)
