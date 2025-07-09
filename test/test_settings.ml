@@ -140,7 +140,7 @@ let%expect_test "test settings validation empty home" =
 let%expect_test "test settings validation invalid port" =
   let settings = Settings.create ~port:(-1) () in
   show_raise (fun () -> Settings.validate settings);
-  [%expect {| (raised (Failure "Port must be between 0 and 65535")) |}];
+  [%expect {| (raised (Failure "Invalid port number: -1")) |}];
   return ()
 
 let%expect_test "test environment variable loading" =
