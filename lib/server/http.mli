@@ -2,6 +2,32 @@ open Core
 open Cohttp
 open Lwt
 
+
+(** Application type *)
+type app = {
+  routes: route_list;
+  middleware: middleware_list;
+  debug: bool;
+  lifespan: (unit -> unit Lwt.t) option;
+}
+
+(** Route type *)
+and route = {
+  path: string;
+  methods: string list;
+  handler: (Request.t -> (Response.t * Body.t) Lwt.t);
+}
+
+and route_list = route list
+
+(** Middleware type *)
+and middleware = {
+  name: string;
+  handler: (Request.t -> (Response.t * Body.t) Lwt.t) -> (Request.t -> (Response.t * Body.t) Lwt.t);
+}
+
+and middleware_list = middleware list 
+
 (** Current HTTP request context *)
 val current_http_request : Request.t option Lwt.key
 
@@ -46,28 +72,3 @@ val create_streamable_http_app :
   ?middleware:middleware_list ->
   unit ->
   app
-
-(** Application type *)
-and app = {
-  routes: route_list;
-  middleware: middleware_list;
-  debug: bool;
-  lifespan: (unit -> unit Lwt.t) option;
-}
-
-(** Route type *)
-and route = {
-  path: string;
-  methods: string list;
-  handler: (Request.t -> (Response.t * Body.t) Lwt.t);
-}
-
-and route_list = route list
-
-(** Middleware type *)
-and middleware = {
-  name: string;
-  handler: (Request.t -> (Response.t * Body.t) Lwt.t) -> (Request.t -> (Response.t * Body.t) Lwt.t);
-}
-
-and middleware_list = middleware list 
