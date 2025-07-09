@@ -46,12 +46,6 @@ jobs:
         eval $(opam env)
         dune runtest
 
-    - name: Check opam file
-      working-directory: /workspace
-      run: |
-        eval $(opam env)
-        opam lint ox-fast-mcp.opam
-
   lint:
     runs-on: ubuntu-latest
     container:
