@@ -1,37 +1,33 @@
 open! Core
 open! Async
-open Yojson.Safe
-open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type json = Yojson.Safe.t
 (** Basic JSON representation with proper OCaml types *)
 
-type json_value =
-  [ `Null
-  | `Bool of bool
-  | `Int of int
-  | `Float of float
-  | `String of string
-  | `List of json_value list
-  | `Assoc of (string * json_value) list ]
-[@@deriving yojson]
+(* Manual yojson conversion functions for json type *)
+val json_of_yojson : Yojson.Safe.t -> json
+val yojson_of_json : json -> Yojson.Safe.t
 
+(* Manual sexp conversion functions for json type *)
+val json_of_sexp : Sexp.t -> json
+val sexp_of_json : json -> Sexp.t
+
+val latest_protocol_version : string
 (** Latest protocol version *)
-let latest_protocol_version = "2025-06-18"
 
+val default_negotiated_version : string
 (** Default negotiated version *)
-let default_negotiated_version = "2025-03-26"
 
+val parse_error : int
 (** Standard JSON-RPC error codes *)
-let parse_error = -32700
 
-let invalid_request = -32600
-let method_not_found = -32601
-let invalid_params = -32602
-let internal_error = -32603
+val invalid_request : int
+val method_not_found : int
+val invalid_params : int
+val internal_error : int
 
+val connection_closed : int
 (** SDK error codes *)
-let connection_closed = -32000
 
 type progress_token = string [@@deriving yojson]
 (** Basic types *)
@@ -87,7 +83,7 @@ type elicitation_capability = {
 [@@deriving yojson]
 
 type client_capabilities = {
-  experimental : (string * (string * Yojson.Safe.t) list) list option;
+  experimental : (string * (string * json) list) list option; [@yojson.option]
   sampling : sampling_capability option; [@yojson.option]
   elicitation : elicitation_capability option; [@yojson.option]
   roots : roots_capability option; [@yojson.option]
@@ -200,19 +196,14 @@ type resource_contents =
   | Text of text_resource_contents
 [@@deriving yojson, compare]
 
-let create_blob_resource ~uri ~mime_type ~blob () =
-  Blob { uri; mime_type; blob }
+val create_blob_resource :
+  uri:string -> mime_type:string -> blob:string -> unit -> resource_contents
 
-let create_text_resource ~uri ~mime_type ~text () =
-  Text { uri; mime_type; text }
+val create_text_resource :
+  uri:string -> mime_type:string -> text:string -> unit -> resource_contents
 
-let get_mime_type = function
-  | Blob { mime_type; _ } -> mime_type
-  | Text { mime_type; _ } -> mime_type
-
-let get_uri = function
-  | Blob { uri; _ } -> uri
-  | Text { uri; _ } -> uri
+val get_mime_type : resource_contents -> string
+val get_uri : resource_contents -> string
 
 type tool_annotations = (string * string) list [@@deriving yojson]
 (** Tool types *)
@@ -321,7 +312,11 @@ type jsonrpc_notification = {
 }
 [@@deriving yojson]
 
-type jsonrpc_response = { jsonrpc : string; id : request_id; result : json }
+type jsonrpc_response = {
+  jsonrpc : string;
+  id : request_id;
+  result : json;
+}
 [@@deriving yojson]
 
 type jsonrpc_error_response = {
@@ -469,8 +464,7 @@ type prompt_argument = {
   description : string option; [@yojson.option]
   required : bool option; [@yojson.option]
 }
-[@@deriving sexp, yojson]
-(** Prompt types *)
+[@@deriving yojson]
 
 type prompt = {
   name : string;
@@ -479,18 +473,24 @@ type prompt = {
   arguments : prompt_argument list option; [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 
 type prompt_message = { role : role; content : content }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
+(** Prompt types *)
+
+type embedded_resource_content = 
+  | Text_resource of text_resource_contents
+  | Blob_resource of blob_resource_contents
+[@@deriving yojson]
 
 type embedded_resource = {
   type_ : [ `Resource ]; [@key "type"]
-  resource : (text_resource_contents, blob_resource_contents) Either.t;
+  resource : embedded_resource_content;
   annotations : annotations option; [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Resource embedded content *)
 
 type resource_link = {
@@ -504,7 +504,7 @@ type resource_link = {
   annotations : annotations option; [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 
 type content_block = {
   text : string option; [@yojson.option]
@@ -513,15 +513,17 @@ type content_block = {
 }
 [@@deriving fields, yojson]
 
-type empty_result = { meta : json option [@key "_meta"] [@yojson.option] }
-[@@deriving sexp, yojson]
+type empty_result = {
+  meta : json option; [@key "_meta"] [@yojson.option]
+}
+[@@deriving yojson]
 (** Empty result type *)
 
 type paginated_result = {
   next_cursor : cursor option; [@key "nextCursor"] [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Paginated result types *)
 
 type list_resources_result = {
@@ -529,7 +531,7 @@ type list_resources_result = {
   next_cursor : cursor option; [@key "nextCursor"] [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Resource operation results *)
 
 type list_resource_templates_result = {
@@ -537,36 +539,37 @@ type list_resource_templates_result = {
   next_cursor : cursor option; [@key "nextCursor"] [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 
 type read_resource_result = {
-  contents : (text_resource_contents, blob_resource_contents) Either.t list;
+  contents : embedded_resource_content list;
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 
 type list_tools_result = {
   tools : tool list;
   next_cursor : cursor option; [@key "nextCursor"] [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Tool operation results *)
 
 type call_tool_result = {
   content : content list;
-  structured_content : json option; [@key "structuredContent"] [@yojson.option]
+  structured_content : json option;
+      [@key "structuredContent"] [@yojson.option]
   is_error : bool; [@key "isError"]
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 
 type list_prompts_result = {
   prompts : prompt list;
   next_cursor : cursor option; [@key "nextCursor"] [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Prompt operation results *)
 
 type get_prompt_result = {
@@ -574,13 +577,13 @@ type get_prompt_result = {
   messages : prompt_message list;
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 
 type list_roots_result = {
   roots : root list;
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Root operation results *)
 
 type cancelled_notification_params = {
@@ -588,14 +591,14 @@ type cancelled_notification_params = {
   reason : string option; [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Cancelled notification types *)
 
 type resource_updated_notification_params = {
   uri : string;
   meta : json option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Resource update notification types *)
 
 type client_result =
@@ -603,7 +606,7 @@ type client_result =
   | `CreateMessage of create_message_result
   | `ListRoots of list_roots_result
   | `Elicit of elicit_result ]
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Client result types *)
 
 type server_result =
@@ -617,11 +620,10 @@ type server_result =
   | `ReadResource of read_resource_result
   | `CallTool of call_tool_result
   | `ListTools of list_tools_result ]
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Server result types *)
 
-type sampling_message = { role : role; content : content }
-[@@deriving sexp, yojson]
+type sampling_message = { role : role; content : content } [@@deriving yojson]
 (** Sampling message type *)
 
 type complete_request_params = {
@@ -629,24 +631,114 @@ type complete_request_params = {
   argument : completion_argument;
   context : completion_context option; [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Complete request params *)
 
 type subscribe_request_params = {
   uri : string;
   meta : meta option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Subscribe request params *)
 
 type unsubscribe_request_params = {
   uri : string;
   meta : meta option; [@key "_meta"] [@yojson.option]
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** Unsubscribe request params *)
 
-type resource_reference = resource_template_reference
-[@@deriving sexp, yojson]
-[@@deprecated "Use resource_template_reference instead"]
-(** Deprecated resource reference type *)
+
+
+(** Helper functions for common operations *)
+
+val create_text_content : string -> content_block
+(** Create a text content block *)
+
+val create_image_content : string -> content_block
+(** Create an image content block *)
+
+val create_audio_content :
+  string ->
+  string ->
+  ?annotations:annotations ->
+  ?meta:json ->
+  unit ->
+  content
+(** Create an audio content block *)
+
+val create_resource_link :
+  name:string ->
+  uri:string ->
+  ?title:string ->
+  ?description:string ->
+  ?mime_type:string ->
+  ?size:int ->
+  ?annotations:annotations ->
+  ?meta:json ->
+  unit ->
+  resource_link
+(** Create a resource link content block *)
+
+val create_embedded_resource :
+  embedded_resource_content ->
+  ?annotations:annotations ->
+  ?meta:json ->
+  unit ->
+  embedded_resource
+(** Create an embedded resource content block *)
+
+val create_message : role:role -> content:content -> message
+(** Create a message *)
+
+val create_sampling_message : role:role -> content:content -> sampling_message
+(** Create a sampling message *)
+
+val create_prompt_message : role:role -> content:content -> message
+(** Create a prompt message *)
+
+val create_error_data :
+  code:int -> message:string -> ?data:json -> unit -> error_data
+(** Create an error data *)
+
+val create_request_params :
+  ?progress_token:progress_token -> unit -> request_params
+(** Create a request params with meta *)
+
+val create_paginated_request_params :
+  ?progress_token:progress_token ->
+  ?cursor:cursor ->
+  unit ->
+  paginated_request_params
+(** Create a paginated request params *)
+
+val create_notification_params :
+  ?progress_token:progress_token -> unit -> notification_params
+(** Create a notification params with meta *)
+
+val create_progress_notification_params :
+  progress_token:progress_token ->
+  progress:float ->
+  ?total:float ->
+  ?message:string ->
+  unit ->
+  progress_notification_params
+(** Create a progress notification params *)
+
+val create_cancelled_notification_params :
+  request_id:request_id ->
+  ?reason:string ->
+  ?meta:json ->
+  unit ->
+  cancelled_notification_params
+(** Create a cancelled notification params *)
+
+val create_resource_updated_notification_params :
+  uri:string ->
+  ?meta:json ->
+  unit ->
+  resource_updated_notification_params
+(** Create a resource updated notification params *)
+
+val create_error_content : string -> content_block
+(** Create an error content block *)

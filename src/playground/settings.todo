@@ -1,0 +1,53 @@
+# Settings Module TODO List
+
+## Missing Python Imports to OCaml Mappings
+- `pydantic` and `pydantic_settings`: No direct equivalent, using manual validation
+- `pydantic.Field`: No direct equivalent, using OCaml record fields
+- `pydantic.model_validator`: No direct equivalent, using manual validation functions
+- `fastmcp.utilities.logging`: ✓ Using lib/utilities/logging.ml
+
+## Missing Functionality
+1. Environment Variable Support
+   - Python uses `ExtendedEnvSettingsSource` for env var handling
+   - Need OCaml equivalent for reading env vars with prefixes
+   - Need to handle deprecated FASTMCP_SERVER_ prefix warning
+
+2. Logging Configuration ✓
+   - Using lib/utilities/logging.ml for configuration
+   - Using lib/utilities/log_types.ml for log levels
+   - Using lib/utilities/log_handler.ml for handlers
+   - Using lib/utilities/log_formatter.ml for formatting
+   - Rich traceback support implemented via Rich_handler
+
+3. Settings Validation
+   - Python uses Pydantic for automatic validation
+   - Need to implement manual validation for:
+   - Log level values (✓ using Log_level.of_string)
+   - Resource prefix format values
+   - Auth provider values
+   - Port range validation
+   - Path validation
+
+4. Dotenv Support
+   - Python uses .env file support via pydantic_settings
+   - Need OCaml equivalent for reading .env files
+
+5. Settings Customization
+   - Python uses `settings_customise_sources` for source priority
+   - Need OCaml equivalent for merging settings from different sources
+
+6. Backwards Compatibility
+   - Python has `settings` property for < 2.8.0 compatibility
+   - Need to decide if this is needed in OCaml version
+
+7. Field Documentation
+   - Python uses Field annotations with descriptions
+   - Consider adding OCaml documentation comments
+
+## Implementation Notes
+1. Using Core.Filename for path handling instead of Python's pathlib
+2. Using variants instead of string literals for enums
+3. Using Core.Or_error for error handling
+4. Using ppx_yojson_conv for JSON serialization
+5. Using ppx_compare and ppx_sexp for comparison and serialization
+6. Using lib/utilities/logging.ml for logging functionality 
