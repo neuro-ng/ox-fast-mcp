@@ -3,7 +3,7 @@ open! Async
 open Yojson.Safe
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
-type json = Yojson.Safe.t [@@deriving yojson]
+type json = Yojson.Safe.t
 (** Basic JSON representation with proper OCaml types *)
 
 type json_value =
@@ -87,7 +87,7 @@ type elicitation_capability = {
 [@@deriving yojson]
 
 type client_capabilities = {
-  experimental : (string * json) list option; [@yojson.option]
+  experimental : (string * (string * Yojson.Safe.t) list) list option;
   sampling : sampling_capability option; [@yojson.option]
   elicitation : elicitation_capability option; [@yojson.option]
   roots : roots_capability option; [@yojson.option]

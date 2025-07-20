@@ -17,19 +17,19 @@ let%expect_test "test_issubclass_safe" =
       print_s [%sexp (expected : bool)];
       [%expect
         {|
-      (* CR expect_test: Test ran multiple times with different test outputs *)
-      ============================= Output 1 / 3 ==============================
-      child_is_subclass_of_parent
-      true
+        (* CR expect_test: Test ran multiple times with different test outputs *)
+        ============================= Output 1 / 3 ==============================
+        child_is_subclass_of_parent
+        true
 
-      ============================= Output 2 / 3 ==============================
-      class_is_subclass_of_itself
-      true
+        ============================= Output 2 / 3 ==============================
+        class_is_subclass_of_itself
+        true
 
-      ============================= Output 3 / 3 ==============================
-      unrelated_class_is_not_subclass
-      false
-      |}]);
+        ============================= Output 3 / 3 ==============================
+        unrelated_class_is_not_subclass
+        false
+        |}]);
   return ()
 
 let%expect_test "test_is_class_member_of_type" =
@@ -46,19 +46,19 @@ let%expect_test "test_is_class_member_of_type" =
       print_s [%sexp (expected : bool)];
       [%expect
         {|
-      (* CR expect_test: Test ran multiple times with different test outputs *)
-      ============================= Output 1 / 3 ==============================
-      basic_subclass_check
-      true
+        (* CR expect_test: Test ran multiple times with different test outputs *)
+        ============================= Output 1 / 3 ==============================
+        basic_subclass_check
+        true
 
-      ============================= Output 2 / 3 ==============================
-      self_is_member
-      true
+        ============================= Output 2 / 3 ==============================
+        self_is_member
+        true
 
-      ============================= Output 3 / 3 ==============================
-      unrelated_class_is_not_member
-      false
-      |}]);
+        ============================= Output 3 / 3 ==============================
+        unrelated_class_is_not_member
+        false
+        |}]);
   return ()
 
 (* Test Image module *)
