@@ -10,10 +10,10 @@ let json_of_yojson (j : Yojson.Safe.t) : json = j
 let yojson_of_json (j : json) : Yojson.Safe.t = j
 
 (* Manual sexp conversion functions for json type *)
-let json_of_sexp (s : Sexp.t) : json = 
+let json_of_sexp (s : Sexp.t) : json =
   Yojson.Safe.from_string (Sexp.to_string_hum s)
-let sexp_of_json (j : json) : Sexp.t = 
-  Sexp.of_string (Yojson.Safe.to_string j)
+
+let sexp_of_json (j : json) : Sexp.t = Sexp.of_string (Yojson.Safe.to_string j)
 
 type json_value =
   [ `Null
@@ -490,10 +490,9 @@ type prompt = {
 }
 [@@deriving yojson]
 
-type prompt_message = { role : role; content : content }
-[@@deriving yojson]
+type prompt_message = { role : role; content : content } [@@deriving yojson]
 
-type embedded_resource_content = 
+type embedded_resource_content =
   | Text_resource of text_resource_contents
   | Blob_resource of blob_resource_contents
 [@@deriving yojson]
@@ -634,8 +633,7 @@ type server_result =
 [@@deriving yojson]
 (** Server result types *)
 
-type sampling_message = { role : role; content : content }
-[@@deriving yojson]
+type sampling_message = { role : role; content : content } [@@deriving yojson]
 (** Sampling message type *)
 
 type complete_request_params = {
@@ -660,65 +658,82 @@ type unsubscribe_request_params = {
 [@@deriving yojson]
 (** Unsubscribe request params *)
 
-
-
 (* Helper constructor functions to match the .mli interface *)
-let create_text_content text = 
-  { text = Some text; image = None; error = None }
+let create_text_content text = { text = Some text; image = None; error = None }
 
-let create_image_content image = 
+let create_image_content image =
   { text = None; image = Some image; error = None }
 
-let create_audio_content _data _mime_type ?annotations:_ ?meta:_ () = 
-  `Audio { type_ = `Audio; data = _data; mime_type = _mime_type; annotations = None; meta = None }
+let create_audio_content _data _mime_type ?annotations:_ ?meta:_ () =
+  `Audio
+    {
+      type_ = `Audio;
+      data = _data;
+      mime_type = _mime_type;
+      annotations = None;
+      meta = None;
+    }
 
-let create_resource_link ~name ~uri ?title:_ ?description:_ ?mime_type:_ ?size:_ ?annotations:_ ?meta:_ () = 
-  { type_ = `Resource_link; name; title = None; uri; description = None; mime_type = None; size = None; annotations = None; meta = None }
+let create_resource_link ~name ~uri ?title:_ ?description:_ ?mime_type:_ ?size:_
+    ?annotations:_ ?meta:_ () =
+  {
+    type_ = `Resource_link;
+    name;
+    title = None;
+    uri;
+    description = None;
+    mime_type = None;
+    size = None;
+    annotations = None;
+    meta = None;
+  }
 
-let create_embedded_resource resource ?annotations:_ ?meta:_ () = 
+let create_embedded_resource resource ?annotations:_ ?meta:_ () =
   { type_ = `Resource; resource; annotations = None; meta = None }
 
-let create_message ~role ~content : message = 
+let create_message ~role ~content : message = { role; content }
+
+let create_sampling_message ~role ~content : sampling_message =
   { role; content }
 
-let create_sampling_message ~role ~content : sampling_message = 
-  { role; content }
+let create_prompt_message ~role ~content : message = { role; content }
+let create_error_data ~code ~message ?data:_ () = { code; message; data = None }
 
-let create_prompt_message ~role ~content : message = 
-  { role; content }
-
-let create_error_data ~code ~message ?data:_ () = 
-  { code; message; data = None }
-
-let create_request_params ?progress_token () : request_params = 
-  let meta = match progress_token with 
-    | None -> None 
-    | Some token -> Some { progress_token = Some token } 
+let create_request_params ?progress_token () : request_params =
+  let meta =
+    match progress_token with
+    | None -> None
+    | Some token -> Some { progress_token = Some token }
   in
   { meta }
 
-let create_paginated_request_params ?progress_token ?cursor () : paginated_request_params = 
-  let meta = match progress_token with 
-    | None -> None 
-    | Some token -> Some { progress_token = Some token } 
+let create_paginated_request_params ?progress_token ?cursor () :
+    paginated_request_params =
+  let meta =
+    match progress_token with
+    | None -> None
+    | Some token -> Some { progress_token = Some token }
   in
   { meta; cursor }
 
-let create_notification_params ?progress_token () : notification_params = 
-  let meta = match progress_token with 
-    | None -> None 
-    | Some token -> Some { progress_token = Some token } 
+let create_notification_params ?progress_token () : notification_params =
+  let meta =
+    match progress_token with
+    | None -> None
+    | Some token -> Some { progress_token = Some token }
   in
   { meta }
 
-let create_progress_notification_params ~progress_token ~progress ?total ?message () = 
+let create_progress_notification_params ~progress_token ~progress ?total
+    ?message () =
   { progress_token; progress; total; message }
 
-let create_cancelled_notification_params ~request_id ?reason ?meta () = 
+let create_cancelled_notification_params ~request_id ?reason ?meta () =
   { request_id; reason; meta }
 
-let create_resource_updated_notification_params ~uri ?meta () : resource_updated_notification_params = 
+let create_resource_updated_notification_params ~uri ?meta () :
+    resource_updated_notification_params =
   { uri; meta }
 
-let create_error_content error = 
+let create_error_content error =
   { text = None; image = None; error = Some error }

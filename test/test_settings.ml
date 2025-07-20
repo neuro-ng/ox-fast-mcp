@@ -178,24 +178,24 @@ let%expect_test "test environment variable loading" =
   return ()
 
 let%expect_test "test dotenv file loading with basic key=value" =
-  let test_env_content = 
-    "OXFASTMCP_HOME=/dotenv/home\n" ^
-    "OXFASTMCP_PORT=8888\n" ^
-    "OXFASTMCP_TEST_MODE=true\n" ^
-    "OXFASTMCP_DEBUG=true\n"
+  let test_env_content =
+    "OXFASTMCP_HOME=/dotenv/home\n" ^ "OXFASTMCP_PORT=8888\n"
+    ^ "OXFASTMCP_TEST_MODE=true\n" ^ "OXFASTMCP_DEBUG=true\n"
   in
-  
+
   (* Create temporary .env file *)
   let%bind temp_dir = Unix.mkdtemp "test_dotenv" in
   let env_file = Filename.concat temp_dir ".env" in
   let%bind () = Writer.save env_file ~contents:test_env_content in
-  
+
   (* Change to temp directory to test .env loading *)
   let%bind original_cwd = Unix.getcwd () in
   let%bind () = Unix.chdir temp_dir in
-  
+
   let initial_settings = Settings.create () in
-  let%bind loaded_settings_result = Settings.load_from_dotenv initial_settings in
+  let%bind loaded_settings_result =
+    Settings.load_from_dotenv initial_settings
+  in
   let settings = Or_error.ok_exn loaded_settings_result in
 
   print_s [%sexp (settings : Settings.t)];
@@ -223,121 +223,128 @@ let%expect_test "test dotenv file loading with basic key=value" =
      (include_tags          ())
      (exclude_tags          ()))
     |}];
-  
+
   (* Cleanup *)
   let%bind () = Unix.chdir original_cwd in
-  let%bind _output = Process.run_exn ~prog:"rm" ~args:["-rf"; temp_dir] ~working_dir:original_cwd () in
+  let%bind _output =
+    Process.run_exn ~prog:"rm" ~args:[ "-rf"; temp_dir ]
+      ~working_dir:original_cwd ()
+  in
   return ()
 
 let%expect_test "test dotenv file loading with quoted values" =
-  let test_env_content = 
-    "OXFASTMCP_HOME=\"/quoted/home\"\n" ^
-    "OXFASTMCP_HOST='localhost'\n" ^
-    "OXFASTMCP_SSE_PATH=\"/quoted/sse/\"\n" ^
-    "OXFASTMCP_PORT=7777\n"
+  let test_env_content =
+    "OXFASTMCP_HOME=\"/quoted/home\"\n" ^ "OXFASTMCP_HOST='localhost'\n"
+    ^ "OXFASTMCP_SSE_PATH=\"/quoted/sse/\"\n" ^ "OXFASTMCP_PORT=7777\n"
   in
-  
+
   (* Create temporary .env file *)
   let%bind temp_dir = Unix.mkdtemp "test_dotenv_quotes" in
   let env_file = Filename.concat temp_dir ".env" in
   let%bind () = Writer.save env_file ~contents:test_env_content in
-  
+
   (* Change to temp directory to test .env loading *)
   let%bind original_cwd = Unix.getcwd () in
   let%bind () = Unix.chdir temp_dir in
-  
+
   let initial_settings = Settings.create () in
-  let%bind loaded_settings_result = Settings.load_from_dotenv initial_settings in
+  let%bind loaded_settings_result =
+    Settings.load_from_dotenv initial_settings
+  in
   let settings = Or_error.ok_exn loaded_settings_result in
 
   print_s [%sexp (settings.home : string)];
   print_s [%sexp (settings.host : string)];
   print_s [%sexp (settings.sse_path : string)];
   print_s [%sexp (settings.port : int)];
-  [%expect
-    {|
+  [%expect {|
     /quoted/home
     localhost
     /quoted/sse/
     7777
     |}];
-  
+
   (* Cleanup *)
   let%bind () = Unix.chdir original_cwd in
-  let%bind _output = Process.run_exn ~prog:"rm" ~args:["-rf"; temp_dir] ~working_dir:original_cwd () in
+  let%bind _output =
+    Process.run_exn ~prog:"rm" ~args:[ "-rf"; temp_dir ]
+      ~working_dir:original_cwd ()
+  in
   return ()
 
 let%expect_test "test dotenv file loading with comments and empty lines" =
-  let test_env_content = 
-    "# This is a comment\n" ^
-    "\n" ^
-    "OXFASTMCP_HOME=/comment/home\n" ^
-    "# Another comment\n" ^
-    "\n" ^
-    "OXFASTMCP_PORT=6666\n" ^
-    "   # Indented comment\n" ^
-    "OXFASTMCP_TEST_MODE=false\n"
+  let test_env_content =
+    "# This is a comment\n" ^ "\n" ^ "OXFASTMCP_HOME=/comment/home\n"
+    ^ "# Another comment\n" ^ "\n" ^ "OXFASTMCP_PORT=6666\n"
+    ^ "   # Indented comment\n" ^ "OXFASTMCP_TEST_MODE=false\n"
   in
-  
+
   (* Create temporary .env file *)
   let%bind temp_dir = Unix.mkdtemp "test_dotenv_comments" in
   let env_file = Filename.concat temp_dir ".env" in
   let%bind () = Writer.save env_file ~contents:test_env_content in
-  
+
   (* Change to temp directory to test .env loading *)
   let%bind original_cwd = Unix.getcwd () in
   let%bind () = Unix.chdir temp_dir in
-  
+
   let initial_settings = Settings.create () in
-  let%bind loaded_settings_result = Settings.load_from_dotenv initial_settings in
+  let%bind loaded_settings_result =
+    Settings.load_from_dotenv initial_settings
+  in
   let settings = Or_error.ok_exn loaded_settings_result in
 
   print_s [%sexp (settings.home : string)];
   print_s [%sexp (settings.port : int)];
   print_s [%sexp (settings.test_mode : bool)];
-  [%expect
-    {|
+  [%expect {|
     /comment/home
     6666
     false
     |}];
-  
+
   (* Cleanup *)
   let%bind () = Unix.chdir original_cwd in
-  let%bind _output = Process.run_exn ~prog:"rm" ~args:["-rf"; temp_dir] ~working_dir:original_cwd () in
+  let%bind _output =
+    Process.run_exn ~prog:"rm" ~args:[ "-rf"; temp_dir ]
+      ~working_dir:original_cwd ()
+  in
   return ()
 
 let%expect_test "test dotenv file loading with values containing equals" =
-  let test_env_content = 
-    "OXFASTMCP_HOME=/path/with=equals\n" ^
-    "OXFASTMCP_HOST=example.com:8080=admin\n" ^
-    "OXFASTMCP_PORT=5555\n"
+  let test_env_content =
+    "OXFASTMCP_HOME=/path/with=equals\n"
+    ^ "OXFASTMCP_HOST=example.com:8080=admin\n" ^ "OXFASTMCP_PORT=5555\n"
   in
-  
+
   (* Create temporary .env file *)
   let%bind temp_dir = Unix.mkdtemp "test_dotenv_equals" in
   let env_file = Filename.concat temp_dir ".env" in
   let%bind () = Writer.save env_file ~contents:test_env_content in
-  
+
   (* Change to temp directory to test .env loading *)
   let%bind original_cwd = Unix.getcwd () in
   let%bind () = Unix.chdir temp_dir in
-  
+
   let initial_settings = Settings.create () in
-  let%bind loaded_settings_result = Settings.load_from_dotenv initial_settings in
+  let%bind loaded_settings_result =
+    Settings.load_from_dotenv initial_settings
+  in
   let settings = Or_error.ok_exn loaded_settings_result in
 
   print_s [%sexp (settings.home : string)];
   print_s [%sexp (settings.host : string)];
-  [%expect
-    {|
+  [%expect {|
     /path/with=equals
     example.com:8080=admin
     |}];
-  
+
   (* Cleanup *)
   let%bind () = Unix.chdir original_cwd in
-  let%bind _output = Process.run_exn ~prog:"rm" ~args:["-rf"; temp_dir] ~working_dir:original_cwd () in
+  let%bind _output =
+    Process.run_exn ~prog:"rm" ~args:[ "-rf"; temp_dir ]
+      ~working_dir:original_cwd ()
+  in
   return ()
 
 let%expect_test "test dotenv file loading when file does not exist" =
@@ -345,111 +352,153 @@ let%expect_test "test dotenv file loading when file does not exist" =
   let%bind temp_dir = Unix.mkdtemp "test_no_dotenv" in
   let%bind original_cwd = Unix.getcwd () in
   let%bind () = Unix.chdir temp_dir in
-  
+
   let initial_settings = Settings.create ~home:"/original/home" () in
-  let%bind loaded_settings_result = Settings.load_from_dotenv initial_settings in
+  let%bind loaded_settings_result =
+    Settings.load_from_dotenv initial_settings
+  in
   let settings = Or_error.ok_exn loaded_settings_result in
 
   (* Should return original settings unchanged *)
   print_s [%sexp (settings.home : string)];
   [%expect {| /original/home |}];
-  
+
   (* Cleanup *)
   let%bind () = Unix.chdir original_cwd in
-  let%bind _output = Process.run_exn ~prog:"rm" ~args:["-rf"; temp_dir] ~working_dir:original_cwd () in
+  let%bind _output =
+    Process.run_exn ~prog:"rm" ~args:[ "-rf"; temp_dir ]
+      ~working_dir:original_cwd ()
+  in
   return ()
 
 let%expect_test "test file secrets loading" =
   let%bind temp_dir = Unix.mkdtemp "test_file_secrets" in
   let home_dir = temp_dir in
   let secrets_dir = Filename.concat home_dir "secrets" in
-  
+
   (* Create secrets directory and files *)
   let%bind () = Unix.mkdir secrets_dir in
-  let%bind () = Writer.save (Filename.concat secrets_dir "OXFASTMCP_HOME") ~contents:"/secret/home" in
-  let%bind () = Writer.save (Filename.concat secrets_dir "OXFASTMCP_PORT") ~contents:"9999" in
-  let%bind () = Writer.save (Filename.concat secrets_dir "OXFASTMCP_TEST_MODE") ~contents:"true" in
-  let%bind () = Writer.save (Filename.concat secrets_dir "OXFASTMCP_DEBUG") ~contents:"true" in
-  
+  let%bind () =
+    Writer.save
+      (Filename.concat secrets_dir "OXFASTMCP_HOME")
+      ~contents:"/secret/home"
+  in
+  let%bind () =
+    Writer.save (Filename.concat secrets_dir "OXFASTMCP_PORT") ~contents:"9999"
+  in
+  let%bind () =
+    Writer.save
+      (Filename.concat secrets_dir "OXFASTMCP_TEST_MODE")
+      ~contents:"true"
+  in
+  let%bind () =
+    Writer.save (Filename.concat secrets_dir "OXFASTMCP_DEBUG") ~contents:"true"
+  in
+
   let initial_settings = Settings.create ~home:home_dir () in
-  let loaded_settings_result = Settings.load_from_file_secrets initial_settings in
+  let loaded_settings_result =
+    Settings.load_from_file_secrets initial_settings
+  in
   let settings = Or_error.ok_exn loaded_settings_result in
 
   print_s [%sexp (settings.home : string)];
   print_s [%sexp (settings.port : int)];
   print_s [%sexp (settings.test_mode : bool)];
   print_s [%sexp (settings.debug : bool)];
-  [%expect
-    {|
+  [%expect {|
     /secret/home
     9999
     true
     true
     |}];
-  
+
   (* Cleanup *)
   let%bind current_dir = Unix.getcwd () in
-  let%bind _output = Process.run_exn ~prog:"rm" ~args:["-rf"; temp_dir] ~working_dir:current_dir () in
+  let%bind _output =
+    Process.run_exn ~prog:"rm" ~args:[ "-rf"; temp_dir ]
+      ~working_dir:current_dir ()
+  in
   return ()
 
 let%expect_test "test file secrets loading when secrets dir does not exist" =
   let%bind temp_dir = Unix.mkdtemp "test_no_secrets" in
   let home_dir = temp_dir in
-  
+
   let initial_settings = Settings.create ~home:home_dir ~port:3333 () in
-  let loaded_settings_result = Settings.load_from_file_secrets initial_settings in
+  let loaded_settings_result =
+    Settings.load_from_file_secrets initial_settings
+  in
   let settings = Or_error.ok_exn loaded_settings_result in
 
   (* Should return original settings unchanged *)
-  let home_matches_temp_dir = String.is_prefix settings.home ~prefix:"test_no_secrets" in
+  let home_matches_temp_dir =
+    String.is_prefix settings.home ~prefix:"test_no_secrets"
+  in
   print_s [%sexp (home_matches_temp_dir : bool)];
   print_s [%sexp (settings.port : int)];
-  [%expect
-    {|
+  [%expect {|
     true
     3333
     |}];
-  
+
   (* Cleanup *)
   let%bind current_dir = Unix.getcwd () in
-  let%bind _output = Process.run_exn ~prog:"rm" ~args:["-rf"; temp_dir] ~working_dir:current_dir () in
+  let%bind _output =
+    Process.run_exn ~prog:"rm" ~args:[ "-rf"; temp_dir ]
+      ~working_dir:current_dir ()
+  in
   return ()
 
 let%expect_test "test file secrets loading with mixed files and directories" =
   let%bind temp_dir = Unix.mkdtemp "test_mixed_secrets" in
   let home_dir = temp_dir in
   let secrets_dir = Filename.concat home_dir "secrets" in
-  
+
   (* Create secrets directory with files and subdirectory *)
   let%bind () = Unix.mkdir secrets_dir in
-  let%bind () = Writer.save (Filename.concat secrets_dir "OXFASTMCP_HOME") ~contents:"/mixed/home" in
-  let%bind () = Writer.save (Filename.concat secrets_dir "OXFASTMCP_PORT") ~contents:"4444" in
-  let%bind () = Unix.mkdir (Filename.concat secrets_dir "subdir") in (* Should be skipped *)
-  let%bind () = Writer.save (Filename.concat secrets_dir "OXFASTMCP_DEBUG") ~contents:"false" in
-  
+  let%bind () =
+    Writer.save
+      (Filename.concat secrets_dir "OXFASTMCP_HOME")
+      ~contents:"/mixed/home"
+  in
+  let%bind () =
+    Writer.save (Filename.concat secrets_dir "OXFASTMCP_PORT") ~contents:"4444"
+  in
+  let%bind () = Unix.mkdir (Filename.concat secrets_dir "subdir") in
+  (* Should be skipped *)
+  let%bind () =
+    Writer.save
+      (Filename.concat secrets_dir "OXFASTMCP_DEBUG")
+      ~contents:"false"
+  in
+
   let initial_settings = Settings.create ~home:home_dir () in
-  let loaded_settings_result = Settings.load_from_file_secrets initial_settings in
+  let loaded_settings_result =
+    Settings.load_from_file_secrets initial_settings
+  in
   let settings = Or_error.ok_exn loaded_settings_result in
 
   print_s [%sexp (settings.home : string)];
   print_s [%sexp (settings.port : int)];
   print_s [%sexp (settings.debug : bool)];
-  [%expect
-    {|
+  [%expect {|
     /mixed/home
     4444
     false
     |}];
-  
+
   (* Cleanup *)
   let%bind current_dir = Unix.getcwd () in
-  let%bind _output = Process.run_exn ~prog:"rm" ~args:["-rf"; temp_dir] ~working_dir:current_dir () in
+  let%bind _output =
+    Process.run_exn ~prog:"rm" ~args:[ "-rf"; temp_dir ]
+      ~working_dir:current_dir ()
+  in
   return ()
 
 let%expect_test "test deprecated environment variable warning" =
   (* Set deprecated prefix variable *)
   Unix.putenv ~key:"OX_FASTMCP_SERVER_HOME" ~data:"/deprecated/home";
-  
+
   let initial_settings = Settings.create () in
   let loaded_settings_result = Settings.load_from_env initial_settings in
   let settings = Or_error.ok_exn loaded_settings_result in
@@ -457,7 +506,7 @@ let%expect_test "test deprecated environment variable warning" =
   (* Should load the value but the warning would be printed to stderr *)
   print_s [%sexp (settings.home : string)];
   [%expect {| /env/home |}];
-  
+
   (* Clean up environment variable *)
   Unix.unsetenv "OX_FASTMCP_SERVER_HOME";
   return ()
@@ -466,95 +515,99 @@ let%expect_test "test settings loading priority order" =
   let%bind temp_dir = Unix.mkdtemp "test_priority" in
   let home_dir = temp_dir in
   let secrets_dir = Filename.concat home_dir "secrets" in
-  
+
   (* Set environment variable *)
   Unix.putenv ~key:"OXFASTMCP_PORT" ~data:"1111";
-  
+
   (* Create .env file *)
   let env_file = Filename.concat temp_dir ".env" in
   let%bind () = Writer.save env_file ~contents:"OXFASTMCP_PORT=2222\n" in
-  
+
   (* Create secrets file *)
   let%bind () = Unix.mkdir secrets_dir in
-  let%bind () = Writer.save (Filename.concat secrets_dir "OXFASTMCP_PORT") ~contents:"3333" in
-  
+  let%bind () =
+    Writer.save (Filename.concat secrets_dir "OXFASTMCP_PORT") ~contents:"3333"
+  in
+
   let%bind original_cwd = Unix.getcwd () in
   let%bind () = Unix.chdir temp_dir in
-  
+
   let initial_settings = Settings.create ~home:home_dir ~port:4444 () in
-  
+
   (* Test environment loading (should override initial) *)
   let env_loaded = Settings.load_from_env initial_settings |> Or_error.ok_exn in
   print_s [%sexp (env_loaded.port : int)];
   [%expect {| 1111 |}];
-  
+
   (* Test dotenv loading (should override initial) *)
-  let%bind dotenv_loaded = Settings.load_from_dotenv initial_settings >>| Or_error.ok_exn in
+  let%bind dotenv_loaded =
+    Settings.load_from_dotenv initial_settings >>| Or_error.ok_exn
+  in
   print_s [%sexp (dotenv_loaded.port : int)];
   [%expect {| 2222 |}];
-  
+
   (* Test secrets loading (should override initial) *)
-  let secrets_loaded = Settings.load_from_file_secrets initial_settings |> Or_error.ok_exn in
+  let secrets_loaded =
+    Settings.load_from_file_secrets initial_settings |> Or_error.ok_exn
+  in
   print_s [%sexp (secrets_loaded.port : int)];
   [%expect {| 4444 |}];
-  
+
   (* Cleanup *)
   let%bind () = Unix.chdir original_cwd in
   Unix.unsetenv "OXFASTMCP_PORT";
-  let%bind _output = Process.run_exn ~prog:"rm" ~args:["-rf"; temp_dir] ~working_dir:original_cwd () in
+  let%bind _output =
+    Process.run_exn ~prog:"rm" ~args:[ "-rf"; temp_dir ]
+      ~working_dir:original_cwd ()
+  in
   return ()
 
 let%expect_test "test settings merge functionality" =
-  let base_settings = Settings.create 
-    ~home:"/base/home" 
-    ~port:8000 
-    ~log_level:Log_level.Info 
-    ~resource_prefix_format:Resource_prefix_format.Path 
-    () in
-  
-  let override_settings = Settings.create 
-    ~home:"/override/home"
-    ~port:9000
-    ~log_level:Log_level.Debug 
-    ~resource_prefix_format:Resource_prefix_format.Protocol 
-    () in
-  
+  let base_settings =
+    Settings.create ~home:"/base/home" ~port:8000 ~log_level:Log_level.Info
+      ~resource_prefix_format:Resource_prefix_format.Path ()
+  in
+
+  let override_settings =
+    Settings.create ~home:"/override/home" ~port:9000 ~log_level:Log_level.Debug
+      ~resource_prefix_format:Resource_prefix_format.Protocol ()
+  in
+
   let merged = Settings.merge base_settings override_settings in
-  
+
   (* Test that merge applies override values for specific fields *)
   print_s [%sexp (merged.log_level : Log_level.t)];
   print_s [%sexp (merged.resource_prefix_format : Resource_prefix_format.t)];
-  [%expect
-    {|
+  [%expect {|
     Debug
     Protocol
     |}];
-  
+
   return ()
 
 let%expect_test "test complex parsing scenarios" =
-  let test_env_content = 
-    "# Complex .env file test\n" ^
-    "\n" ^
-    "OXFASTMCP_SERVER_DEPENDENCIES=dep1,dep2,dep3\n" ^
-    "OXFASTMCP_INCLUDE_TAGS=\"tag1, tag2, tag3\"\n" ^
-    "OXFASTMCP_EXCLUDE_TAGS='exclude1,exclude2'\n" ^
-    "OXFASTMCP_CLIENT_INIT_TIMEOUT=30.5\n" ^
-    "OXFASTMCP_LOG_LEVEL=DEBUG\n" ^
-    "OXFASTMCP_RESOURCE_PREFIX_FORMAT=protocol\n"
+  let test_env_content =
+    "# Complex .env file test\n" ^ "\n"
+    ^ "OXFASTMCP_SERVER_DEPENDENCIES=dep1,dep2,dep3\n"
+    ^ "OXFASTMCP_INCLUDE_TAGS=\"tag1, tag2, tag3\"\n"
+    ^ "OXFASTMCP_EXCLUDE_TAGS='exclude1,exclude2'\n"
+    ^ "OXFASTMCP_CLIENT_INIT_TIMEOUT=30.5\n" ^ "OXFASTMCP_LOG_LEVEL=DEBUG\n"
+    ^ "OXFASTMCP_RESOURCE_PREFIX_FORMAT=protocol\n"
   in
-  
+
   (* Create temporary .env file *)
   let%bind temp_dir = Unix.mkdtemp "test_complex_parsing" in
   let env_file = Filename.concat temp_dir ".env" in
   let%bind () = Writer.save env_file ~contents:test_env_content in
-  
+
   (* Change to temp directory to test .env loading *)
   let%bind original_cwd = Unix.getcwd () in
   let%bind () = Unix.chdir temp_dir in
-  
+
   let initial_settings = Settings.create () in
-  let%bind loaded_settings_result = Settings.load_from_dotenv initial_settings in
+  let%bind loaded_settings_result =
+    Settings.load_from_dotenv initial_settings
+  in
   let settings = Or_error.ok_exn loaded_settings_result in
 
   print_s [%sexp (settings.server_dependencies : string list)];
@@ -572,8 +625,11 @@ let%expect_test "test complex parsing scenarios" =
     Debug
     Protocol
     |}];
-  
+
   (* Cleanup *)
   let%bind () = Unix.chdir original_cwd in
-  let%bind _output = Process.run_exn ~prog:"rm" ~args:["-rf"; temp_dir] ~working_dir:original_cwd () in
+  let%bind _output =
+    Process.run_exn ~prog:"rm" ~args:[ "-rf"; temp_dir ]
+      ~working_dir:original_cwd ()
+  in
   return ()

@@ -312,11 +312,7 @@ type jsonrpc_notification = {
 }
 [@@deriving yojson]
 
-type jsonrpc_response = {
-  jsonrpc : string;
-  id : request_id;
-  result : json;
-}
+type jsonrpc_response = { jsonrpc : string; id : request_id; result : json }
 [@@deriving yojson]
 
 type jsonrpc_error_response = {
@@ -475,11 +471,10 @@ type prompt = {
 }
 [@@deriving yojson]
 
-type prompt_message = { role : role; content : content }
-[@@deriving yojson]
+type prompt_message = { role : role; content : content } [@@deriving yojson]
 (** Prompt types *)
 
-type embedded_resource_content = 
+type embedded_resource_content =
   | Text_resource of text_resource_contents
   | Blob_resource of blob_resource_contents
 [@@deriving yojson]
@@ -513,9 +508,7 @@ type content_block = {
 }
 [@@deriving fields, yojson]
 
-type empty_result = {
-  meta : json option; [@key "_meta"] [@yojson.option]
-}
+type empty_result = { meta : json option [@key "_meta"] [@yojson.option] }
 [@@deriving yojson]
 (** Empty result type *)
 
@@ -557,8 +550,7 @@ type list_tools_result = {
 
 type call_tool_result = {
   content : content list;
-  structured_content : json option;
-      [@key "structuredContent"] [@yojson.option]
+  structured_content : json option; [@key "structuredContent"] [@yojson.option]
   is_error : bool; [@key "isError"]
   meta : json option; [@key "_meta"] [@yojson.option]
 }
@@ -648,8 +640,6 @@ type unsubscribe_request_params = {
 [@@deriving yojson]
 (** Unsubscribe request params *)
 
-
-
 (** Helper functions for common operations *)
 
 val create_text_content : string -> content_block
@@ -659,12 +649,7 @@ val create_image_content : string -> content_block
 (** Create an image content block *)
 
 val create_audio_content :
-  string ->
-  string ->
-  ?annotations:annotations ->
-  ?meta:json ->
-  unit ->
-  content
+  string -> string -> ?annotations:annotations -> ?meta:json -> unit -> content
 (** Create an audio content block *)
 
 val create_resource_link :
@@ -734,10 +719,7 @@ val create_cancelled_notification_params :
 (** Create a cancelled notification params *)
 
 val create_resource_updated_notification_params :
-  uri:string ->
-  ?meta:json ->
-  unit ->
-  resource_updated_notification_params
+  uri:string -> ?meta:json -> unit -> resource_updated_notification_params
 (** Create a resource updated notification params *)
 
 val create_error_content : string -> content_block
