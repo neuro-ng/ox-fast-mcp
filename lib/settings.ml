@@ -63,13 +63,10 @@ module Settings_error = struct
   let to_string = function
     | Invalid_log_level s -> sprintf "Invalid log level: %s" s
     | Invalid_duplicate_behavior s -> sprintf "Invalid duplicate behavior: %s" s
-    | Invalid_resource_prefix_format s ->
-      sprintf "Invalid resource prefix format: %s" s
+    | Invalid_resource_prefix_format s -> sprintf "Invalid resource prefix format: %s" s
     | Invalid_auth_provider s -> sprintf "Invalid auth provider: %s" s
-    | Invalid_env_value (var, value) ->
-      sprintf "Invalid value '%s' for environment variable %s" value var
-    | Missing_required_env var ->
-      sprintf "Missing required environment variable: %s" var
+    | Invalid_env_value (var, value) -> sprintf "Invalid value '%s' for environment variable %s" value var
+    | Missing_required_env var -> sprintf "Missing required environment variable: %s" var
 end
 
 module Settings_source = struct
@@ -81,6 +78,30 @@ module Settings_source = struct
     | Environment -> 1
     | Dotenv -> 2
     | File_secrets -> 3
+end
+
+(* Common parsing functions *)
+module Parsers = struct
+  let parse_bool_or_error value var_name =
+    match String.lowercase value with
+    | "true" | "1" -> Ok true
+    | "false" | "0" -> Ok false
+    | _ -> Or_error.error_string (sprintf "Invalid boolean value for %s: '%s'. Expected 'true'/'false' or '1'/'0'." var_name value)
+
+  let parse_int_or_error value var_name =
+    try Ok (Int.of_string value)
+    with _ -> Or_error.error_string (sprintf "Invalid integer value for %s: '%s'." var_name value)
+
+  let parse_float_or_error value var_name =
+    try Ok (Float.of_string value)
+    with _ -> Or_error.error_string (sprintf "Invalid float value for %s: '%s'." var_name value)
+
+  let parse_csv_list value =
+    String.split ~on:',' value |> List.map ~f:String.strip
+
+  let parse_log_level value =
+    try Ok (Log_level.of_string value)
+    with Failure msg -> Or_error.error_string msg
 end
 
 module Settings = struct
@@ -172,31 +193,96 @@ module Settings = struct
     else ();
     value
 
-  let parse_bool_or_error value var_name =
-    match String.lowercase value with
-    | "true" | "1" -> Ok true
-    | "false" | "0" -> Ok false
-    | _ ->
-      Or_error.error_string
-        (sprintf
-           "Invalid boolean value for %s: '%s'. Expected 'true'/'false' or \
-            '1'/'0'."
-           var_name value)
+  (* Field update functions that handle parsing and updating directly *)
+  let update_string_field lookup_fn env_name update_fn settings =
+    match lookup_fn env_name with
+    | Some value -> Ok (update_fn settings value)
+    | None -> Ok settings
 
-  let parse_int_or_error value var_name =
-    try Ok (Int.of_string value)
-    with _ ->
-      Or_error.error_string
-        (sprintf "Invalid integer value for %s: '%s'." var_name value)
+  let update_bool_field lookup_fn env_name update_fn settings =
+    let open Or_error.Let_syntax in
+    match lookup_fn env_name with
+    | Some value ->
+      let%bind parsed = Parsers.parse_bool_or_error value env_name in
+      Ok (update_fn settings parsed)
+    | None -> Ok settings
 
-  let parse_float_or_error value var_name =
-    try Ok (Float.of_string value)
-    with _ ->
-      Or_error.error_string
-        (sprintf "Invalid float value for %s: '%s'." var_name value)
+  let update_int_field lookup_fn env_name update_fn settings =
+    let open Or_error.Let_syntax in
+    match lookup_fn env_name with
+    | Some value ->
+      let%bind parsed = Parsers.parse_int_or_error value env_name in
+      Ok (update_fn settings parsed)
+    | None -> Ok settings
+
+  let update_log_level_field lookup_fn env_name update_fn settings =
+    let open Or_error.Let_syntax in
+    match lookup_fn env_name with
+    | Some value ->
+      let%bind parsed = Parsers.parse_log_level value in
+      Ok (update_fn settings parsed)
+    | None -> Ok settings
+
+  let update_resource_prefix_field lookup_fn env_name update_fn settings =
+    let open Or_error.Let_syntax in
+    match lookup_fn env_name with
+    | Some value ->
+      let%bind parsed = Resource_prefix_format.of_string value in
+      Ok (update_fn settings parsed)
+    | None -> Ok settings
+
+  let update_string_list_field lookup_fn env_name update_fn settings =
+    match lookup_fn env_name with
+    | Some value -> Ok (update_fn settings (Parsers.parse_csv_list value))
+    | None -> Ok settings
+
+  let update_float_option_field lookup_fn env_name update_fn settings =
+    let open Or_error.Let_syntax in
+    match lookup_fn env_name with
+    | Some value ->
+      let%bind parsed = Parsers.parse_float_or_error value env_name in
+      Ok (update_fn settings (Some parsed))
+    | None -> Ok settings
+
+  let update_auth_provider_option_field lookup_fn env_name update_fn settings =
+    let open Or_error.Let_syntax in
+    match lookup_fn env_name with
+    | Some value ->
+      let%bind parsed = Auth_provider.of_string value in
+      Ok (update_fn settings (Some parsed))
+    | None -> Ok settings
+
+  let update_string_list_option_field lookup_fn env_name update_fn settings =
+    match lookup_fn env_name with
+    | Some value -> Ok (update_fn settings (Some (Parsers.parse_csv_list value)))
+    | None -> Ok settings
+
+  (* Apply all field updates *)
+  let apply_all_field_updates lookup_fn settings =
+    let open Or_error.Let_syntax in
+    let%bind s1 = update_string_field lookup_fn "HOME" (fun t v -> {t with home = v}) settings in
+    let%bind s2 = update_string_field lookup_fn "HOST" (fun t v -> {t with host = v}) s1 in
+    let%bind s3 = update_string_field lookup_fn "SSE_PATH" (fun t v -> {t with sse_path = v}) s2 in
+    let%bind s4 = update_string_field lookup_fn "MESSAGE_PATH" (fun t v -> {t with message_path = v}) s3 in
+    let%bind s5 = update_string_field lookup_fn "STREAMABLE_HTTP_PATH" (fun t v -> {t with streamable_http_path = v}) s4 in
+    let%bind s6 = update_bool_field lookup_fn "TEST_MODE" (fun t v -> {t with test_mode = v}) s5 in
+    let%bind s7 = update_bool_field lookup_fn "ENABLE_RICH_TRACEBACKS" (fun t v -> {t with enable_rich_tracebacks = v}) s6 in
+    let%bind s8 = update_bool_field lookup_fn "DEPRECATION_WARNINGS" (fun t v -> {t with deprecation_warnings = v}) s7 in
+    let%bind s9 = update_bool_field lookup_fn "CLIENT_RAISE_FIRST_EXCEPTIONGROUP_ERROR" (fun t v -> {t with client_raise_first_exceptiongroup_error = v}) s8 in
+    let%bind s10 = update_bool_field lookup_fn "DEBUG" (fun t v -> {t with debug = v}) s9 in
+    let%bind s11 = update_bool_field lookup_fn "MASK_ERROR_DETAILS" (fun t v -> {t with mask_error_details = v}) s10 in
+    let%bind s12 = update_bool_field lookup_fn "JSON_RESPONSE" (fun t v -> {t with json_response = v}) s11 in
+    let%bind s13 = update_bool_field lookup_fn "STATELESS_HTTP" (fun t v -> {t with stateless_http = v}) s12 in
+    let%bind s14 = update_int_field lookup_fn "PORT" (fun t v -> {t with port = v}) s13 in
+    let%bind s15 = update_log_level_field lookup_fn "LOG_LEVEL" (fun t v -> {t with log_level = v}) s14 in
+    let%bind s16 = update_resource_prefix_field lookup_fn "RESOURCE_PREFIX_FORMAT" (fun t v -> {t with resource_prefix_format = v}) s15 in
+    let%bind s17 = update_string_list_field lookup_fn "SERVER_DEPENDENCIES" (fun t v -> {t with server_dependencies = v}) s16 in
+    let%bind s18 = update_float_option_field lookup_fn "CLIENT_INIT_TIMEOUT" (fun t v -> {t with client_init_timeout = v}) s17 in
+    let%bind s19 = update_auth_provider_option_field lookup_fn "DEFAULT_AUTH_PROVIDER" (fun t v -> {t with default_auth_provider = v}) s18 in
+    let%bind s20 = update_string_list_option_field lookup_fn "INCLUDE_TAGS" (fun t v -> {t with include_tags = v}) s19 in
+    update_string_list_option_field lookup_fn "EXCLUDE_TAGS" (fun t v -> {t with exclude_tags = v}) s20
 
   let load_from_env t =
-    let open Or_error.Let_syntax in
     let try_prefixes var_name =
       List.find_map env_prefixes ~f:(fun prefix ->
           let full_name = prefix ^ var_name in
@@ -204,188 +290,25 @@ module Settings = struct
           | Some value -> Some (warn_if_deprecated prefix value)
           | None -> None)
     in
-
-    let%bind home =
-      match try_prefixes "HOME" with
-      | Some value -> Ok value
-      | None -> Ok t.home
-    in
-
-    let%bind test_mode =
-      match try_prefixes "TEST_MODE" with
-      | Some value -> parse_bool_or_error value "TEST_MODE"
-      | None -> Ok t.test_mode
-    in
-
-    let%bind log_level =
-      try
-        match try_prefixes "LOG_LEVEL" with
-        | Some value -> Ok (Log_level.of_string value)
-        | None -> Ok t.log_level
-      with Failure msg -> Or_error.error_string msg
-    in
-
-    let%bind enable_rich_tracebacks =
-      match try_prefixes "ENABLE_RICH_TRACEBACKS" with
-      | Some value -> parse_bool_or_error value "ENABLE_RICH_TRACEBACKS"
-      | None -> Ok t.enable_rich_tracebacks
-    in
-
-    let%bind deprecation_warnings =
-      match try_prefixes "DEPRECATION_WARNINGS" with
-      | Some value -> parse_bool_or_error value "DEPRECATION_WARNINGS"
-      | None -> Ok t.deprecation_warnings
-    in
-
-    let%bind client_raise_first_exceptiongroup_error =
-      match try_prefixes "CLIENT_RAISE_FIRST_EXCEPTIONGROUP_ERROR" with
-      | Some value ->
-        parse_bool_or_error value "CLIENT_RAISE_FIRST_EXCEPTIONGROUP_ERROR"
-      | None -> Ok t.client_raise_first_exceptiongroup_error
-    in
-
-    let%bind resource_prefix_format =
-      match try_prefixes "RESOURCE_PREFIX_FORMAT" with
-      | Some value -> Resource_prefix_format.of_string value
-      | None -> Ok t.resource_prefix_format
-    in
-
-    let%bind client_init_timeout =
-      match try_prefixes "CLIENT_INIT_TIMEOUT" with
-      | Some value ->
-        let%bind f = parse_float_or_error value "CLIENT_INIT_TIMEOUT" in
-        Ok (Some f)
-      | None -> Ok t.client_init_timeout (* Keep existing option state *)
-    in
-
-    let%bind host =
-      match try_prefixes "HOST" with
-      | Some value -> Ok value
-      | None -> Ok t.host
-    in
-
-    let%bind port =
-      match try_prefixes "PORT" with
-      | Some value -> parse_int_or_error value "PORT"
-      | None -> Ok t.port
-    in
-
-    let%bind sse_path =
-      match try_prefixes "SSE_PATH" with
-      | Some value -> Ok value
-      | None -> Ok t.sse_path
-    in
-
-    let%bind message_path =
-      match try_prefixes "MESSAGE_PATH" with
-      | Some value -> Ok value
-      | None -> Ok t.message_path
-    in
-
-    let%bind streamable_http_path =
-      match try_prefixes "STREAMABLE_HTTP_PATH" with
-      | Some value -> Ok value
-      | None -> Ok t.streamable_http_path
-    in
-
-    let%bind debug =
-      match try_prefixes "DEBUG" with
-      | Some value -> parse_bool_or_error value "DEBUG"
-      | None -> Ok t.debug
-    in
-
-    let%bind mask_error_details =
-      match try_prefixes "MASK_ERROR_DETAILS" with
-      | Some value -> parse_bool_or_error value "MASK_ERROR_DETAILS"
-      | None -> Ok t.mask_error_details
-    in
-
-    let%bind server_dependencies =
-      match try_prefixes "SERVER_DEPENDENCIES" with
-      | Some value -> Ok (String.split ~on:',' value |> List.map ~f:String.strip)
-      | None -> Ok t.server_dependencies
-    in
-
-    let%bind json_response =
-      match try_prefixes "JSON_RESPONSE" with
-      | Some value -> parse_bool_or_error value "JSON_RESPONSE"
-      | None -> Ok t.json_response
-    in
-
-    let%bind stateless_http =
-      match try_prefixes "STATELESS_HTTP" with
-      | Some value -> parse_bool_or_error value "STATELESS_HTTP"
-      | None -> Ok t.stateless_http
-    in
-
-    let%bind default_auth_provider =
-      match try_prefixes "DEFAULT_AUTH_PROVIDER" with
-      | Some value ->
-        let%bind provider = Auth_provider.of_string value in
-        Ok (Some provider)
-      | None -> Ok t.default_auth_provider
-    in
-
-    let%bind include_tags =
-      match try_prefixes "INCLUDE_TAGS" with
-      | Some value ->
-        Ok (Some (String.split ~on:',' value |> List.map ~f:String.strip))
-      | None -> Ok t.include_tags (* Keep existing option state *)
-    in
-
-    let%bind exclude_tags =
-      match try_prefixes "EXCLUDE_TAGS" with
-      | Some value ->
-        Ok (Some (String.split ~on:',' value |> List.map ~f:String.strip))
-      | None -> Ok t.exclude_tags (* Keep existing option state *)
-    in
-
-    (* Construct the new record with all updated fields *)
-    Ok
-      {
-        home;
-        test_mode;
-        log_level;
-        enable_rich_tracebacks;
-        deprecation_warnings;
-        client_raise_first_exceptiongroup_error;
-        resource_prefix_format;
-        client_init_timeout;
-        host;
-        port;
-        sse_path;
-        message_path;
-        streamable_http_path;
-        debug;
-        mask_error_details;
-        server_dependencies;
-        json_response;
-        stateless_http;
-        default_auth_provider;
-        include_tags;
-        exclude_tags;
-      }
+    apply_all_field_updates try_prefixes t
 
   let load_from_dotenv t =
     let%bind exists = Sys.file_exists env_file in
     match exists with
     | `Yes ->
-      (* Parse .env file and apply settings *)
       (try
         let lines = In_channel.read_lines env_file in
         let env_vars = Hashtbl.create (module String) in
         
-        (* Parse each line to extract key=value pairs *)
+        (* Parse .env file *)
         List.iter lines ~f:(fun line ->
           let trimmed = String.strip line in
-          (* Skip empty lines and comments *)
           if not (String.is_empty trimmed) && not (String.is_prefix trimmed ~prefix:"#") then
             match String.split trimmed ~on:'=' with
             | key :: value_parts when List.length value_parts >= 1 ->
               let value = String.concat ~sep:"=" value_parts in
               let clean_key = String.strip key in
               let clean_value = String.strip value in
-              (* Remove quotes from value if present *)
               let unquoted_value =
                 if (String.is_prefix clean_value ~prefix:"\"" && String.is_suffix clean_value ~suffix:"\"") ||
                    (String.is_prefix clean_value ~prefix:"'" && String.is_suffix clean_value ~suffix:"'") then
@@ -393,181 +316,18 @@ module Settings = struct
                 else clean_value
               in
               Hashtbl.set env_vars ~key:clean_key ~data:unquoted_value
-            | _ -> (* Skip malformed lines *)
+            | _ -> 
               Logging.Global.warning (sprintf "Malformed line in .env file: %s" trimmed)
         );
         
-        (* Apply environment variables from .env file using same logic as load_from_env *)
-        let apply_dotenv_vars t =
-          let open Or_error.Let_syntax in
-          let try_dotenv_lookup var_name =
-            List.find_map env_prefixes ~f:(fun prefix ->
-              let full_name = prefix ^ var_name in
-              Hashtbl.find env_vars full_name
-              |> Option.map ~f:(warn_if_deprecated prefix))
-          in
-          
-          let%bind home =
-            match try_dotenv_lookup "HOME" with
-            | Some value -> Ok value
-            | None -> Ok t.home
-          in
-          
-          let%bind test_mode =
-            match try_dotenv_lookup "TEST_MODE" with
-            | Some value -> parse_bool_or_error value "TEST_MODE"
-            | None -> Ok t.test_mode
-          in
-          
-          let%bind log_level =
-            try
-              match try_dotenv_lookup "LOG_LEVEL" with
-              | Some value -> Ok (Log_level.of_string value)
-              | None -> Ok t.log_level
-            with Failure msg -> Or_error.error_string msg
-          in
-          
-          let%bind enable_rich_tracebacks =
-            match try_dotenv_lookup "ENABLE_RICH_TRACEBACKS" with
-            | Some value -> parse_bool_or_error value "ENABLE_RICH_TRACEBACKS"
-            | None -> Ok t.enable_rich_tracebacks
-          in
-          
-          let%bind deprecation_warnings =
-            match try_dotenv_lookup "DEPRECATION_WARNINGS" with
-            | Some value -> parse_bool_or_error value "DEPRECATION_WARNINGS"
-            | None -> Ok t.deprecation_warnings
-          in
-          
-          let%bind client_raise_first_exceptiongroup_error =
-            match try_dotenv_lookup "CLIENT_RAISE_FIRST_EXCEPTIONGROUP_ERROR" with
-            | Some value -> parse_bool_or_error value "CLIENT_RAISE_FIRST_EXCEPTIONGROUP_ERROR"
-            | None -> Ok t.client_raise_first_exceptiongroup_error
-          in
-          
-          let%bind resource_prefix_format =
-            match try_dotenv_lookup "RESOURCE_PREFIX_FORMAT" with
-            | Some value -> Resource_prefix_format.of_string value
-            | None -> Ok t.resource_prefix_format
-          in
-          
-          let%bind client_init_timeout =
-            match try_dotenv_lookup "CLIENT_INIT_TIMEOUT" with
-            | Some value ->
-              let%bind f = parse_float_or_error value "CLIENT_INIT_TIMEOUT" in
-              Ok (Some f)
-            | None -> Ok t.client_init_timeout
-          in
-          
-          let%bind host =
-            match try_dotenv_lookup "HOST" with
-            | Some value -> Ok value
-            | None -> Ok t.host
-          in
-          
-          let%bind port =
-            match try_dotenv_lookup "PORT" with
-            | Some value -> parse_int_or_error value "PORT"
-            | None -> Ok t.port
-          in
-          
-          let%bind sse_path =
-            match try_dotenv_lookup "SSE_PATH" with
-            | Some value -> Ok value
-            | None -> Ok t.sse_path
-          in
-          
-          let%bind message_path =
-            match try_dotenv_lookup "MESSAGE_PATH" with
-            | Some value -> Ok value
-            | None -> Ok t.message_path
-          in
-          
-          let%bind streamable_http_path =
-            match try_dotenv_lookup "STREAMABLE_HTTP_PATH" with
-            | Some value -> Ok value
-            | None -> Ok t.streamable_http_path
-          in
-          
-          let%bind debug =
-            match try_dotenv_lookup "DEBUG" with
-            | Some value -> parse_bool_or_error value "DEBUG"
-            | None -> Ok t.debug
-          in
-          
-          let%bind mask_error_details =
-            match try_dotenv_lookup "MASK_ERROR_DETAILS" with
-            | Some value -> parse_bool_or_error value "MASK_ERROR_DETAILS"
-            | None -> Ok t.mask_error_details
-          in
-          
-          let%bind server_dependencies =
-            match try_dotenv_lookup "SERVER_DEPENDENCIES" with
-            | Some value -> Ok (String.split ~on:',' value |> List.map ~f:String.strip)
-            | None -> Ok t.server_dependencies
-          in
-          
-          let%bind json_response =
-            match try_dotenv_lookup "JSON_RESPONSE" with
-            | Some value -> parse_bool_or_error value "JSON_RESPONSE"
-            | None -> Ok t.json_response
-          in
-          
-          let%bind stateless_http =
-            match try_dotenv_lookup "STATELESS_HTTP" with
-            | Some value -> parse_bool_or_error value "STATELESS_HTTP"
-            | None -> Ok t.stateless_http
-          in
-          
-          let%bind default_auth_provider =
-            match try_dotenv_lookup "DEFAULT_AUTH_PROVIDER" with
-            | Some value ->
-              let%bind provider = Auth_provider.of_string value in
-              Ok (Some provider)
-            | None -> Ok t.default_auth_provider
-          in
-          
-          let%bind include_tags =
-            match try_dotenv_lookup "INCLUDE_TAGS" with
-            | Some value ->
-              Ok (Some (String.split ~on:',' value |> List.map ~f:String.strip))
-            | None -> Ok t.include_tags
-          in
-          
-          let%bind exclude_tags =
-            match try_dotenv_lookup "EXCLUDE_TAGS" with
-            | Some value ->
-              Ok (Some (String.split ~on:',' value |> List.map ~f:String.strip))
-            | None -> Ok t.exclude_tags
-          in
-          
-          (* Return updated settings record *)
-          Ok {
-            home;
-            test_mode;
-            log_level;
-            enable_rich_tracebacks;
-            deprecation_warnings;
-            client_raise_first_exceptiongroup_error;
-            resource_prefix_format;
-            client_init_timeout;
-            host;
-            port;
-            sse_path;
-            message_path;
-            streamable_http_path;
-            debug;
-            mask_error_details;
-            server_dependencies;
-            json_response;
-            stateless_http;
-            default_auth_provider;
-            include_tags;
-            exclude_tags;
-          }
+        let try_dotenv_lookup var_name =
+          List.find_map env_prefixes ~f:(fun prefix ->
+            let full_name = prefix ^ var_name in
+            Hashtbl.find env_vars full_name
+            |> Option.map ~f:(warn_if_deprecated prefix))
         in
         
-        return (apply_dotenv_vars t)
+        return (apply_all_field_updates try_dotenv_lookup t)
       with 
       | Sys_error msg -> 
         return (Or_error.error_string (sprintf "Error reading .env file: %s" msg))
@@ -576,7 +336,6 @@ module Settings = struct
     | _ -> return (Ok t)
 
   let load_from_file_secrets t =
-    (* Load secrets from files in the secrets directory *)
     let secrets_dir = Filename.concat t.home "secrets" in
     
     try
@@ -588,25 +347,22 @@ module Settings = struct
           with exn -> Or_error.error_string (sprintf "Error reading secrets directory: %s" (Exn.to_string exn))
         in
         
-        (* Create a mapping from secret file names to their contents *)
         let secret_values = Hashtbl.create (module String) in
         
-        (* Read each secret file *)
+        (* Read secret files *)
         Array.iter files ~f:(fun filename ->
           let filepath = Filename.concat secrets_dir filename in
           try
             match Sys_unix.is_file filepath with
             | `Yes ->
               let content = In_channel.read_all filepath |> String.strip in
-              (* Map secret file names to environment variable patterns *)
               let env_var_name = String.uppercase filename in
               Hashtbl.set secret_values ~key:env_var_name ~data:content
-            | _ -> () (* Skip directories and other non-files *)
+            | _ -> ()
           with exn ->
             Logging.Global.warning (sprintf "Error reading secret file %s: %s" filename (Exn.to_string exn))
         );
         
-        (* Apply secrets using similar logic to env vars, but check secrets first *)
         let try_secret_lookup var_name =
           List.find_map env_prefixes ~f:(fun prefix ->
             let full_name = prefix ^ var_name in
@@ -614,167 +370,8 @@ module Settings = struct
             Hashtbl.find secret_values secret_key)
         in
         
-        let%bind home =
-          match try_secret_lookup "HOME" with
-          | Some value -> Ok value
-          | None -> Ok t.home
-        in
-        
-        let%bind test_mode =
-          match try_secret_lookup "TEST_MODE" with
-          | Some value -> parse_bool_or_error value "TEST_MODE"
-          | None -> Ok t.test_mode
-        in
-        
-        let%bind log_level =
-          try
-            match try_secret_lookup "LOG_LEVEL" with
-            | Some value -> Ok (Log_level.of_string value)
-            | None -> Ok t.log_level
-          with Failure msg -> Or_error.error_string msg
-        in
-        
-        let%bind enable_rich_tracebacks =
-          match try_secret_lookup "ENABLE_RICH_TRACEBACKS" with
-          | Some value -> parse_bool_or_error value "ENABLE_RICH_TRACEBACKS"
-          | None -> Ok t.enable_rich_tracebacks
-        in
-        
-        let%bind deprecation_warnings =
-          match try_secret_lookup "DEPRECATION_WARNINGS" with
-          | Some value -> parse_bool_or_error value "DEPRECATION_WARNINGS"
-          | None -> Ok t.deprecation_warnings
-        in
-        
-        let%bind client_raise_first_exceptiongroup_error =
-          match try_secret_lookup "CLIENT_RAISE_FIRST_EXCEPTIONGROUP_ERROR" with
-          | Some value -> parse_bool_or_error value "CLIENT_RAISE_FIRST_EXCEPTIONGROUP_ERROR"
-          | None -> Ok t.client_raise_first_exceptiongroup_error
-        in
-        
-        let%bind resource_prefix_format =
-          match try_secret_lookup "RESOURCE_PREFIX_FORMAT" with
-          | Some value -> Resource_prefix_format.of_string value
-          | None -> Ok t.resource_prefix_format
-        in
-        
-        let%bind client_init_timeout =
-          match try_secret_lookup "CLIENT_INIT_TIMEOUT" with
-          | Some value ->
-            let%bind f = parse_float_or_error value "CLIENT_INIT_TIMEOUT" in
-            Ok (Some f)
-          | None -> Ok t.client_init_timeout
-        in
-        
-        let%bind host =
-          match try_secret_lookup "HOST" with
-          | Some value -> Ok value
-          | None -> Ok t.host
-        in
-        
-        let%bind port =
-          match try_secret_lookup "PORT" with
-          | Some value -> parse_int_or_error value "PORT"
-          | None -> Ok t.port
-        in
-        
-        let%bind sse_path =
-          match try_secret_lookup "SSE_PATH" with
-          | Some value -> Ok value
-          | None -> Ok t.sse_path
-        in
-        
-        let%bind message_path =
-          match try_secret_lookup "MESSAGE_PATH" with
-          | Some value -> Ok value
-          | None -> Ok t.message_path
-        in
-        
-        let%bind streamable_http_path =
-          match try_secret_lookup "STREAMABLE_HTTP_PATH" with
-          | Some value -> Ok value
-          | None -> Ok t.streamable_http_path
-        in
-        
-        let%bind debug =
-          match try_secret_lookup "DEBUG" with
-          | Some value -> parse_bool_or_error value "DEBUG"
-          | None -> Ok t.debug
-        in
-        
-        let%bind mask_error_details =
-          match try_secret_lookup "MASK_ERROR_DETAILS" with
-          | Some value -> parse_bool_or_error value "MASK_ERROR_DETAILS"
-          | None -> Ok t.mask_error_details
-        in
-        
-        let%bind server_dependencies =
-          match try_secret_lookup "SERVER_DEPENDENCIES" with
-          | Some value -> Ok (String.split ~on:',' value |> List.map ~f:String.strip)
-          | None -> Ok t.server_dependencies
-        in
-        
-        let%bind json_response =
-          match try_secret_lookup "JSON_RESPONSE" with
-          | Some value -> parse_bool_or_error value "JSON_RESPONSE"
-          | None -> Ok t.json_response
-        in
-        
-        let%bind stateless_http =
-          match try_secret_lookup "STATELESS_HTTP" with
-          | Some value -> parse_bool_or_error value "STATELESS_HTTP"
-          | None -> Ok t.stateless_http
-        in
-        
-        let%bind default_auth_provider =
-          match try_secret_lookup "DEFAULT_AUTH_PROVIDER" with
-          | Some value ->
-            let%bind provider = Auth_provider.of_string value in
-            Ok (Some provider)
-          | None -> Ok t.default_auth_provider
-        in
-        
-        let%bind include_tags =
-          match try_secret_lookup "INCLUDE_TAGS" with
-          | Some value ->
-            Ok (Some (String.split ~on:',' value |> List.map ~f:String.strip))
-          | None -> Ok t.include_tags
-        in
-        
-        let%bind exclude_tags =
-          match try_secret_lookup "EXCLUDE_TAGS" with
-          | Some value ->
-            Ok (Some (String.split ~on:',' value |> List.map ~f:String.strip))
-          | None -> Ok t.exclude_tags
-        in
-        
-        (* Return updated settings with secrets applied *)
-        Ok {
-          home;
-          test_mode;
-          log_level;
-          enable_rich_tracebacks;
-          deprecation_warnings;
-          client_raise_first_exceptiongroup_error;
-          resource_prefix_format;
-          client_init_timeout;
-          host;
-          port;
-          sse_path;
-          message_path;
-          streamable_http_path;
-          debug;
-          mask_error_details;
-          server_dependencies;
-          json_response;
-          stateless_http;
-          default_auth_provider;
-          include_tags;
-          exclude_tags;
-        }
-      | _ -> 
-        (* Secrets directory doesn't exist, return settings unchanged *)
-        Ok t
+        apply_all_field_updates try_secret_lookup t
+      | _ -> Ok t
     with exn ->
       Or_error.error_string (sprintf "Error loading file secrets: %s" (Exn.to_string exn))
 
@@ -784,11 +381,9 @@ module Settings = struct
       log_level = override.log_level;
       resource_prefix_format = override.resource_prefix_format;
       default_auth_provider = override.default_auth_provider;
-      (* Add other fields as needed *)
     }
 
   let validate t =
-    (* Validate home path *)
     if String.equal t.home "" then failwith "Home path cannot be empty"
     else if t.port < 0 || t.port > 65535 then
       failwith (sprintf "Invalid port number: %d" t.port)
