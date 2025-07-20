@@ -43,7 +43,7 @@ jobs:
       working-directory: /workspace
       run: |
         mv ox-fast-mcp.opam ox-fast-mcp.opam.bak
-        mv deps-only.opam ox-fast-mcp.opam
+        mv deps-only ox-fast-mcp.opam
         eval $(opam env)
         opam-dune-lint
 
