@@ -5,11 +5,6 @@
   core
   async
   yojson
-  ppx_yojson_conv_lib
-  mcp_types)
- (modules
-  mcp_error
-  types
-  mcp_client)
+  ppx_yojson_conv_lib)
  (preprocess
   (pps ppx_jane ppx_yojson_conv))) 
