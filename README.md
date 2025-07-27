@@ -17,7 +17,7 @@ An OCaml implementation of the [FastMCP Python library](https://github.com/jlowi
 
 ```
 ox-fast-mcp/
-├── lib/                          # Core library modules
+├── src/                          # Core library modules
 │   ├── utilities/                # Common types and utilities (OpenAPI, JSON schema, HTTP, logging, caching)
 │   ├── tools/                    # Tool management system (execution, transformation, managers)
 │   ├── prompts/                  # Prompt management system (templates, execution)
@@ -66,19 +66,19 @@ All modules are fully tested and passing:
 
 ## Core Components
 
-### 1. Utilities Module (`lib/utilities/`)
+### 1. Utilities Module (`src/utilities/`)
 
 Provides the foundation types and utilities for the entire MCP implementation.
 
-### 2. Tools Module (`lib/tools/`)
+### 2. Tools Module (`src/tools/`)
 
 Manages executable tools with registration, filtering, and execution capabilities.
 
-### 3. Prompts Module (`lib/prompts/`)
+### 3. Prompts Module (`src/prompts/`)
 
 Handles prompt templates with variable substitution and multi-modal message support.
 
-### 4. CLI Module (`lib/cli/`)
+### 4. CLI Module (`src/cli/`)
 
 Command-line interface supporting multiple transport types and configuration options.
 
