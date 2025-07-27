@@ -4,16 +4,15 @@
     framework. It carries session, request, and lifespan context information. *)
 
 open Core
-open Mcp.Types
 
 type ('session, 'lifespan_context, 'request) t = {
-  request_id : request_id;
-  meta : request_params_meta option;
+  request_id : Mcp.Types.request_id;
+  meta : Mcp.Types.meta option;
   session : 'session;
   lifespan_context : 'lifespan_context;
   request : 'request option;
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** A generic request context carrying session and lifespan information *)
 
 (** Create a new request context *)

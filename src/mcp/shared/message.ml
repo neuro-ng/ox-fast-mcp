@@ -1,14 +1,14 @@
 open Core
 open Lwt.Syntax
 
-type resumption_token = string
+type resumption_token = { value : string } [@@deriving yojson] 
 type resumption_token_update_callback = resumption_token -> unit Lwt.t
 
 type client_message_metadata = {
   resumption_token : resumption_token option;
   on_resumption_token_update : resumption_token_update_callback option;
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 
 type server_message_metadata = {
   related_request_id : Mcp.Types.request_id option;

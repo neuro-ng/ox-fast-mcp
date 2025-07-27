@@ -110,45 +110,45 @@ module type OAUTH_AUTHORIZATION_SERVER_PROVIDER = sig
   type access_token_t = access_token
 
   val get_client :
-    string -> Ox_fast_mcp.Shared.Auth.oauth_client_information_full option Lwt.t
+    string -> Mcp_shared.Auth.oauth_client_information_full option Lwt.t
   (** Get client information by client ID *)
 
   val register_client :
-    Ox_fast_mcp.Shared.Auth.oauth_client_information_full -> unit Lwt.t
+    Mcp_shared.Auth.oauth_client_information_full -> unit Lwt.t
   (** Register a new client
       @raise Registration_error if client metadata is invalid *)
 
   val authorize :
-    Ox_fast_mcp.Shared.Auth.oauth_client_information_full ->
+    Mcp_shared.Auth.oauth_client_information_full ->
     authorization_params ->
     string Lwt.t
   (** Authorize a client and return redirect URL
       @raise Authorization_error if request is invalid *)
 
   val load_authorization_code :
-    Ox_fast_mcp.Shared.Auth.oauth_client_information_full ->
+    Mcp_shared.Auth.oauth_client_information_full ->
     string ->
     authorization_code_t option Lwt.t
   (** Load authorization code *)
 
   val exchange_authorization_code :
-    Ox_fast_mcp.Shared.Auth.oauth_client_information_full ->
+    Mcp_shared.Auth.oauth_client_information_full ->
     authorization_code_t ->
-    Ox_fast_mcp.Shared.Auth.oauth_token Lwt.t
+    Mcp_shared.Auth.oauth_token Lwt.t
   (** Exchange authorization code for tokens
       @raise Token_error if request is invalid *)
 
   val load_refresh_token :
-    Ox_fast_mcp.Shared.Auth.oauth_client_information_full ->
+    Mcp_shared.Auth.oauth_client_information_full ->
     string ->
     refresh_token_t option Lwt.t
   (** Load refresh token *)
 
   val exchange_refresh_token :
-    Ox_fast_mcp.Shared.Auth.oauth_client_information_full ->
+    Mcp_shared.Auth.oauth_client_information_full ->
     refresh_token_t ->
     string list ->
-    Ox_fast_mcp.Shared.Auth.oauth_token Lwt.t
+    Mcp_shared.Auth.oauth_token Lwt.t
   (** Exchange refresh token for new tokens
       @raise Token_error if request is invalid *)
 

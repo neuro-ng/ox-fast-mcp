@@ -1,0 +1,6 @@
+(library
+ (name mcp_test)
+ (public_name ox-fast-mcp.mcp_test)
+ (libraries core async yojson ppx_yojson_conv_lib mcp)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))

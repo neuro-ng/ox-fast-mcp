@@ -7,7 +7,7 @@ open Mcp.Types
 
 type ('session, 'lifespan_context, 'request) t = {
   request_id : request_id;
-  meta : request_params_meta option;
+  meta : Mcp.Types.meta option;
   session : 'session;
   lifespan_context : 'lifespan_context;
   request : 'request option;
@@ -22,7 +22,7 @@ type ('session, 'lifespan_context, 'request) t = {
 
 val create :
   request_id:request_id ->
-  ?meta:request_params_meta ->
+  ?meta:Mcp.Types.meta ->
   session:'session ->
   lifespan_context:'lifespan_context ->
   ?request:'request ->

@@ -7,9 +7,8 @@
   async
   cohttp
   lwt
-  mcp_server_auth_core
-  mcp_server_auth_provider
-  dream
+  mcp_server_auth
+  opium
   yojson)
  (preprocess
-  (pps ppx_deriving_yojson ppx_deriving.show))) 
+  (pps ppx_jane ppx_yojson_conv)))

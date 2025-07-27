@@ -113,36 +113,36 @@ module type OAUTH_AUTHORIZATION_SERVER_PROVIDER = sig
   type access_token_t = access_token
 
   val get_client :
-    string -> Ox_fast_mcp.Shared.Auth.oauth_client_information_full option Lwt.t
+    string -> Mcp_shared.Auth.oauth_client_information_full option Lwt.t
 
   val register_client :
-    Ox_fast_mcp.Shared.Auth.oauth_client_information_full -> unit Lwt.t
+    Mcp_shared.Auth.oauth_client_information_full -> unit Lwt.t
 
   val authorize :
-    Ox_fast_mcp.Shared.Auth.oauth_client_information_full ->
+    Mcp_shared.Auth.oauth_client_information_full ->
     authorization_params ->
     string Lwt.t
 
   val load_authorization_code :
-    Ox_fast_mcp.Shared.Auth.oauth_client_information_full ->
+    Mcp_shared.Auth.oauth_client_information_full ->
     string ->
     authorization_code_t option Lwt.t
 
   val exchange_authorization_code :
-    Ox_fast_mcp.Shared.Auth.oauth_client_information_full ->
+    Mcp_shared.Auth.oauth_client_information_full ->
     authorization_code_t ->
-    Ox_fast_mcp.Shared.Auth.oauth_token Lwt.t
+    Mcp_shared.Auth.oauth_token Lwt.t
 
   val load_refresh_token :
-    Ox_fast_mcp.Shared.Auth.oauth_client_information_full ->
+    Mcp_shared.Auth.oauth_client_information_full ->
     string ->
     refresh_token_t option Lwt.t
 
   val exchange_refresh_token :
-    Ox_fast_mcp.Shared.Auth.oauth_client_information_full ->
+    Mcp_shared.Auth.oauth_client_information_full ->
     refresh_token_t ->
     string list ->
-    Ox_fast_mcp.Shared.Auth.oauth_token Lwt.t
+    Mcp_shared.Auth.oauth_token Lwt.t
 
   val load_access_token : string -> access_token_t option Lwt.t
 

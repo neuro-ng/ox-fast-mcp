@@ -5,7 +5,6 @@
   core
   lwt
   lwt.unix
-  ppx_jane
   ppx_yojson_conv_lib
   yojson
   ox-fast-mcp.mcp)
@@ -16,4 +15,5 @@
   session
   version)
  (preprocess
-  (pps ppx_jane ppx_yojson_conv))) 
+  (pps ppx_jane ppx_yojson_conv)))
+  

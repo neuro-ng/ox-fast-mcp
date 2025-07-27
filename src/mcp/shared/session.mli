@@ -1,5 +1,6 @@
 open Core
 open Lwt.Syntax
+open Mcp.Types
 
 type progress_fn = float -> float option -> string option -> unit Lwt.t
 (** Progress notification callback type *)
@@ -8,7 +9,7 @@ type progress_fn = float -> float option -> string option -> unit Lwt.t
 module Request_responder : sig
   type ('req, 'res) t = {
     request_id : Mcp.Types.request_id;
-    request_meta : Mcp.Types.request_params_meta option;
+    request_meta : Mcp.Types.meta option;
     request : 'req;
     message_metadata : Message.message_metadata option;
     mutable completed : bool;
@@ -17,7 +18,7 @@ module Request_responder : sig
 
   val create :
     request_id:Mcp.Types.request_id ->
-    ?request_meta:Mcp.Types.request_params_meta ->
+    ?request_meta:Mcp.Types.meta ->
     request:'req ->
     ?message_metadata:Message.message_metadata ->
     on_complete:(('req, 'res) t -> unit Lwt.t) ->
