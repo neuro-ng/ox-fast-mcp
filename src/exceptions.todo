@@ -1,4 +1,4 @@
-# FastMCP Exceptions Translation TODO
+# OxFastMCP Exceptions Translation TODO
 
 ## File Location: 
 - **exceptions.ml** - `/src/exceptions.ml`
@@ -19,11 +19,14 @@
 - [x] Updated src/dune to include ox-fast-mcp.mcp dependency and ppx_compare
 - [x] Removed empty src/exceptions/ directory
 - [x] Re-verified build after file restructuring
+- [x] Renamed all FastMCP references to OxFastMCP throughout codebase
+- [x] Updated exception names, function names, and documentation
+- [x] Fixed test file compilation and module import issues
 
 ## Python to OCaml Mappings
 
 ### Direct Exception Mappings:
-- [x] `FastMCPError` → `FastMCP_error`
+- [x] `OxFastMCPError` → `OxFastMCP_error`
 - [x] `ValidationError` → `Validation_error`  
 - [x] `ResourceError` → `Resource_error`
 - [x] `ToolError` → `Tool_error`
@@ -42,11 +45,11 @@
 - [x] Helper functions for creating exceptions (`create_*_error`)
 - [x] `to_string` function for exception-to-string conversion
 - [x] `get_error_data` function to extract error data
-- [x] `is_fastmcp_error` predicate function
+- [x] `is_oxfastmcp_error` predicate function
 
 ## Missing ML Equivalents / Concerns:
 - ⚠️  Python inheritance hierarchy vs OCaml exception hierarchy:
-  - Python: `ValidationError(FastMCPError)` inherits from `FastMCPError`
+  - Python: `ValidationError(OxFastMCPError)` inherits from `OxFastMCPError`
   - OCaml: All exceptions are separate types with same `error_data` payload
   - Impact: Pattern matching differs, but functionality preserved
 

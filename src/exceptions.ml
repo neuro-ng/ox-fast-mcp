@@ -1,4 +1,4 @@
-(** Custom exceptions for FastMCP *)
+(** Custom exceptions for OxFastMCP *)
 
 open! Core
 open! Async
@@ -16,25 +16,25 @@ type error_data = {
 }
 [@@deriving sexp, yojson]
 
-(* Base error for FastMCP - equivalent to 'class FastMCPError(Exception)' *)
-exception FastMCP_error of error_data
+(* Base error for OxFastMCP - equivalent to 'class OxFastMCPError(Exception)' *)
+exception OxFastMCP_error of error_data
 
 (* Error in validating parameters or return values - equivalent to 'class
-   ValidationError(FastMCPError)' *)
+   ValidationError(OxFastMCPError)' *)
 exception Validation_error of error_data
 
 (* Error in resource operations - equivalent to 'class
-   ResourceError(FastMCPError)' *)
+   ResourceError(OxFastMCPError)' *)
 exception Resource_error of error_data
 
-(* Error in tool operations - equivalent to 'class ToolError(FastMCPError)' *)
+(* Error in tool operations - equivalent to 'class ToolError(OxFastMCPError)' *)
 exception Tool_error of error_data
 
 (* Error in prompt operations - equivalent to 'class
-   PromptError(FastMCPError)' *)
+   PromptError(OxFastMCPError)' *)
 exception Prompt_error of error_data
 
-(* Invalid signature for use with FastMCP - equivalent to 'class
+(* Invalid signature for use with OxFastMCP - equivalent to 'class
    InvalidSignature(Exception)' *)
 exception Invalid_signature of error_data
 
@@ -48,8 +48,8 @@ exception Not_found_error of error_data
 exception Disabled_error of error_data
 
 (* Helper functions to create exceptions with just a message *)
-let create_fastmcp_error ?(code = None) ?(data = None) message =
-  FastMCP_error { message; code; data }
+let create_oxfastmcp_error ?(code = None) ?(data = None) message =
+  OxFastMCP_error { message; code; data }
 
 let create_validation_error ?(code = None) ?(data = None) message =
   Validation_error { message; code; data }
@@ -77,7 +77,7 @@ let create_disabled_error ?(code = None) ?(data = None) message =
 
 (* Convert to string representation *)
 let to_string = function
-  | FastMCP_error { message; _ } -> sprintf "FastMCP_error: %s" message
+  | OxFastMCP_error { message; _ } -> sprintf "OxFastMCP_error: %s" message
   | Validation_error { message; _ } -> sprintf "Validation_error: %s" message
   | Resource_error { message; _ } -> sprintf "Resource_error: %s" message
   | Tool_error { message; _ } -> sprintf "Tool_error: %s" message
@@ -90,7 +90,7 @@ let to_string = function
 
 (* Get error data from exception *)
 let get_error_data = function
-  | FastMCP_error data -> data
+  | OxFastMCP_error data -> data
   | Validation_error data -> data
   | Resource_error data -> data
   | Tool_error data -> data
@@ -99,11 +99,11 @@ let get_error_data = function
   | Client_error data -> data
   | Not_found_error data -> data
   | Disabled_error data -> data
-  | _ -> failwith "Not a FastMCP error"
+  | _ -> failwith "Not an OxFastMCP error"
 
-(* Check if exception is a FastMCP exception *)
-let is_fastmcp_error = function
-  | FastMCP_error _
+(* Check if exception is an OxFastMCP exception *)
+let is_oxfastmcp_error = function
+  | OxFastMCP_error _
   | Validation_error _
   | Resource_error _
   | Tool_error _
