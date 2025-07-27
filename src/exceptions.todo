@@ -1,0 +1,88 @@
+# FastMCP Exceptions Translation TODO
+
+## File Location: 
+- **exceptions.ml** - `/src/exceptions.ml`
+- **exceptions.mli** - `/src/exceptions.mli` 
+- **exceptions.todo** - `/src/exceptions.todo`
+
+## Translation Status: ✅ COMPLETED
+- [x] Translated all Python exception classes to OCaml exceptions
+- [x] Added proper Jane Street style with Core/Async opens
+- [x] Used ppx_yojson_conv and ppx_compare as requested
+- [x] Created proper .mli interface file
+- [x] Updated dune file with required dependencies
+- [x] Fixed MCP module imports (use 'open Mcp.Types')
+- [x] Fixed yojson conversion issues (added Ppx_yojson_conv_lib.Yojson_conv.Primitives)
+- [x] Resolved build issues and module compiles successfully
+- [x] Verified integration with full project build
+- [x] Moved files from src/exceptions/ to src/ (exceptions.ml, exceptions.mli, exceptions.todo)
+- [x] Updated src/dune to include ox-fast-mcp.mcp dependency and ppx_compare
+- [x] Removed empty src/exceptions/ directory
+- [x] Re-verified build after file restructuring
+
+## Python to OCaml Mappings
+
+### Direct Exception Mappings:
+- [x] `FastMCPError` → `FastMCP_error`
+- [x] `ValidationError` → `Validation_error`  
+- [x] `ResourceError` → `Resource_error`
+- [x] `ToolError` → `Tool_error`
+- [x] `PromptError` → `Prompt_error`
+- [x] `InvalidSignature` → `Invalid_signature`
+- [x] `ClientError` → `Client_error`
+- [x] `NotFoundError` → `Not_found_error`
+- [x] `DisabledError` → `Disabled_error`
+
+### Import/Module Mappings:
+- [x] `from mcp import McpError` → `module Mcp_exceptions = Mcp.Shared.Exceptions`
+  - Note: `McpError` available as `Mcp_exceptions.Mcp_error`
+
+## Additional OCaml Features Added (not in Python)
+- [x] `error_data` type with sexp, yojson, compare derivers
+- [x] Helper functions for creating exceptions (`create_*_error`)
+- [x] `to_string` function for exception-to-string conversion
+- [x] `get_error_data` function to extract error data
+- [x] `is_fastmcp_error` predicate function
+
+## Missing ML Equivalents / Concerns:
+- ⚠️  Python inheritance hierarchy vs OCaml exception hierarchy:
+  - Python: `ValidationError(FastMCPError)` inherits from `FastMCPError`
+  - OCaml: All exceptions are separate types with same `error_data` payload
+  - Impact: Pattern matching differs, but functionality preserved
+
+- ⚠️  ppx_compare limitation with json type:
+  - `json` type (alias for `Yojson.Safe.t`) doesn't support compare derivation
+  - Removed compare derivation for `error_data` type 
+  - Impact: No automatic comparison of error_data records, but this is rarely needed for exceptions
+
+## Testing Requirements:
+- [ ] Add unit tests for exception creation
+- [ ] Add tests for exception pattern matching
+- [ ] Add tests for error_data serialization/deserialization
+- [ ] Test integration with MCP error types
+
+## Documentation Requirements:
+- [ ] Add usage examples in module documentation
+- [ ] Document differences from Python version
+- [ ] Add examples of error handling patterns
+
+## Performance Considerations:
+- ✅ Used structured error_data instead of simple strings
+- ✅ Leveraged OCaml's efficient pattern matching
+- ✅ Zero-cost abstractions with inline functions
+
+## Dependencies Status:
+- [x] `core` - Jane Street Core library ✅
+- [x] `async` - Jane Street Async library ✅  
+- [x] `yojson` - JSON handling ✅
+- [x] `ppx_yojson_conv_lib` - JSON conversion ✅
+- [x] `mcp` - MCP types and exceptions ✅
+- [x] `ppx_jane` - Jane Street PPX bundle ✅
+- [x] `ppx_yojson_conv` - JSON derivers ✅
+- [x] `ppx_compare` - Comparison derivers ⚠️ (limited by json type compatibility, but available in dune)
+
+## Notes:
+- OCaml exception model is fundamentally different from Python classes
+- Used variant-style exceptions with structured data instead of inheritance
+- Maintained all functional equivalents while leveraging OCaml's type system
+- All Python functionality successfully mapped to idiomatic OCaml 

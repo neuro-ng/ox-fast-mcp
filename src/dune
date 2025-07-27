@@ -10,6 +10,7 @@
   async_log
   yojson
   ppx_yojson_conv_lib
-  ox-fast-mcp.utilities)
+  ox-fast-mcp.utilities
+  ox-fast-mcp.mcp)
  (preprocess
-  (pps ppx_jane ppx_yojson_conv)))
+  (pps ppx_jane ppx_yojson_conv ppx_compare)))
