@@ -29,10 +29,10 @@ val internal_error : int
 val connection_closed : int
 (** SDK error codes *)
 
-type progress_token = string [@@deriving yojson]
+type progress_token = { value : string } [@@deriving yojson]
 (** Basic types *)
 
-type cursor = string [@@deriving yojson]
+type cursor = { value : string } [@@deriving yojson]
 type role = [ `User | `Assistant ] [@@deriving yojson]
 type request_id = [ `Int of int | `String of string ] [@@deriving yojson]
 
