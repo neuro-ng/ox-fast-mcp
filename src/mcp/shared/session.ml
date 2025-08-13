@@ -7,23 +7,15 @@ type progress_fn = float -> float option -> string option -> unit Lwt.t
 module Request_responder = struct
   type ('req, 'res) t = {
     request_id : request_id;
-    request_meta : request_params_meta option;
+    request_meta : meta option;
     request : 'req;
     message_metadata : Message.message_metadata option;
     mutable completed : bool;
     mutable cancel_scope : unit -> unit;
   }
 
-  let create ~request_id ?request_meta ~request ?message_metadata ~on_complete =
-    {
-      request_id;
-      request_meta;
-      request_meta;
-      request;
-      message_metadata;
-      completed = false;
-      cancel_scope = (fun () -> ());
-    }
+  let[@ocaml.warning "-16"] create ~request_id ?request_meta ~request ?message_metadata ~on_complete =
+    { request_id; request_meta; request; message_metadata; completed = false; cancel_scope = (fun () -> ()) }
 
   let with_responder t f =
     let old_cancel_scope = t.cancel_scope in
@@ -31,10 +23,11 @@ module Request_responder = struct
     t.cancel_scope <- (fun () -> cancelled := true);
 
     let* result =
-      try%lwt f t
-      with exn ->
-        if not !cancelled then t.completed <- true;
-        Lwt.fail exn
+      Lwt.catch
+        (fun () -> f t)
+        (fun exn ->
+          if not !cancelled then t.completed <- true;
+          Lwt.fail exn)
     in
 
     t.cancel_scope <- old_cancel_scope;
@@ -51,8 +44,8 @@ module Request_responder = struct
     t.completed <- true;
     Lwt.return_unit
 
-  let in_flight t = (not t.completed) && not (t.cancel_scope == fun () -> ())
-  let is_cancelled t = t.cancel_scope <> fun () -> ()
+  let in_flight t = (not t.completed)
+  let is_cancelled t = false
 end
 
 module Base_session = struct
@@ -62,15 +55,14 @@ module Base_session = struct
   }
 
   type ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t = {
-    read_stream :
-      (Message.session_message, [> `Msg of string ]) result Lwt_stream.t;
+    read_stream : Message.session_message Lwt_stream.t;
     write_stream : Message.session_message -> unit Lwt.t;
     mutable request_id : int;
     receive_request_type : 'recv_req;
     receive_notification_type : 'recv_notif;
     read_timeout : float option;
     mutable in_flight : ('recv_req, 'send_res) Request_responder.t list;
-    mutable progress_callbacks : (request_id, progress_fn) Hashtbl.t;
+    mutable progress_callbacks : (string, progress_fn) Hashtbl.t;
     mutable response_streams : (request_id, response_stream) Hashtbl.t;
   }
 
@@ -85,7 +77,13 @@ module Base_session = struct
       read_timeout;
       in_flight = [];
       progress_callbacks = Hashtbl.create (module String);
-      response_streams = Hashtbl.create (module String);
+      response_streams = Hashtbl.create (module struct
+        type t = request_id
+        let compare (a : t) (b : t) = Poly.compare a b
+        let hash = Hashtbl.hash
+        let sexp_of_t _ = Sexp.Atom "request_id"
+        let t_of_sexp _ = `Int 0
+      end);
     }
 
   let with_session t f =
@@ -96,21 +94,20 @@ module Base_session = struct
           Lwt.async (fun () -> Request_responder.cancel resp));
     Hashtbl.clear t.progress_callbacks;
     (* Close all response streams *)
-    Hashtbl.iter t.response_streams ~f:(fun ~key:_ ~data:stream ->
-        Lwt.async stream.close);
+    Hashtbl.iter t.response_streams ~f:(fun stream -> Lwt.async stream.close);
     Hashtbl.clear t.response_streams;
     Lwt.return result
 
   let send_error t request_id error =
-    let jsonrpc_error = { jsonrpc = "2.0"; id = request_id; error } in
-    let message = Message.{ message = jsonrpc_error; metadata = None } in
+    let jsonrpc_error = { jsonrpc = "2.0"; id = `Int request_id; error } in
+    let message = Message.{ message = (`Error jsonrpc_error); metadata = None } in
     t.write_stream message
 
   let send_response t request_id response =
     let jsonrpc_response =
-      { jsonrpc = "2.0"; id = request_id; result = response }
+      { jsonrpc = "2.0"; id = `Int request_id; result = response }
     in
-    let message = Message.{ message = jsonrpc_response; metadata = None } in
+    let message = Message.{ message = (`Response jsonrpc_response); metadata = None } in
     t.write_stream message
 
   let send_request t request ?request_read_timeout ?metadata ?progress_callback
@@ -128,19 +125,18 @@ module Base_session = struct
             Lwt.return_unit);
         close =
           (fun () ->
-            if not (Lwt.is_resolved response_promise) then
+            if not (Lwt.is_sleeping response_promise) then
               Lwt.wakeup_later_exn resolver (Failure "Stream closed");
             Lwt.return_unit);
       }
     in
-    Hashtbl.add_exn t.response_streams ~key:(Int.to_string request_id)
-      ~data:stream;
+    Hashtbl.add_exn t.response_streams ~key:(`Int request_id) ~data:stream;
 
     (* Create JSONRPC request *)
     let jsonrpc_request =
       {
         jsonrpc = "2.0";
-        id = request_id;
+        id = `Int request_id;
         method_ = "request";
         (* This would need to be properly set based on request type *)
         params = None;
@@ -152,14 +148,13 @@ module Base_session = struct
     let* () =
       match progress_callback with
       | Some cb ->
-        Hashtbl.add_exn t.progress_callbacks ~key:(Int.to_string request_id)
-          ~data:cb;
+         Hashtbl.add_exn t.progress_callbacks ~key:(Int.to_string request_id) ~data:cb;
         Lwt.return_unit
       | None -> Lwt.return_unit
     in
 
     (* Send request *)
-    let message = Message.{ message = jsonrpc_request; metadata } in
+    let message = Message.{ message = (`Request jsonrpc_request); metadata } in
     let* () = t.write_stream message in
 
     (* Wait for response with timeout *)
@@ -187,7 +182,7 @@ module Base_session = struct
             { related_request_id = Some id; request_context = None })
     in
 
-    let message = Message.{ message = jsonrpc_notification; metadata } in
+    let message = Message.{ message = (`Notification jsonrpc_notification); metadata } in
     t.write_stream message
 
   let send_progress_notification t ~progress_token ~progress ?total ?message ()
@@ -214,7 +209,7 @@ module Base_session = struct
       }
     in
 
-    let message = Message.{ message = notification; metadata = None } in
+    let message = Message.{ message = (`Notification notification); metadata = None } in
     t.write_stream message
 
   let received_request _t _responder = Lwt.return_unit
@@ -230,12 +225,7 @@ module Base_session = struct
       let* message = Lwt_stream.get t.read_stream in
       match message with
       | None -> Lwt.return_unit (* Stream closed *)
-      | Some (Error e) ->
-        let* () =
-          handle_incoming t (`Error (Failure (Error.to_string_hum e)))
-        in
-        receive_loop t
-      | Some (Ok message) -> (
+      | Some message -> (
         match message.Message.message with
         | Request req -> (
           (* Validate and handle request *)
@@ -288,7 +278,7 @@ module Base_session = struct
                 List.Assoc.find params ~equal:String.equal "progressToken"
               with
               | Some (`String token) -> (
-                match Hashtbl.find t.progress_callbacks token with
+                 match Hashtbl.find t.progress_callbacks token with
                 | Some callback ->
                   let progress =
                     match
@@ -326,10 +316,10 @@ module Base_session = struct
             with _ -> receive_loop t))
         | Response resp -> (
           (* Handle response *)
-          match Hashtbl.find t.response_streams (Int.to_string resp.id) with
+          match Hashtbl.find t.response_streams resp.id with
           | Some stream ->
             let* () = stream.send resp in
-            Hashtbl.remove t.response_streams (Int.to_string resp.id);
+            Hashtbl.remove t.response_streams resp.id;
             receive_loop t
           | None ->
             let* () =
@@ -342,10 +332,10 @@ module Base_session = struct
             receive_loop t)
         | Error err -> (
           (* Handle error response *)
-          match Hashtbl.find t.response_streams (Int.to_string err.id) with
+           match Hashtbl.find t.response_streams err.id with
           | Some stream ->
             let* () = stream.send err in
-            Hashtbl.remove t.response_streams (Int.to_string err.id);
+            Hashtbl.remove t.response_streams err.id;
             receive_loop t
           | None -> receive_loop t))
     with

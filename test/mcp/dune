@@ -1,6 +1,18 @@
 (library
- (name mcp_test)
- (public_name ox-fast-mcp.mcp_test)
- (libraries core async yojson ppx_yojson_conv_lib mcp)
- (preprocess
-  (pps ppx_jane ppx_yojson_conv)))
+ (name test_types)
+ (modules test_types)
+ (libraries ox-fast-mcp.mcp core expect_test_helpers_core)
+ (preprocess (pps ppx_jane ppx_expect)))
+
+(library
+ (name test_mcp_server_auth_middleware_auth_context)
+ (modules test_auth_context)
+ (libraries
+  core
+  expect_test_helpers_core
+  cohttp
+  lwt.unix
+  uri
+  ox-fast-mcp.mcp
+  ox-fast-mcp.server.auth.middleware)
+ (preprocess (pps ppx_jane ppx_expect)))

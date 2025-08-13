@@ -1,6 +1,5 @@
 open Core
-open Lwt.Syntax
-open Mcp.Types
+module Types = Mcp.Types
 
 type progress_fn = float -> float option -> string option -> unit Lwt.t
 (** Progress notification callback type *)
@@ -8,8 +7,8 @@ type progress_fn = float -> float option -> string option -> unit Lwt.t
 (** Request responder module *)
 module Request_responder : sig
   type ('req, 'res) t = {
-    request_id : Mcp.Types.request_id;
-    request_meta : Mcp.Types.meta option;
+    request_id : Types.request_id;
+    request_meta : Types.meta option;
     request : 'req;
     message_metadata : Message.message_metadata option;
     mutable completed : bool;
@@ -17,8 +16,8 @@ module Request_responder : sig
   }
 
   val create :
-    request_id:Mcp.Types.request_id ->
-    ?request_meta:Mcp.Types.meta ->
+    request_id:Types.request_id ->
+    ?request_meta:Types.meta ->
     request:'req ->
     ?message_metadata:Message.message_metadata ->
     on_complete:(('req, 'res) t -> unit Lwt.t) ->
@@ -36,8 +35,7 @@ end
 (** Base session module *)
 module Base_session : sig
   type ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t = {
-    read_stream :
-      (Message.session_message, [> `Msg of string ]) result Lwt_stream.t;
+    read_stream : Message.session_message Lwt_stream.t;
     write_stream : Message.session_message -> unit Lwt.t;
     mutable request_id : int;
     receive_request_type : 'recv_req; (* Type info for request validation *)
@@ -45,12 +43,11 @@ module Base_session : sig
         (* Type info for notification validation *)
     read_timeout : float option;
     mutable in_flight : ('recv_req, 'send_res) Request_responder.t list;
-    mutable progress_callbacks : (Mcp.Types.request_id, progress_fn) Hashtbl.t;
+    mutable progress_callbacks : (string, progress_fn) Hashtbl.t;
   }
 
   val create :
-    read_stream:
-      (Message.session_message, [> `Msg of string ]) result Lwt_stream.t ->
+    read_stream: Message.session_message Lwt_stream.t ->
     write_stream:(Message.session_message -> unit Lwt.t) ->
     receive_request_type:'recv_req ->
     receive_notification_type:'recv_notif ->
@@ -75,13 +72,13 @@ module Base_session : sig
   val send_notification :
     ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t ->
     'send_notif ->
-    ?related_request_id:Mcp.Types.request_id ->
+    ?related_request_id:Types.request_id ->
     unit ->
     unit Lwt.t
 
   val send_progress_notification :
     ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t ->
-    progress_token:Mcp.Types.request_id ->
+    progress_token:Types.request_id ->
     progress:float ->
     ?total:float ->
     ?message:string ->

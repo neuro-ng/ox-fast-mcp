@@ -4,6 +4,8 @@
     framework. It carries session, request, and lifespan context information. *)
 
 open Core
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+module Types = Mcp.Types
 
 type ('session, 'lifespan_context, 'request) t = {
   request_id : Mcp.Types.request_id;

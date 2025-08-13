@@ -7,7 +7,7 @@
   async
   cohttp
   lwt
-  mcp_server_auth
+  ox-fast-mcp.mcp.server.auth
   opium
   yojson)
  (preprocess

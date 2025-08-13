@@ -3,16 +3,16 @@
     This module provides the request context type used throughout the MCP
     framework. It carries session, request, and lifespan context information. *)
 
-open Mcp.Types
+module Types = Mcp.Types
 
 type ('session, 'lifespan_context, 'request) t = {
-  request_id : request_id;
-  meta : Mcp.Types.meta option;
+  request_id : Types.request_id;
+  meta : Types.meta option;
   session : 'session;
   lifespan_context : 'lifespan_context;
   request : 'request option;
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 (** A generic request context carrying session and lifespan information.
 
     Type parameters:
@@ -21,8 +21,8 @@ type ('session, 'lifespan_context, 'request) t = {
     - 'request: The type of the request *)
 
 val create :
-  request_id:request_id ->
-  ?meta:Mcp.Types.meta ->
+  request_id:Types.request_id ->
+  ?meta:Types.meta ->
   session:'session ->
   lifespan_context:'lifespan_context ->
   ?request:'request ->

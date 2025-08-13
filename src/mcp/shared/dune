@@ -13,7 +13,7 @@
   exceptions
   message
   session
-  version)
+  version
+  auth)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))
-  

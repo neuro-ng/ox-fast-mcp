@@ -10,6 +10,7 @@
  (description "OCaml implementation of FastMCP using Jane Street libraries")
  (depends
   (ocaml (>= 4.14.0))
+  (ocaml-variants (>= 5.2.0+ox))
   (dune (>= 3.0))
   (core (>= v0.16.0))
   (core_unix (>= v0.16.0))

@@ -1,0 +1,17 @@
+File Location
+- Test ML: `test/mcp/test_auth_context.ml`
+- TODO: `test/mcp/test_auth_context.todo`
+- Implementation under test: `src/mcp/server/auth/middleware/auth_context.ml` and `.mli`
+
+Test Status
+- [x] Added expect tests for `get_access_token` unset and set via middleware
+- [ ] Add test ensuring context is cleared/reset after `next` completes
+- [ ] Add test for multiple sequential requests do not leak context
+- [ ] Add test for concurrent requests isolation with different users
+
+Python from-import parity flags
+- mcp.server.auth.middleware.bearer_auth.AuthenticatedUser → OCaml: Bearer_auth.authenticated_user (present)
+- mcp.server.auth.provider.AccessToken → OCaml: Mcp_server_auth.Provider.access_token (present)
+
+Notes
+- Consider adding property-like tests for scope propagation if upstream middleware changes the `auth_result` shape

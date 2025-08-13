@@ -1,0 +1,60 @@
+OxFastMCP Project Guidelines Digest
+
+Source docs processed: `GEMINI.md`, `SIMPLE_MINDSET_GUIDE.md`
+Date: [update as needed]
+
+Translation and Build Checklist
+- [ ] Rename all FastMCP references to OxFastMCP
+- [ ] Use OxCaml (ocaml-variants 5.2.0+ox)
+- [ ] Use Jane Street libraries (`core`, `async`, etc.)
+- [ ] Use ppx_yojson_conv for JSON (de)serialization
+- [ ] Use ppx_compare for comparison functions
+- [ ] Reflect all changes in appropriate `dune` files
+- [ ] Test-first (ppx_expect + expect_test_helpers_core) with let%expect_test
+- [ ] Tests compiled as (library ...) with (preprocess (pps ppx_jane))
+- [ ] Create `test_xxx.todo` alongside each new test module
+- [ ] For each translated module, create an `xxx.todo` (see structure of `src/exceptions.todo`)
+
+Python→OCaml Module Mapping
+- `fastmcp.tools` → `src/tools/`
+- `fastmcp.client.client` → `src/client/client.ml`
+- `fastmcp.exceptions` → `src/exceptions.ml`
+- `fastmcp.tools.tool` → `src/tools/tool.ml`
+- `fastmcp.utilities.json_schema` → `src/utilities/json_schema.ml`
+- `mcp.types` → `src/mcp/types.ml`
+
+Task Procedure for Each Translation
+1. Create `test_xxxx.ml` mirroring the implementation path under `/test/`
+2. Add/adjust `dune` with (library ...) and (preprocess (pps ppx_jane))
+3. Implement `xxx.ml` using Jane Street style; add ppx_yojson_conv/ppx_compare
+4. Create `xxx.todo` in the same directory capturing mappings, gaps, tests, docs, perf, deps
+
+Missing ML Equivalents / Concerns
+- Track any Python `from ... import ...` with no OCaml counterpart in the corresponding `xxx.todo`
+- Record any semantic differences or limitations introduced in OCaml
+
+Testing Requirements
+- Prefer expect tests with small, focused cases
+- Cover success paths, error paths, and JSON (de)serialization
+- Add integration points for tools/client as needed
+
+Documentation Requirements
+- Module docstrings summarizing responsibilities and assumptions
+- Keep public APIs explicit and documented
+
+Performance Considerations
+- Avoid unnecessary allocations; prefer immutable data and clear boundaries
+- Use explicit error handling; avoid broad exception traps
+
+Simple Mindset Principles (to apply during implementation)
+- Single responsibility per module/function
+- Avoid complecting I/O with business logic
+- Prefer pure functions; isolate mutable state when unavoidable
+- Be explicit; avoid hidden/magical behavior
+- Minimize dependencies; choose constructs that keep artifacts simple
+
+Missing ML equivalents flagged (current)
+- None yet; add entries here per module during translation
+
+Next actions
+- Await a concrete Python file to translate; then follow the procedure above

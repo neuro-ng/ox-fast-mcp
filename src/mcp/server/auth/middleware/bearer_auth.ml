@@ -2,7 +2,7 @@ open Core
 open Async
 open Cohttp
 open Lwt.Syntax
-open Mcp.Server.Auth.Provider
+open Mcp_server_auth.Provider
 
 type authenticated_user = {
   client_id : string;
@@ -76,7 +76,7 @@ module Require_auth_middleware = struct
     in
     let body_string = Yojson.Safe.to_string body in
     let headers =
-      Header.init_with
+      Header.of_list
         [
           ("Content-Type", "application/json");
           ("Content-Length", string_of_int (String.length body_string));
@@ -86,21 +86,21 @@ module Require_auth_middleware = struct
     let response = Response.make ~status ~headers () in
     Lwt.return (response, Body.of_string body_string)
 
-  let handle config auth_result _req next =
-    match auth_result with
-    | None ->
+  let handle config (auth_result_opt : auth_result option) (_req : Request.t) (next : (Response.t * Body.t) Lwt.t) =
+    match auth_result_opt with
+    | None | Some None ->
       send_auth_error ~status:`Unauthorized ~error:"invalid_token"
         ~description:"Authentication required"
         ~resource_metadata_url:config.resource_metadata_url
-    | Some (auth_creds, _) -> (
+    | Some (Some (auth_creds, _auth_user)) -> (
       let missing_scope =
         List.find config.required_scopes ~f:(fun required_scope ->
             not (List.mem auth_creds.scopes required_scope ~equal:String.equal))
       in
       match missing_scope with
-      | Some scope ->
+        | Some scope ->
         send_auth_error ~status:`Forbidden ~error:"insufficient_scope"
           ~description:(Printf.sprintf "Required scope: %s" scope)
           ~resource_metadata_url:config.resource_metadata_url
-      | None -> next)
+       | None -> next)
 end

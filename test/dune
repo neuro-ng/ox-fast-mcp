@@ -7,7 +7,11 @@
   expect_test_helpers_core
   ox_fast_mcp
   ox-fast-mcp.utilities
-  ox-fast-mcp.mcp)
+  ox-fast-mcp.mcp
+  ox-fast-mcp.server.auth.middleware
+  cohttp
+  lwt
+  uri)
  (inline_tests)
  (preprocess
   (pps ppx_jane ppx_expect)))

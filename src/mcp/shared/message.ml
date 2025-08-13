@@ -1,8 +1,14 @@
 open Core
-open Lwt.Syntax
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
-type resumption_token = { value : string } [@@deriving yojson] 
+type resumption_token = string [@@deriving yojson]
 type resumption_token_update_callback = resumption_token -> unit Lwt.t
+let resumption_token_update_callback_of_yojson (_ : Yojson.Safe.t) : resumption_token_update_callback =
+  fun _ -> Lwt.return_unit
+let resumption_token_update_callback_to_yojson (_ : resumption_token_update_callback) : Yojson.Safe.t =
+  `Null
+let yojson_of_resumption_token_update_callback =
+  resumption_token_update_callback_to_yojson
 
 type client_message_metadata = {
   resumption_token : resumption_token option;
@@ -12,17 +18,17 @@ type client_message_metadata = {
 
 type server_message_metadata = {
   related_request_id : Mcp.Types.request_id option;
-  request_context : Yojson.Safe.t option; (* Using JSON for arbitrary context *)
+  request_context : Mcp.Types.json option; (* Using JSON for arbitrary context *)
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 
 type message_metadata =
   | Client of client_message_metadata
   | Server of server_message_metadata
-[@@deriving sexp, yojson]
+[@@deriving yojson]
 
 type session_message = {
   message : Mcp.Types.jsonrpc_message;
   metadata : message_metadata option;
 }
-[@@deriving sexp, yojson]
+[@@deriving yojson]

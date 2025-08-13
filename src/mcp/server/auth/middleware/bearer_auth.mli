@@ -1,7 +1,5 @@
-open Core
-open Async
 open Cohttp
-open Mcp.Server.Auth.Provider
+open Mcp_server_auth.Provider
 
 type authenticated_user = {
   client_id : string;
