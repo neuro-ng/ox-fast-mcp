@@ -11,7 +11,9 @@
   logs
   lwt
   ppx_yojson_conv
-  base64)
+  base64
+  mcp
+  str)
  (modules
   resource)
  (preprocess

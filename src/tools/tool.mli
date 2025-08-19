@@ -1,8 +1,9 @@
 open Tool_types
-open Utilities.Types
+open Fmcp_types
+open Async
 
 type tool_manager = {
-  mutable tools : (string, tool) Hashtbl.t;
+  mutable tools : (string, tool) Base.Hashtbl.t;
   mutable duplicate_behavior : [ `Warn | `Error | `Replace | `Ignore ];
   mutable mask_error_details : bool;
 }
@@ -30,7 +31,7 @@ val from_tool :
   ?name:string ->
   ?description:string ->
   ?tags:string list ->
-  ?transform_fn:(execution_context -> json -> content_type list Lwt.t) ->
+  ?transform_fn:(execution_context -> json -> content_type list Deferred.t) ->
   ?transform_args:(string * Arg_transform.t) list ->
   ?annotations:(string * json) list option ->
   ?serializer:(content_type list -> string) ->
@@ -67,7 +68,7 @@ val tool_count : tool_manager -> int
 (** Get tool count *)
 
 val execute_tool :
-  tool_manager -> string -> execution_context -> json -> content_type list Lwt.t
+  tool_manager -> string -> execution_context -> json -> content_type list Deferred.t
 (** Execute a tool *)
 
 val enable_tool : tool_manager -> string -> bool

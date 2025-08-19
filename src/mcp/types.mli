@@ -253,7 +253,9 @@ type resource = {
   annotations: annotations option [@default None] [@yojson.option];
   meta: Yojson.Safe.t option [@key "_meta"] [@default None] [@yojson.option];
   base_metadata: base_metadata [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson];
-} [@@deriving compare, sexp]
+} [@@deriving yojson, compare, sexp]
+val resource_of_yojson : Yojson.Safe.t -> resource
+val resource_to_yojson : resource -> Yojson.Safe.t
 
 type resource_template = {
   uri_template: string [@key "uriTemplate"];

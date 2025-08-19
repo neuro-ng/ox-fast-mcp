@@ -1,5 +1,6 @@
 open Core
 open Async
+open Tool_types
 
 (** Tool manager module for FastMCP.
 
@@ -29,9 +30,8 @@ module Tool : sig
     annotations : (string * string) list;
     parameters : Yojson.Safe.t;
     enabled : bool;
-    fn : Yojson.Safe.t -> Utilities.Types.content_type list Deferred.t;
+    fn : Tool_types.tool_handler;
   }
-  [@@deriving sexp]
 
   val with_key : t -> string -> t
   val enable : t -> unit
@@ -45,7 +45,7 @@ module Tool : sig
   val convert_to_content :
     ?serializer:(Yojson.Safe.t -> string) ->
     Yojson.Safe.t ->
-    Utilities.Types.content_type list
+    Fmcp_types.content_type list
 
   val from_function :
     ?name:string ->
@@ -55,17 +55,16 @@ module Tool : sig
     ?exclude_args:string list ->
     ?serializer:(Yojson.Safe.t -> string) ->
     ?enabled:bool ->
-    (Yojson.Safe.t -> Utilities.Types.content_type list Deferred.t) ->
+    (Yojson.Safe.t -> Fmcp_types.content_type list Deferred.t) ->
     t
 end
 
-type t [@@deriving sexp]
+type t
 
 type mounted_server = {
   prefix : string option;
-  server : unit; (* Placeholder - Server module not available *)
+  (* server field removed - Server module not available *)
 }
-[@@deriving sexp]
 
 val create :
   ?duplicate_behavior:DuplicateBehavior.t ->
@@ -97,7 +96,7 @@ val list_tools : t -> Tool.t list Deferred.t
 
 val add_tool_from_fn :
   t ->
-  (Yojson.Safe.t -> Utilities.Types.content_type list Deferred.t) ->
+  (Yojson.Safe.t -> Fmcp_types.content_type list Deferred.t) ->
   ?name:string ->
   ?description:string ->
   ?tags:string list ->
@@ -118,7 +117,7 @@ val remove_tool : t -> string -> unit
     @raise Not_found_error if the tool is not found *)
 
 val call_tool :
-  t -> string -> Yojson.Safe.t -> Utilities.Types.content_type list Deferred.t
+  t -> string -> Yojson.Safe.t -> Fmcp_types.content_type list Deferred.t
 (** Call a tool with arguments.
     @raise Not_found_error if the tool is not found
     @raise Tool_error if the tool execution fails *)

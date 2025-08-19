@@ -1,11 +1,12 @@
 open Core
-open Utilities.Types
+open Fmcp_types
 open Tool_types
+open Async
 
-val forward : execution_context -> json -> content_type list Lwt.t
+val forward : execution_context -> json -> content_type list Deferred.t
 (** Forward arguments to parent tool with transformation *)
 
-val forward_raw : execution_context -> json -> content_type list Lwt.t
+val forward_raw : execution_context -> json -> content_type list Deferred.t
 (** Forward raw arguments to parent tool without transformation *)
 
 val create_from_tool :

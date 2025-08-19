@@ -265,6 +265,9 @@ type resource = {
 let[@ocaml.warning "-32"] base_metadata_to_yojson = yojson_of_base_metadata
 let base_metadata_of_yojson = base_metadata_of_yojson
 
+(* Aliases required by the .mli signatures for resource type *)
+let resource_to_yojson = yojson_of_resource
+
 type resource_template = {
   uri_template: string [@key "uriTemplate"];
   description: string option [@yojson.option];

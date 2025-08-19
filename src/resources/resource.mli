@@ -1,15 +1,13 @@
-open Core
-
 (** Base module for all MCP resources *)
 
 (** Content type for resources *)
 type content =
   | Text of string
-  | Binary of string (* Base64 encoded binary data *)
+  | Binary of bytes (* Binary data *)
 [@@deriving sexp, yojson_of]
 
 type t = {
-  uri : Uri.t;  (** URI of the resource *)
+  uri : string;  (** URI of the resource *)
   name : string;  (** Name of the resource *)
   mime_type : string;  (** MIME type of the resource content *)
   description : string option;  (** Optional description of the resource *)
@@ -18,7 +16,7 @@ type t = {
   read_fn : (unit -> content Lwt.t) option;
       (** Optional function to read resource content *)
 }
-[@@deriving sexp, yojson_of]
+[@@deriving yojson_of]
 (** Base type for all resources *)
 
 val validate_mime_type : string -> bool
@@ -48,7 +46,7 @@ val key : t -> string
 (** Gets the key of a resource (used for internal bookkeeping) *)
 
 val to_mcp_resource :
-  ?overrides:(string * Yojson.Safe.t) list -> t -> Mcp.Types.Resource.t
+  ?overrides:(string * Yojson.Safe.t) list -> t -> Mcp.Types.resource
 (** Converts to MCP resource type *)
 
 val text : string -> content

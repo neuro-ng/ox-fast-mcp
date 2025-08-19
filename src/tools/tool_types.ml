@@ -1,7 +1,7 @@
-open Utilities.Types
+open Fmcp_types
 open Core
 open Async
-open Yojson.Safe
+
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type execution_context = {
@@ -14,7 +14,7 @@ type execution_context = {
 }
 (** Tool handler signature *)
 
-type tool_handler = execution_context -> json -> content_type list Lwt.t
+type tool_handler = execution_context -> json -> content_type list Deferred.t
 
 type base_tool = {
   name : string;
@@ -169,7 +169,7 @@ let enable t = { t with enabled = true }
 let disable t = { t with enabled = false }
 
 let from_function ?name ?description ?(tags = []) ?(annotations = [])
-    ?(exclude_args = []) ?serializer ?(enabled = true) fn =
+    ?(_exclude_args = []) ?(_serializer) ?(enabled = true) fn =
   let key =
     match name with
     | Some n -> String.lowercase n
@@ -185,8 +185,5 @@ let from_function ?name ?description ?(tags = []) ?(annotations = [])
     (* TODO: Generate JSON schema from function type *)
     enabled;
     error = None;
-    fn =
-      (fun args ->
-        let%bind result = fn args in
-        return result);
+    fn = fn;
   }

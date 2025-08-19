@@ -75,16 +75,13 @@ let create_schema ?(type_ = "object") ?(properties = []) ?(required = [])
 let forward ctx arguments =
   match !current_tool with
   | None ->
-    Lwt.fail
-      (Invalid_argument "forward() can only be called within a transformed tool")
+    failwith "forward() can only be called within a transformed tool"
   | Some tool -> tool.forwarding_fn ctx arguments
 
 let forward_raw ctx arguments =
   match !current_tool with
   | None ->
-    Lwt.fail
-      (Invalid_argument
-         "forward_raw() can only be called within a transformed tool")
+    failwith "forward_raw() can only be called within a transformed tool"
   | Some tool -> tool.parent_tool.handler ctx arguments
 
 (** Check if a function accepts kwargs *)

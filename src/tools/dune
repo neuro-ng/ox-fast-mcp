@@ -8,6 +8,6 @@
   ppx_yojson_conv_lib
   mcp
   utilities
-  exceptions)
+  ox_fast_mcp)
  (preprocess
   (pps ppx_jane ppx_yojson_conv))) 
