@@ -1,6 +1,6 @@
 open Core
 open Async
-open Tool_types
+open! Tool_types
 
 (** Tool manager module for FastMCP.
 
@@ -34,8 +34,8 @@ module Tool : sig
   }
 
   val with_key : t -> string -> t
-  val enable : t -> unit
-  val disable : t -> unit
+  val enable : t -> t
+  val disable : t -> t
 
   val to_mcp_tool :
     ?overrides:(string * Yojson.Safe.t) list -> t -> Yojson.Safe.t
@@ -52,8 +52,8 @@ module Tool : sig
     ?description:string ->
     ?tags:string list ->
     ?annotations:(string * string) list ->
-    ?exclude_args:string list ->
-    ?serializer:(Yojson.Safe.t -> string) ->
+    ?_exclude_args:string list ->
+    ?_serializer:(Yojson.Safe.t -> string) ->
     ?enabled:bool ->
     (Yojson.Safe.t -> Fmcp_types.content_type list Deferred.t) ->
     t
@@ -75,7 +75,7 @@ val create :
     @param duplicate_behavior How to handle duplicate tool registrations
     @param mask_error_details Whether to mask internal error details *)
 
-val mount : t -> server:unit -> prefix:string option -> unit
+val mount : t -> _server:unit -> prefix:string option -> unit
 (** Mount a server as a source of tools. Tools from mounted servers are
     available with their prefix (if any). *)
 
@@ -101,7 +101,6 @@ val add_tool_from_fn :
   ?description:string ->
   ?tags:string list ->
   ?annotations:(string * string) list ->
-  ?serializer:(Yojson.Safe.t -> string) ->
   ?exclude_args:string list ->
   unit ->
   Tool.t

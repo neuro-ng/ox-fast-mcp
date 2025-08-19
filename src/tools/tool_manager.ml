@@ -2,7 +2,7 @@ open Core
 open Async
 open Mcp.Types
 open Ox_fast_mcp.Exceptions
-open Tool_types
+open! Tool_types
 
 module DuplicateBehavior = struct
   type t = Warn | Replace | Error | Ignore
@@ -66,9 +66,9 @@ module Tool = struct
   let convert_to_content ?serializer result =
     let serialize = Option.value serializer ~default:default_serializer in
     match result with
-    | `String s -> [ create_text_content s ]
-    | `List l -> List.map l ~f:(fun x -> create_text_content (serialize x))
-    | x -> [ create_text_content (serialize x) ]
+    | `String s -> [ Fmcp_types.create_text_content s ]
+    | `List l -> List.map l ~f:(fun x -> Fmcp_types.create_text_content (serialize x))
+    | x -> [ Fmcp_types.create_text_content (serialize x) ]
 
   let from_function ?name ?description ?(tags = []) ?(annotations = [])
       ?(_exclude_args = []) ?(_serializer) ?(enabled = true) fn =
@@ -231,7 +231,7 @@ let call_tool t key arguments =
         | [] ->
           failwith ("Tool not found: " ^ key)
         | mounted :: rest -> (
-          let tool_key =
+          let _tool_key =
             match mounted.prefix with
             | Some prefix when String.is_prefix key ~prefix:(prefix ^ "_") ->
               String.chop_prefix_exn key ~prefix:(prefix ^ "_")
@@ -244,7 +244,7 @@ let call_tool t key arguments =
           with
           | Ok result -> return result
           | Error (Not_found_s _) -> try_mounted rest
-          | Error exn ->
+          | Error _exn ->
             (* Log.Global.error "Error calling tool %s on mounted server %s: %s"
               key
               (Option.value mounted.prefix ~default:"<no prefix>")
