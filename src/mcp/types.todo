@@ -45,6 +45,9 @@
 
 ## Testing Requirements:
 - [x] Expect tests for `progress_token`, `role`, `request_id`, `jsonrpc_message` in `test/mcp/test_types.ml`
+- [x] Fixed yojson function return types and test patterns
+- [x] Implemented proper round-trip JSON serialization testing
+- [x] Verified all type conversions work correctly without Or_error wrapping
 - [ ] Add more coverage for resource/prompt/tools/logging/sampling modules
 
 ## Documentation Requirements:

@@ -2,7 +2,7 @@ open! Core
 open! Async
 
 let%expect_test "find_available_port returns a valid port number" =
-  let port = Http.find_available_port () in
+  let port = Network_utils.find_available_port () in
   let is_valid_port = port > 0 && port < 65536 in
   print_s [%sexp (is_valid_port : bool)];
   [%expect {| true |}];
@@ -21,8 +21,8 @@ let%expect_test "find_available_port returns a valid port number" =
 
 let%expect_test "find_available_port returns different ports on consecutive \
                  calls" =
-  let port1 = Http.find_available_port () in
-  let port2 = Http.find_available_port () in
+  let port1 = Network_utils.find_available_port () in
+  let port2 = Network_utils.find_available_port () in
   let ports_are_different = port1 <> port2 in
   print_s [%sexp (ports_are_different : bool)];
   [%expect {| true |}];

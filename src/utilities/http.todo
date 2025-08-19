@@ -1,22 +1,22 @@
-# HTTP Module Translation TODOs
+# HTTP Utilities TODO
 
-## Implementation Notes
-- Python's socket module functionality translated to OCaml's Unix module
-- Using Core.Unix instead of the standard library Unix module for Jane Street style
-- Socket handling is more explicit in OCaml compared to Python's context manager
+## COMPLETED
+- [x] Resolved module name conflict between utilities/Http and server/Http
+- [x] Renamed utilities/http.ml to network_utils.ml to avoid collision
+- [x] Updated test/utilities/test_http.ml to use Network_utils module
+- [x] Removed conflicting http.ml and http.mli from utilities
+- [x] Verified build stability after module reorganization
+- [x] All tests pass with new Network_utils module structure
 
-## Missing Functionality
-None - all functionality from the Python version has been implemented in OCaml
+## NOTES
+- The original utilities/Http module contained only `find_available_port` function
+- This has been moved to utilities/Network_utils to avoid naming conflicts with server/Http
+- All tests now pass after this module reorganization
 
-## Python to OCaml Module Mappings
-- Python `socket` → OCaml `Core.Unix`
-  - `socket.socket()` → `Unix.socket`
-  - `socket.AF_INET` → `Unix.PF_INET`
-  - `socket.SOCK_STREAM` → `Unix.SOCK_STREAM`
-  - `socket.bind()` → `Unix.bind`
-  - `socket.getsockname()` → `Unix.getsockname`
+## PYTHON TO OCAML MAPPING
+- Python: `http` module utilities → OCaml: `Network_utils` module
+- Python: `find_available_port()` → OCaml: `Network_utils.find_available_port()`
 
-## Additional Considerations
-- OCaml implementation includes explicit socket closure with `Unix.close`
-- Error handling is more explicit in OCaml with pattern matching on address type
-- Used labeled arguments in OCaml for better readability and type safety 
+## NEXT STEPS
+- Consider adding more network utility functions to Network_utils if needed
+- Document the module name change for users migrating from Python

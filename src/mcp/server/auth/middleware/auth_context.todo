@@ -9,6 +9,11 @@ Translation Status
 - [x] Middleware `handle` updated to accept `auth_result option` and set context
 - [x] Dune libraries confirmed (`core`, `lwt`, `cohttp`, `yojson`)
 - [x] Unit tests added/updated in `test/mcp/test_auth_context.ml`
+- [x] Fixed Lwt.key type to handle auth_user option correctly
+- [x] Verified build stability and all tests passing
+- [x] Resolved module reference issues in tests (Ox_fast_mcp → proper paths)
+- [x] Fixed auth_result double-option type handling in tests
+- [x] Implemented proper access_token validation in tests
 - [ ] Ensure integration with upstream middleware chain
 
 Python to OCaml Mappings

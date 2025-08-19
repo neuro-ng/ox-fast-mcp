@@ -44,6 +44,10 @@ module Base_session : sig
     read_timeout : float option;
     mutable in_flight : ('recv_req, 'send_res) Request_responder.t list;
     mutable progress_callbacks : (string, progress_fn) Hashtbl.t;
+    (* Internal registry for response streams used by the implementation *)
+    (* This mirrors an internal field in the implementation and is hidden in the signature *)
+    (* Internal: response streams registry *)
+    (* hidden in interface intentionally *)
   }
 
   val create :

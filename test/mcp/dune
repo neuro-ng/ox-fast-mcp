@@ -14,5 +14,6 @@
   lwt.unix
   uri
   ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.server.auth
   ox-fast-mcp.server.auth.middleware)
  (preprocess (pps ppx_jane ppx_expect)))

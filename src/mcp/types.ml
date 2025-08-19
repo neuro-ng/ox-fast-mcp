@@ -256,7 +256,7 @@ type resource = {
   meta: json option [@key "_meta"] [@yojson.option];
   base_metadata: base_metadata [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson];
 } [@@deriving yojson, compare, sexp]
-let base_metadata_to_yojson = yojson_of_base_metadata
+let[@ocaml.warning "-32"] base_metadata_to_yojson = yojson_of_base_metadata
 let base_metadata_of_yojson = base_metadata_of_yojson
 
 type resource_template = {

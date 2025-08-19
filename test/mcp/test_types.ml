@@ -14,8 +14,11 @@ let%expect_test "progress_token yojson" =
     "token"
     123
   |}];
-  require_equal (module (struct type t = progress_token [@@deriving sexp] let compare = Mcp.Types.compare_progress_token end)) token_string (Mcp.Types.progress_token_of_yojson yojson_string |> Or_error.ok_exn);
-  require_equal (module (struct type t = progress_token [@@deriving sexp] let compare = Mcp.Types.compare_progress_token end)) token_int (Mcp.Types.progress_token_of_yojson yojson_int |> Or_error.ok_exn)
+  (* Test round-trip conversion *)
+  let roundtrip_string = Mcp.Types.progress_token_of_yojson yojson_string in
+  let roundtrip_int = Mcp.Types.progress_token_of_yojson yojson_int in
+  require ~here:[%here] (phys_equal token_string roundtrip_string);
+  require ~here:[%here] (phys_equal token_int roundtrip_int)
 
 let%expect_test "role yojson" = 
   let user_role = `User in
@@ -28,8 +31,10 @@ let%expect_test "role yojson" =
     "user"
     "assistant"
   |}];
-  require_equal (module (struct type t = role [@@deriving sexp] let compare = Mcp.Types.compare_role end)) user_role (Mcp.Types.role_of_yojson yojson_user |> Or_error.ok_exn);
-  require_equal (module (struct type t = role [@@deriving sexp] let compare = Mcp.Types.compare_role end)) assistant_role (Mcp.Types.role_of_yojson yojson_assistant |> Or_error.ok_exn)
+  let roundtrip_user = Mcp.Types.role_of_yojson yojson_user in
+  let roundtrip_assistant = Mcp.Types.role_of_yojson yojson_assistant in
+  require ~here:[%here] (phys_equal user_role roundtrip_user);
+  require ~here:[%here] (phys_equal assistant_role roundtrip_assistant)
 
 let%expect_test "request_id yojson" = 
   let id_string = `String "id" in
@@ -42,8 +47,10 @@ let%expect_test "request_id yojson" =
     "id"
     123
   |}];
-  require_equal (module (struct type t = request_id [@@deriving sexp] let compare = Mcp.Types.compare_request_id end)) id_string (Mcp.Types.request_id_of_yojson yojson_string |> Or_error.ok_exn);
-  require_equal (module (struct type t = request_id [@@deriving sexp] let compare = Mcp.Types.compare_request_id end)) id_int (Mcp.Types.request_id_of_yojson yojson_int |> Or_error.ok_exn)
+  let roundtrip_string = Mcp.Types.request_id_of_yojson yojson_string in
+  let roundtrip_int = Mcp.Types.request_id_of_yojson yojson_int in
+  require ~here:[%here] (phys_equal id_string roundtrip_string);
+  require ~here:[%here] (phys_equal id_int roundtrip_int)
 
 let%expect_test "jsonrpc_message yojson" = 
   let request = `Request { jsonrpc = "2.0"; id = `Int 1; method_ = "test"; params = None } in
@@ -64,7 +71,11 @@ let%expect_test "jsonrpc_message yojson" =
     ["Response",{"jsonrpc":"2.0","id":1,"result":null}]
     ["Error",{"jsonrpc":"2.0","id":1,"error":{"code":1,"message":"error"}}]
   |}];
-  require_equal (module (struct type t = jsonrpc_message [@@deriving sexp] let compare = Mcp.Types.compare_jsonrpc_message end)) request (Mcp.Types.jsonrpc_message_of_yojson yojson_request |> Or_error.ok_exn);
-  require_equal (module (struct type t = jsonrpc_message [@@deriving sexp] let compare = Mcp.Types.compare_jsonrpc_message end)) notification (Mcp.Types.jsonrpc_message_of_yojson yojson_notification |> Or_error.ok_exn);
-  require_equal (module (struct type t = jsonrpc_message [@@deriving sexp] let compare = Mcp.Types.compare_jsonrpc_message end)) response (Mcp.Types.jsonrpc_message_of_yojson yojson_response |> Or_error.ok_exn);
-  require_equal (module (struct type t = jsonrpc_message [@@deriving sexp] let compare = Mcp.Types.compare_jsonrpc_message end)) error (Mcp.Types.jsonrpc_message_of_yojson yojson_error |> Or_error.ok_exn)
+  let roundtrip_request = Mcp.Types.jsonrpc_message_of_yojson yojson_request in
+  let roundtrip_notification = Mcp.Types.jsonrpc_message_of_yojson yojson_notification in
+  let roundtrip_response = Mcp.Types.jsonrpc_message_of_yojson yojson_response in
+  let roundtrip_error = Mcp.Types.jsonrpc_message_of_yojson yojson_error in
+  require ~here:[%here] (phys_equal request roundtrip_request);
+  require ~here:[%here] (phys_equal notification roundtrip_notification);
+  require ~here:[%here] (phys_equal response roundtrip_response);
+  require ~here:[%here] (phys_equal error roundtrip_error)

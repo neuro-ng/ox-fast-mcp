@@ -1,10 +1,7 @@
-open Core
-open Lwt
-open Cohttp
-open Bearer_auth
+(* Avoid unused opens *)
 
 (** Auth context key for Lwt local storage *)
-let auth_context_key : authenticated_user Lwt.key = Lwt.new_key ()
+let auth_context_key : Bearer_auth.authenticated_user Lwt.key = Lwt.new_key ()
 
 (** Get the access token from the current context *)
 let get_access_token () =
@@ -25,5 +22,5 @@ module Auth_context_middleware = struct
     | Some None -> next
     | Some (Some (_auth_creds, auth_user)) ->
       (* Set the authenticated user in Lwt local storage *)
-      Lwt.with_value auth_context_key auth_user (fun () -> next)
+      Lwt.with_value auth_context_key (Some auth_user) (fun () -> next)
 end

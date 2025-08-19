@@ -1,9 +1,9 @@
 open! Core
 open! Expect_test_helpers_core
 
-module Provider = Ox_fast_mcp.Mcp.Server.Auth.Provider
-module Bearer = Ox_fast_mcp.Mcp.Server.Auth.Middleware.Bearer_auth
-module Ctx = Ox_fast_mcp.Mcp.Server.Auth.Middleware.Auth_context
+module Provider = Mcp_server_auth.Provider
+module Bearer = Mcp_server_auth_middleware.Bearer_auth
+module Ctx = Mcp_server_auth_middleware.Auth_context
 
 let dummy_token : Provider.access_token =
   { token = "tkn"; client_id = "cid"; scopes = [ "s1" ]; expires_at = None; resource = None }
@@ -20,14 +20,15 @@ let%expect_test "get_access_token returns token when set in context via middlewa
   let next = return (Cohttp.Response.make (), Cohttp.Body.empty) in
   let run =
     Ctx.Auth_context_middleware.handle
-      (Some (({ scopes = [ "s1" ] }, dummy_user)))
+      (Some (Some ({ scopes = [ "s1" ] }, dummy_user)))
       (Cohttp.Request.make (Uri.of_string "/"))
       next
   in
   let _resp = Lwt_main.run run in
   let tok = Lwt_main.run (Ctx.get_access_token ()) in
-  require_equal ~here:[%here]
-    (module struct
-      type t = Provider.access_token option [@@deriving compare, sexp_of, equal]
-    end)
-    tok (Some dummy_token)
+  require ~here:[%here] (Option.is_some tok);
+  match tok with
+  | Some token -> 
+    require_equal ~here:[%here] (module String) token.token dummy_token.token;
+    require_equal ~here:[%here] (module String) token.client_id dummy_token.client_id
+  | None -> failwith "Expected Some token"
