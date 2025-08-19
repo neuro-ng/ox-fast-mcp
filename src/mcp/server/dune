@@ -1,15 +1,17 @@
 (library
- (name server)
+ (name mcp_server)
  (public_name ox-fast-mcp.mcp.server)
  (libraries
   base
   core
   async
   yojson
+  ppx_yojson_conv_lib
   uri
   cohttp-lwt-unix
   logs
-  lwt)
+  lwt
+  mcp)
  (modules
   models)
  (preprocess

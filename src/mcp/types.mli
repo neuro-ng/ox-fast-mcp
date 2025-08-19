@@ -178,13 +178,19 @@ type prompts_capability = {
 type resources_capability = {
   subscribe: bool option [@default None] [@yojson.option];
   list_changed: bool option [@key "listChanged"] [@default None] [@yojson.option];
-} [@@deriving compare, sexp]
+} [@@deriving yojson, compare, sexp]
+val resources_capability_of_yojson : Yojson.Safe.t -> resources_capability
+val resources_capability_to_yojson : resources_capability -> Yojson.Safe.t
 
 type tools_capability = {
   list_changed: bool option [@key "listChanged"] [@default None] [@yojson.option];
-} [@@deriving compare, sexp]
+} [@@deriving yojson, compare, sexp]
+val tools_capability_of_yojson : Yojson.Safe.t -> tools_capability
+val tools_capability_to_yojson : tools_capability -> Yojson.Safe.t
 
-type logging_capability = Yojson.Safe.t [@@deriving compare, sexp]
+type logging_capability = Yojson.Safe.t [@@deriving yojson, compare, sexp]
+val logging_capability_of_yojson : Yojson.Safe.t -> logging_capability
+val logging_capability_to_yojson : logging_capability -> Yojson.Safe.t
 
 type server_capabilities = {
   experimental: (string, Yojson.Safe.t) List.Assoc.t option [@default None] [@yojson.option];
@@ -192,7 +198,9 @@ type server_capabilities = {
   prompts: prompts_capability option [@default None] [@yojson.option];
   resources: resources_capability option [@default None] [@yojson.option];
   tools: tools_capability option [@default None] [@yojson.option];
-} [@@deriving compare, sexp]
+} [@@deriving yojson, compare, sexp]
+val server_capabilities_of_yojson : Yojson.Safe.t -> server_capabilities
+val server_capabilities_to_yojson : server_capabilities -> Yojson.Safe.t
 
 (* Initialization *)
 

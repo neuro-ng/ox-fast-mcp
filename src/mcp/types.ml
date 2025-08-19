@@ -204,6 +204,12 @@ type server_capabilities = {
   tools: tools_capability option [@yojson.option];
 } [@@deriving yojson, compare, sexp]
 
+(* Aliases required by the .mli signatures for capability types *)
+let resources_capability_to_yojson = yojson_of_resources_capability
+let tools_capability_to_yojson = yojson_of_tools_capability
+let logging_capability_to_yojson = yojson_of_logging_capability
+let server_capabilities_to_yojson = yojson_of_server_capabilities
+
 (* Initialization *)
 
 type initialize_request_params = {

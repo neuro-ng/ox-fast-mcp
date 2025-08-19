@@ -1,5 +1,5 @@
 (library
- (name client)
+ (name mcp_client)
  (public_name ox-fast-mcp.client)
  (libraries
   base

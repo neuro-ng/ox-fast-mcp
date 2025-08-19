@@ -1,8 +1,6 @@
 (** This module provides simpler types to use with the server for managing
     prompts and tools. *)
 
-open Core
-
 type initialization_options = {
   server_name : string;
   server_version : string;

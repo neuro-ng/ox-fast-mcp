@@ -1,4 +1,5 @@
 open Core
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type initialization_options = {
   server_name : string;
