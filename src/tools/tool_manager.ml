@@ -1,7 +1,7 @@
 open Core
 open Async
-open Mcp.Types
-open Ox_fast_mcp.Exceptions
+open! Mcp.Types
+open! Ox_fast_mcp.Exceptions
 open! Tool_types
 
 module DuplicateBehavior = struct
@@ -136,7 +136,7 @@ let load_tools t ~via_server =
             in
             match mounted.prefix with
             | Some prefix ->
-              return (Map.fold child_dict ~init:acc ~f:(fun ~key ~data acc ->
+              return (Map.fold child_dict ~init:acc ~f:(fun ~key:_ ~data acc ->
                   let prefixed_name = prefix ^ "_" ^ data.Tool.key in
                   let prefixed_tool = Tool.with_key data prefixed_name in
                   Map.set acc ~key:prefixed_tool.Tool.key ~data:prefixed_tool))
@@ -175,8 +175,9 @@ let list_tools t =
   let%bind tools = load_tools t ~via_server:true in
   return (Map.data tools)
 
-let add_tool_from_fn t fn ?name ?description ?(tags = []) ?(annotations = [])
+let add_tool_from_fn _t fn ?name ?description ?(tags = []) ?(annotations = [])
     ?(exclude_args = []) () =
+  let _ = exclude_args in (* Suppress unused variable warning *)
   (* if Settings.deprecation_warnings then
     Log.Global.deprecated ~since:"2.7.0"
       "ToolManager.add_tool_from_fn() is deprecated. Use Tool.from_function() \
