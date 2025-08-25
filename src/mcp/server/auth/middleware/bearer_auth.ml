@@ -86,7 +86,8 @@ module Require_auth_middleware = struct
     let response = Response.make ~status ~headers () in
     Lwt.return (response, Body.of_string body_string)
 
-  let handle config (auth_result_opt : auth_result option) (_req : Request.t) (next : (Response.t * Body.t) Lwt.t) =
+  let handle config (auth_result_opt : auth_result option) (_req : Request.t)
+      (next : (Response.t * Body.t) Lwt.t) =
     match auth_result_opt with
     | None | Some None ->
       send_auth_error ~status:`Unauthorized ~error:"invalid_token"
@@ -98,9 +99,9 @@ module Require_auth_middleware = struct
             not (List.mem auth_creds.scopes required_scope ~equal:String.equal))
       in
       match missing_scope with
-        | Some scope ->
+      | Some scope ->
         send_auth_error ~status:`Forbidden ~error:"insufficient_scope"
           ~description:(Printf.sprintf "Required scope: %s" scope)
           ~resource_metadata_url:config.resource_metadata_url
-       | None -> next)
+      | None -> next)
 end

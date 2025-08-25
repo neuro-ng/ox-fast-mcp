@@ -74,8 +74,7 @@ let create_schema ?(type_ = "object") ?(properties = []) ?(required = [])
 
 let forward ctx arguments =
   match !current_tool with
-  | None ->
-    failwith "forward() can only be called within a transformed tool"
+  | None -> failwith "forward() can only be called within a transformed tool"
   | Some tool -> tool.forwarding_fn ctx arguments
 
 let forward_raw ctx arguments =

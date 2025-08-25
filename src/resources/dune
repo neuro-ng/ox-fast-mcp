@@ -14,7 +14,6 @@
   base64
   mcp
   str)
- (modules
-  resource)
+ (modules resource)
  (preprocess
-  (pps ppx_jane lwt_ppx ppx_yojson_conv))) 
+  (pps ppx_jane lwt_ppx ppx_yojson_conv)))

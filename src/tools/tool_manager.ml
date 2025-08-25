@@ -14,8 +14,9 @@ module DuplicateBehavior = struct
     | "error" -> Ok Error
     | "ignore" -> Ok Ignore
     | s ->
-      Or_error.error_string 
-        ("Invalid duplicate_behavior: " ^ s ^ ". Must be one of: warn, replace, error, ignore")
+      Or_error.error_string
+        ("Invalid duplicate_behavior: " ^ s
+       ^ ". Must be one of: warn, replace, error, ignore")
 
   let of_string_exn s =
     match of_string s with
@@ -67,11 +68,12 @@ module Tool = struct
     let serialize = Option.value serializer ~default:default_serializer in
     match result with
     | `String s -> [ Fmcp_types.create_text_content s ]
-    | `List l -> List.map l ~f:(fun x -> Fmcp_types.create_text_content (serialize x))
+    | `List l ->
+      List.map l ~f:(fun x -> Fmcp_types.create_text_content (serialize x))
     | x -> [ Fmcp_types.create_text_content (serialize x) ]
 
   let from_function ?name ?description ?(tags = []) ?(annotations = [])
-      ?(_exclude_args = []) ?(_serializer) ?(enabled = true) fn =
+      ?(_exclude_args = []) ?_serializer ?(enabled = true) fn =
     let key =
       match name with
       | Some n -> String.lowercase n
@@ -87,15 +89,13 @@ module Tool = struct
       annotations;
       parameters = `Assoc [] (* TODO: Generate JSON schema from function type *);
       enabled;
-      fn =
-        (fun _ctx args ->
-          fn args);
+      fn = (fun _ctx args -> fn args);
     }
 end
 
 type mounted_server = {
   prefix : string option;
-  (* server : Server.t; (* TODO: Define Server module *) *)
+      (* server : Server.t; (* TODO: Define Server module *) *)
 }
 
 type t = {
@@ -124,22 +124,22 @@ let load_tools t ~via_server =
         Monitor.try_with (fun () ->
             let%bind child_results =
               if via_server then
-                (* Server.list_tools
-                  mounted.server (* TODO: Implement in Server module *) *)
+                (* Server.list_tools mounted.server (* TODO: Implement in Server
+                   module *) *)
                 return String.Map.empty
               else
-                (* Server.get_tools
-                  mounted.server (* TODO: Implement in Server module *) *)
+                (* Server.get_tools mounted.server (* TODO: Implement in Server
+                   module *) *)
                 return String.Map.empty
             in
-            let child_dict = child_results
-            in
+            let child_dict = child_results in
             match mounted.prefix with
             | Some prefix ->
-              return (Map.fold child_dict ~init:acc ~f:(fun ~key:_ ~data acc ->
-                  let prefixed_name = prefix ^ "_" ^ data.Tool.key in
-                  let prefixed_tool = Tool.with_key data prefixed_name in
-                  Map.set acc ~key:prefixed_tool.Tool.key ~data:prefixed_tool))
+              return
+                (Map.fold child_dict ~init:acc ~f:(fun ~key:_ ~data acc ->
+                     let prefixed_name = prefix ^ "_" ^ data.Tool.key in
+                     let prefixed_tool = Tool.with_key data prefixed_name in
+                     Map.set acc ~key:prefixed_tool.Tool.key ~data:prefixed_tool))
             | None ->
               return
                 (Map.merge acc child_dict ~f:(fun ~key:_ -> function
@@ -166,8 +166,7 @@ let get_tool t key =
   let%bind tools = load_tools t ~via_server:false in
   match Map.find tools key with
   | Some tool -> return tool
-  | None ->
-    failwith ("Tool not found: " ^ key)
+  | None -> failwith ("Tool not found: " ^ key)
 
 let get_tools t = load_tools t ~via_server:false
 
@@ -177,14 +176,12 @@ let list_tools t =
 
 let add_tool_from_fn _t fn ?name ?description ?(tags = []) ?(annotations = [])
     ?(exclude_args = []) () =
-  let _ = exclude_args in (* Suppress unused variable warning *)
-  (* if Settings.deprecation_warnings then
-    Log.Global.deprecated ~since:"2.7.0"
-      "ToolManager.add_tool_from_fn() is deprecated. Use Tool.from_function() \
-       and call add_tool() instead."; *)
-  let tool =
-    Tool.from_function fn ?name ?description ~tags ~annotations
-  in
+  let _ = exclude_args in
+  (* Suppress unused variable warning *)
+  (* if Settings.deprecation_warnings then Log.Global.deprecated ~since:"2.7.0"
+     "ToolManager.add_tool_from_fn() is deprecated. Use Tool.from_function() \
+     and call add_tool() instead."; *)
+  let tool = Tool.from_function fn ?name ?description ~tags ~annotations in
   (* add_tool t tool *) tool
 
 let add_tool t tool =
@@ -200,8 +197,7 @@ let add_tool t tool =
       | Replace ->
         t.tools <- Map.set t.tools ~key:tool.Tool.key ~data:tool;
         tool
-      | Error ->
-        failwith ("Tool already exists: " ^ tool.Tool.key)
+      | Error -> failwith ("Tool already exists: " ^ tool.Tool.key)
       | Ignore -> existing)
     | None ->
       t.tools <- Map.set t.tools ~key:tool.Tool.key ~data:tool;
@@ -210,46 +206,52 @@ let add_tool t tool =
 let remove_tool t key =
   match Map.find t.tools key with
   | Some _ -> t.tools <- Map.remove t.tools key
-  | None ->
-    failwith ("Tool not found: " ^ key)
+  | None -> failwith ("Tool not found: " ^ key)
 
 let call_tool t key arguments =
   match Map.find t.tools key with
-  | Some tool ->
-    (Monitor.try_with ~extract_exn:true (fun () -> 
-      let ctx = {Tool_types.request_id = None; client_id = None; session_data = Hashtbl.create (module String); tools_changed = false; resources_changed = false; prompts_changed = false} in
-      tool.Tool.fn ctx arguments)
+  | Some tool -> (
+    Monitor.try_with ~extract_exn:true (fun () ->
+        let ctx =
+          {
+            Tool_types.request_id = None;
+            client_id = None;
+            session_data = Hashtbl.create (module String);
+            tools_changed = false;
+            resources_changed = false;
+            prompts_changed = false;
+          }
+        in
+        tool.Tool.fn ctx arguments)
     >>| function
     | Ok result -> result
     | Error exn ->
-      (* Log.Global.error "Error calling tool %s: %s" key (Exn.to_string exn); *)
-      if t.mask_error_details then
-        failwith ("Error calling tool " ^ key)
+      (* Log.Global.error "Error calling tool %s: %s" key (Exn.to_string
+         exn); *)
+      if t.mask_error_details then failwith ("Error calling tool " ^ key)
       else raise exn)
   | None ->
-      (* Try mounted servers *)
-      let rec try_mounted = function
-        | [] ->
-          failwith ("Tool not found: " ^ key)
-        | mounted :: rest -> (
-          let _tool_key =
-            match mounted.prefix with
-            | Some prefix when String.is_prefix key ~prefix:(prefix ^ "_") ->
-              String.chop_prefix_exn key ~prefix:(prefix ^ "_")
-            | _ -> key
-          in
-          match%bind
-            Monitor.try_with (fun () ->
-                (* Server.call_tool mounted.server tool_key arguments *) 
-                return [])
-          with
-          | Ok result -> return result
-          | Error (Not_found_s _) -> try_mounted rest
-          | Error _exn ->
-            (* Log.Global.error "Error calling tool %s on mounted server %s: %s"
-              key
-              (Option.value mounted.prefix ~default:"<no prefix>")
-              (Exn.to_string exn); *)
-            try_mounted rest)
-      in
-      try_mounted (List.rev t.mounted_servers)
+    (* Try mounted servers *)
+    let rec try_mounted = function
+      | [] -> failwith ("Tool not found: " ^ key)
+      | mounted :: rest -> (
+        let _tool_key =
+          match mounted.prefix with
+          | Some prefix when String.is_prefix key ~prefix:(prefix ^ "_") ->
+            String.chop_prefix_exn key ~prefix:(prefix ^ "_")
+          | _ -> key
+        in
+        match%bind
+          Monitor.try_with (fun () ->
+              (* Server.call_tool mounted.server tool_key arguments *)
+              return [])
+        with
+        | Ok result -> return result
+        | Error (Not_found_s _) -> try_mounted rest
+        | Error _exn ->
+          (* Log.Global.error "Error calling tool %s on mounted server %s: %s"
+             key (Option.value mounted.prefix ~default:"<no prefix>")
+             (Exn.to_string exn); *)
+          try_mounted rest)
+    in
+    try_mounted (List.rev t.mounted_servers)

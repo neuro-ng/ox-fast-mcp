@@ -19,4 +19,4 @@
   ox-fast-mcp.mcp.server.auth
   ox-fast-mcp.utilities)
  (preprocess
-  (pps ppx_jane))) 
+  (pps ppx_jane)))

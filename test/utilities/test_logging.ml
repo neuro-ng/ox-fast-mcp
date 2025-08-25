@@ -81,8 +81,10 @@ let create_test_logger_with_capture level =
   let logger = Logger.create ~level "test" in
   Logger.add_handler logger (module Test_handler);
   let handler = List.hd_exn (Logger.get_handlers logger) in
-  handler.instance.log <- (fun ~level ~msg -> 
-    Queue.enqueue buffer (sprintf "[%s] %s" (Log_types.Level.to_string level) msg));
+  handler.instance.log <-
+    (fun ~level ~msg ->
+      Queue.enqueue buffer
+        (sprintf "[%s] %s" (Log_types.Level.to_string level) msg));
   (logger, buffer)
 
 let%expect_test "Logger.debug logs debug messages when level permits" =
@@ -114,7 +116,9 @@ let%expect_test "Logger.info logs info messages at info level" =
   return ()
 
 let%expect_test "Logger.info ignores messages when level too high" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Warning in
+  let logger, buffer =
+    create_test_logger_with_capture Log_types.Level.Warning
+  in
   Logger.info logger "info message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| () |}];
@@ -128,7 +132,9 @@ let%expect_test "Logger.warning logs warning messages when level permits" =
   return ()
 
 let%expect_test "Logger.warning logs warning messages at warning level" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Warning in
+  let logger, buffer =
+    create_test_logger_with_capture Log_types.Level.Warning
+  in
   Logger.warning logger "warning message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| ("[WARNING] warning message") |}];
@@ -156,7 +162,9 @@ let%expect_test "Logger.error logs error messages at error level" =
   return ()
 
 let%expect_test "Logger.error ignores messages when level too high" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Critical in
+  let logger, buffer =
+    create_test_logger_with_capture Log_types.Level.Critical
+  in
   Logger.error logger "error message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| () |}];
@@ -170,7 +178,9 @@ let%expect_test "Logger.critical logs critical messages when level permits" =
   return ()
 
 let%expect_test "Logger.critical logs critical messages at critical level" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Critical in
+  let logger, buffer =
+    create_test_logger_with_capture Log_types.Level.Critical
+  in
   Logger.critical logger "critical message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| ("[CRITICAL] critical message") |}];
@@ -184,7 +194,8 @@ let%expect_test "Logger methods with multiple messages" =
   Logger.error logger "error 1";
   Logger.critical logger "critical 1";
   print_s [%sexp (Queue.to_list buffer : string list)];
-  [%expect {|
+  [%expect
+    {|
     ("[DEBUG] debug 1"
      "[INFO] info 1"
      "[WARNING] warning 1"
@@ -194,25 +205,37 @@ let%expect_test "Logger methods with multiple messages" =
   return ()
 
 let%expect_test "Logger level filtering with multiple messages" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Warning in
+  let logger, buffer =
+    create_test_logger_with_capture Log_types.Level.Warning
+  in
   Logger.debug logger "debug 1";
   Logger.info logger "info 1";
   Logger.warning logger "warning 1";
   Logger.error logger "error 1";
   Logger.critical logger "critical 1";
   print_s [%sexp (Queue.to_list buffer : string list)];
-  [%expect {| ("[WARNING] warning 1" "[ERROR] error 1" "[CRITICAL] critical 1") |}];
+  [%expect
+    {| ("[WARNING] warning 1" "[ERROR] error 1" "[CRITICAL] critical 1") |}];
   return ()
 
 let%expect_test "Logger with custom level configuration" =
-  let logger_debug = Logger.create ~level:Log_types.Level.Debug "debug_logger" in
-  let logger_error = Logger.create ~level:Log_types.Level.Error "error_logger" in
-  
-  print_s [%sexp {
-    debug_logger_level = (Log_types.Level.to_string (Logger.get_level logger_debug) : string);
-    error_logger_level = (Log_types.Level.to_string (Logger.get_level logger_error) : string);
-  }];
-  [%expect {|
+  let logger_debug =
+    Logger.create ~level:Log_types.Level.Debug "debug_logger"
+  in
+  let logger_error =
+    Logger.create ~level:Log_types.Level.Error "error_logger"
+  in
+
+  print_s
+    [%sexp
+      {
+        debug_logger_level =
+          (Log_types.Level.to_string (Logger.get_level logger_debug) : string);
+        error_logger_level =
+          (Log_types.Level.to_string (Logger.get_level logger_error) : string);
+      }];
+  [%expect
+    {|
     ((debug_logger_level DEBUG)
      (error_logger_level ERROR))
   |}];
@@ -223,10 +246,12 @@ let%expect_test "Logger.get_handlers returns correct handler list" =
   let initial_handlers = Logger.get_handlers logger in
   Logger.add_handler logger (module Test_handler);
   let handlers_after_add = Logger.get_handlers logger in
-  print_s [%sexp {
-    initial_count = (List.length initial_handlers : int);
-    after_add_count = (List.length handlers_after_add : int);
-  }];
+  print_s
+    [%sexp
+      {
+        initial_count = (List.length initial_handlers : int);
+        after_add_count = (List.length handlers_after_add : int);
+      }];
   [%expect {|
     ((initial_count   0)
      (after_add_count 1))
@@ -281,10 +306,10 @@ let%expect_test "Global logger functions work correctly" =
      Global.error "global error";
      Global.critical "global critical";
      test_result := "success"
-   with
-   | exn -> test_result := sprintf "failed: %s" (Exn.to_string exn));
+   with exn -> test_result := sprintf "failed: %s" (Exn.to_string exn));
   printf "Global logging test result: %s\n" !test_result;
-  [%expect {|
+  [%expect
+    {|
     DEBUG global debug
     INFO global info
     WARNING global warning
@@ -300,23 +325,23 @@ let%expect_test "Global logger timestamp configuration works correctly" =
      (* Test configuring without timestamp (default) *)
      Global.configure ~with_timestamp:false ();
      printf "✓ Configured without timestamp\n";
-     
+
      (* Test configuring with timestamp *)
      Global.configure ~with_timestamp:true ();
      printf "✓ Configured with timestamp\n";
-     
+
      (* Reset to default (without timestamp) for other tests *)
      Global.configure ~with_timestamp:false ();
      printf "✓ Reset to no timestamp\n";
-     
-     printf "✓ All timestamp configuration tests passed\n";
-   with
-   | exn -> printf "✗ Timestamp configuration failed: %s\n" (Exn.to_string exn));
-  [%expect {|
+
+     printf "✓ All timestamp configuration tests passed\n"
+   with exn ->
+     printf "✗ Timestamp configuration failed: %s\n" (Exn.to_string exn));
+  [%expect
+    {|
     ✓ Configured without timestamp
     ✓ Configured with timestamp
     ✓ Reset to no timestamp
     ✓ All timestamp configuration tests passed
     |}];
   return ()
-  

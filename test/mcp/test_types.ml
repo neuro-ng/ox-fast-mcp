@@ -2,8 +2,7 @@ open Base
 open Expect_test_helpers_core
 open Mcp.Types
 
-
-let%expect_test "progress_token yojson" = 
+let%expect_test "progress_token yojson" =
   let token_string = `String "token" in
   let token_int = `Int 123 in
   let yojson_string = progress_token_to_yojson token_string in
@@ -20,7 +19,7 @@ let%expect_test "progress_token yojson" =
   require ~here:[%here] (phys_equal token_string roundtrip_string);
   require ~here:[%here] (phys_equal token_int roundtrip_int)
 
-let%expect_test "role yojson" = 
+let%expect_test "role yojson" =
   let user_role = `User in
   let assistant_role = `Assistant in
   let yojson_user = role_to_yojson user_role in
@@ -36,7 +35,7 @@ let%expect_test "role yojson" =
   require ~here:[%here] (phys_equal user_role roundtrip_user);
   require ~here:[%here] (phys_equal assistant_role roundtrip_assistant)
 
-let%expect_test "request_id yojson" = 
+let%expect_test "request_id yojson" =
   let id_string = `String "id" in
   let id_int = `Int 123 in
   let yojson_string = request_id_to_yojson id_string in
@@ -52,11 +51,22 @@ let%expect_test "request_id yojson" =
   require ~here:[%here] (phys_equal id_string roundtrip_string);
   require ~here:[%here] (phys_equal id_int roundtrip_int)
 
-let%expect_test "jsonrpc_message yojson" = 
-  let request = `Request { jsonrpc = "2.0"; id = `Int 1; method_ = "test"; params = None } in
-  let notification = `Notification { jsonrpc = "2.0"; method_ = "test"; params = None } in
+let%expect_test "jsonrpc_message yojson" =
+  let request =
+    `Request { jsonrpc = "2.0"; id = `Int 1; method_ = "test"; params = None }
+  in
+  let notification =
+    `Notification { jsonrpc = "2.0"; method_ = "test"; params = None }
+  in
   let response = `Response { jsonrpc = "2.0"; id = `Int 1; result = `Null } in
-  let error = `Error { jsonrpc = "2.0"; id = `Int 1; error = { code = 1; message = "error"; data = None } } in
+  let error =
+    `Error
+      {
+        jsonrpc = "2.0";
+        id = `Int 1;
+        error = { code = 1; message = "error"; data = None };
+      }
+  in
   let yojson_request = jsonrpc_message_to_yojson request in
   let yojson_notification = jsonrpc_message_to_yojson notification in
   let yojson_response = jsonrpc_message_to_yojson response in
@@ -65,15 +75,20 @@ let%expect_test "jsonrpc_message yojson" =
   print_endline (Yojson.Safe.to_string yojson_notification);
   print_endline (Yojson.Safe.to_string yojson_response);
   print_endline (Yojson.Safe.to_string yojson_error);
-  [%expect {|
+  [%expect
+    {|
     ["Request",{"jsonrpc":"2.0","id":1,"method":"test"}]
     ["Notification",{"jsonrpc":"2.0","method":"test"}]
     ["Response",{"jsonrpc":"2.0","id":1,"result":null}]
     ["Error",{"jsonrpc":"2.0","id":1,"error":{"code":1,"message":"error"}}]
   |}];
   let roundtrip_request = Mcp.Types.jsonrpc_message_of_yojson yojson_request in
-  let roundtrip_notification = Mcp.Types.jsonrpc_message_of_yojson yojson_notification in
-  let roundtrip_response = Mcp.Types.jsonrpc_message_of_yojson yojson_response in
+  let roundtrip_notification =
+    Mcp.Types.jsonrpc_message_of_yojson yojson_notification
+  in
+  let roundtrip_response =
+    Mcp.Types.jsonrpc_message_of_yojson yojson_response
+  in
   let roundtrip_error = Mcp.Types.jsonrpc_message_of_yojson yojson_error in
   require ~here:[%here] (phys_equal request roundtrip_request);
   require ~here:[%here] (phys_equal notification roundtrip_notification);

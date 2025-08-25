@@ -68,7 +68,11 @@ val tool_count : tool_manager -> int
 (** Get tool count *)
 
 val execute_tool :
-  tool_manager -> string -> execution_context -> json -> content_type list Deferred.t
+  tool_manager ->
+  string ->
+  execution_context ->
+  json ->
+  content_type list Deferred.t
 (** Execute a tool *)
 
 val enable_tool : tool_manager -> string -> bool

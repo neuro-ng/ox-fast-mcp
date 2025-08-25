@@ -1,7 +1,6 @@
 open Fmcp_types
 open Core
 open Async
-
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type execution_context = {
@@ -169,7 +168,7 @@ let enable t = { t with enabled = true }
 let disable t = { t with enabled = false }
 
 let from_function ?name ?description ?(tags = []) ?(annotations = [])
-    ?(_exclude_args = []) ?(_serializer) ?(enabled = true) fn =
+    ?(_exclude_args = []) ?_serializer ?(enabled = true) fn =
   let key =
     match name with
     | Some n -> String.lowercase n
@@ -185,5 +184,5 @@ let from_function ?name ?description ?(tags = []) ?(annotations = [])
     (* TODO: Generate JSON schema from function type *)
     enabled;
     error = None;
-    fn = fn;
+    fn;
   }

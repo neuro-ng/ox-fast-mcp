@@ -90,38 +90,39 @@ let configure_logging ?(level = Log_types.Level.Info)
 module Global = struct
   (* Configuration for timestamp inclusion *)
   let include_timestamp = ref false
-  
   let simple_formatter = Log_formatter.create "%(level)s %(message)s"
-  let timestamped_formatter = Log_formatter.create "%(timestamp)s %(level)s %(message)s"
-  
+
+  let timestamped_formatter =
+    Log_formatter.create "%(timestamp)s %(level)s %(message)s"
+
   let get_timestamp () =
     let time = Core_unix.time () in
     let tm = Core_unix.localtime time in
-    let microseconds = Float.round_decimal (Float.mod_float time 1.0 *. 1_000_000.0) ~decimal_digits:0 |> Float.to_int in
-    sprintf "%04d-%02d-%02d %02d:%02d:%02d.%06d%s"
-      (tm.tm_year + 1900)
-      (tm.tm_mon + 1)
-      tm.tm_mday
-      tm.tm_hour
-      tm.tm_min
-      tm.tm_sec
-      microseconds
-      (if tm.tm_isdst then "+08:00" else "+08:00") (* Simplified timezone *)
-  
+    let microseconds =
+      Float.round_decimal
+        (Float.mod_float time 1.0 *. 1_000_000.0)
+        ~decimal_digits:0
+      |> Float.to_int
+    in
+    sprintf "%04d-%02d-%02d %02d:%02d:%02d.%06d%s" (tm.tm_year + 1900)
+      (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min tm.tm_sec microseconds
+      (if tm.tm_isdst then "+08:00" else "+08:00")
+  (* Simplified timezone *)
+
   let configure ?(with_timestamp = false) () =
     include_timestamp := with_timestamp
-  
+
   let log_direct level msg =
-    let formatted = 
+    let formatted =
       if !include_timestamp then
         let timestamp = get_timestamp () in
-        let msg_with_timestamp = String.substr_replace_all 
-          (Log_formatter.format timestamped_formatter ~level ~msg)
-          ~pattern:"%(timestamp)s" ~with_:timestamp
+        let msg_with_timestamp =
+          String.substr_replace_all
+            (Log_formatter.format timestamped_formatter ~level ~msg)
+            ~pattern:"%(timestamp)s" ~with_:timestamp
         in
         msg_with_timestamp
-      else
-        Log_formatter.format simple_formatter ~level ~msg
+      else Log_formatter.format simple_formatter ~level ~msg
     in
     eprintf "%s\n%!" formatted
 

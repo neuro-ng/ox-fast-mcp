@@ -1,6 +1,7 @@
 open Core
 open Lwt.Syntax
 open Mcp_server_auth.Provider
+
 (* Settings module not found, will define needed types inline if necessary *)
 (* Simple logging functions instead of full Utilities.Logging *)
 let log_debug msg = Printf.eprintf "[DEBUG] Bearer: %s\n%!" msg
@@ -28,9 +29,12 @@ module RSA_key_pair = struct
 
   let generate () =
     let key = Mirage_crypto_pk.Rsa.generate ~bits:2048 () in
-    let priv_pem = X509.Private_key.encode_pem (`RSA key) |> Cstruct.to_string in
+    let priv_pem =
+      X509.Private_key.encode_pem (`RSA key) |> Cstruct.to_string
+    in
     let pub_pem =
-      X509.Public_key.encode_pem (`RSA (Mirage_crypto_pk.Rsa.pub_of_priv key)) |> Cstruct.to_string
+      X509.Public_key.encode_pem (`RSA (Mirage_crypto_pk.Rsa.pub_of_priv key))
+      |> Cstruct.to_string
     in
     { private_key = priv_pem; public_key = pub_pem }
 
@@ -67,16 +71,17 @@ module RSA_key_pair = struct
       | None -> [ ("alg", `String "RS256") ]
       | Some k -> [ ("alg", `String "RS256"); ("kid", `String k) ]
     in
-    (* Simplified for now - return a placeholder token until Jose API is figured out *)
+    (* Simplified for now - return a placeholder token until Jose API is figured
+       out *)
     "placeholder_jwt_token"
 end
 
 (** Bearer Auth Provider module *)
 module Bearer_auth_provider = struct
   type authorization_code_t = authorization_code
-  type refresh_token_t = refresh_token  
+  type refresh_token_t = refresh_token
   type access_token_t = access_token
-  
+
   type t = {
     public_key : string option;
     jwks_uri : string option;
@@ -135,12 +140,13 @@ module Bearer_auth_provider = struct
           | [ (_, key) ] -> Lwt.return key
           | _ ->
             let* () =
-              Lwt.return (log_debug "No key ID provided and multiple keys in cache")
+              Lwt.return
+                (log_debug "No key ID provided and multiple keys in cache")
             in
             Lwt.fail (Failure "No key ID provided and multiple keys in cache"))
       else
         let* () = Lwt.return (log_debug ("Fetching JWKS from " ^ uri)) in
-        let* (_response, body) = Cohttp_lwt_unix.Client.get (Uri.of_string uri) in
+        let* _response, body = Cohttp_lwt_unix.Client.get (Uri.of_string uri) in
         let* body = Cohttp_lwt.Body.to_string body in
         let jwks = Yojson.Safe.from_string body in
         let keys =
@@ -166,7 +172,8 @@ module Bearer_auth_provider = struct
           | [ (_, key) ] -> Lwt.return key
           | _ ->
             let* () =
-              Lwt.return (log_debug "No key ID provided and multiple keys in JWKS")
+              Lwt.return
+                (log_debug "No key ID provided and multiple keys in JWKS")
             in
             Lwt.fail (Failure "No key ID provided and multiple keys in JWKS")))
 
@@ -199,9 +206,9 @@ module Bearer_auth_provider = struct
 
     (module struct
       type authorization_code_t = authorization_code
-      type refresh_token_t = refresh_token  
+      type refresh_token_t = refresh_token
       type access_token_t = access_token
-      
+
       let get_client _ = Lwt.return None
 
       let register_client _ =
@@ -221,10 +228,12 @@ module Bearer_auth_provider = struct
       let load_access_token token =
         let t = get_state () in
         let* _key = get_verification_key t token in
-        match Ok (`Assoc []) with (* Placeholder - replace Jose.Jwt.verify *)
+        match Ok (`Assoc []) with
+        (* Placeholder - replace Jose.Jwt.verify *)
         | Error _ ->
           let* () =
-            Lwt.return (log_debug "Token validation failed: JWT signature/format invalid")
+            Lwt.return
+              (log_debug "Token validation failed: JWT signature/format invalid")
           in
           Lwt.return None
         | Ok claims -> (
@@ -247,11 +256,14 @@ module Bearer_auth_provider = struct
           match exp with
           | Some e when e < now ->
             let* () =
-              Lwt.return (log_debug
-                ("Token validation failed: expired token for client " ^ client_id))
+              Lwt.return
+                (log_debug
+                   ("Token validation failed: expired token for client "
+                  ^ client_id))
             in
             let* () =
-              Lwt.return (log_info ("Bearer token rejected for client " ^ client_id))
+              Lwt.return
+                (log_info ("Bearer token rejected for client " ^ client_id))
             in
             Lwt.return None
           | _ -> (
@@ -260,13 +272,17 @@ module Bearer_auth_provider = struct
               Yojson.Safe.Util.(member "iss" claims |> to_string_option)
             in
             match (t.issuer, iss) with
-            | Some expected, Some actual when not (String.equal expected actual) ->
+            | Some expected, Some actual when not (String.equal expected actual)
+              ->
               let* () =
-                Lwt.return (log_debug
-                  ("Token validation failed: issuer mismatch for client " ^ client_id))
+                Lwt.return
+                  (log_debug
+                     ("Token validation failed: issuer mismatch for client "
+                    ^ client_id))
               in
               let* () =
-                Lwt.return (log_info ("Bearer token rejected for client " ^ client_id))
+                Lwt.return
+                  (log_info ("Bearer token rejected for client " ^ client_id))
               in
               Lwt.return None
             | _ -> (
@@ -294,11 +310,15 @@ module Bearer_auth_provider = struct
                     }
                 else
                   let* () =
-                    Lwt.return (log_debug
-                      ("Token validation failed: audience mismatch for client " ^ client_id))
+                    Lwt.return
+                      (log_debug
+                         ("Token validation failed: audience mismatch for \
+                           client " ^ client_id))
                   in
                   let* () =
-                    Lwt.return (log_info ("Bearer token rejected for client " ^ client_id))
+                    Lwt.return
+                      (log_info
+                         ("Bearer token rejected for client " ^ client_id))
                   in
                   Lwt.return None
               | None ->
@@ -316,15 +336,21 @@ module Bearer_auth_provider = struct
       let revoke_token _ = Lwt.fail (Failure "Token revocation not supported")
       (* let verify_token token = load_access_token token *)
     end : OAUTH_AUTHORIZATION_SERVER_PROVIDER)
-  
+
   (* Also provide the functions at module level to satisfy interface *)
   let get_client _ = Lwt.return None
   let register_client _ = Lwt.return_unit
   let authorize _ _ = Lwt.fail (Failure "Use create() to get a proper provider")
   let load_authorization_code _ _ = Lwt.return None
-  let exchange_authorization_code _ _ = Lwt.fail (Failure "Use create() to get a proper provider")
+
+  let exchange_authorization_code _ _ =
+    Lwt.fail (Failure "Use create() to get a proper provider")
+
   let load_refresh_token _ _ = Lwt.return None
-  let exchange_refresh_token _ _ _ = Lwt.fail (Failure "Use create() to get a proper provider")
+
+  let exchange_refresh_token _ _ _ =
+    Lwt.fail (Failure "Use create() to get a proper provider")
+
   let load_access_token _ = Lwt.return None
   let revoke_token _ = Lwt.return_unit
 end

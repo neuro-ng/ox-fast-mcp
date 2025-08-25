@@ -1,9 +1,7 @@
 (** Base module for all MCP resources *)
 
 (** Content type for resources *)
-type content =
-  | Text of string
-  | Binary of bytes (* Binary data *)
+type content = Text of string | Binary of bytes (* Binary data *)
 [@@deriving sexp, yojson_of]
 
 type t = {

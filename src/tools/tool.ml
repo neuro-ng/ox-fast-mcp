@@ -18,7 +18,11 @@ type tool_manager = {
 (** Create a new tool manager *)
 let create_manager ?(duplicate_behavior = `Warn) ?(mask_error_details = false)
     () =
-  { tools = Hashtbl.create (module String); duplicate_behavior; mask_error_details }
+  {
+    tools = Hashtbl.create (module String);
+    duplicate_behavior;
+    mask_error_details;
+  }
 
 (** Create a new function tool *)
 let create_tool ~name ~description ?(parameters = `Null) ?(enabled = true)
@@ -47,7 +51,8 @@ let register_tool manager tool =
   | true, `Error ->
     failwith ("Tool with name '" ^ tool_name ^ "' already exists")
   | true, `Warn ->
-    (* Printf.eprintf "Warning: Tool '%s' already exists, replacing\n%!" tool_name; *)
+    (* Printf.eprintf "Warning: Tool '%s' already exists, replacing\n%!"
+       tool_name; *)
     Hashtbl.set manager.tools ~key:tool_name ~data:tool
   | true, `Replace -> Hashtbl.set manager.tools ~key:tool_name ~data:tool
   | true, `Ignore ->
@@ -59,12 +64,12 @@ let register_tool manager tool =
 let remove_tool manager name = Hashtbl.remove manager.tools name
 
 (** Get a tool by name *)
-let get_tool manager name =
-  Hashtbl.find manager.tools name
+let get_tool manager name = Hashtbl.find manager.tools name
 
 (** Get all tools *)
 let get_all_tools manager =
-  Hashtbl.fold manager.tools ~init:[] ~f:(fun ~key:_ ~data:tool acc -> tool :: acc)
+  Hashtbl.fold manager.tools ~init:[] ~f:(fun ~key:_ ~data:tool acc ->
+      tool :: acc)
 
 (** Get enabled tools only *)
 let get_enabled_tools manager =
@@ -75,7 +80,10 @@ let get_enabled_tools manager =
 let filter_tools_by_tags manager tags =
   Hashtbl.fold manager.tools ~init:[] ~f:(fun ~key:_ ~data:tool acc ->
       let tool_tags = Tool_types.get_tags tool in
-      let has_any_tag = List.exists tags ~f:(fun tag -> List.mem tool_tags tag ~equal:String.equal) in
+      let has_any_tag =
+        List.exists tags ~f:(fun tag ->
+            List.mem tool_tags tag ~equal:String.equal)
+      in
       if has_any_tag then tool :: acc else acc)
 
 (** Get tool count *)
@@ -87,17 +95,16 @@ let execute_tool manager tool_name context args =
   | None -> failwith ("Tool not found: " ^ tool_name)
   | Some tool when not (Tool_types.is_enabled tool) ->
     failwith ("Tool disabled: " ^ tool_name)
-  | Some tool ->
+  | Some tool -> (
     let handler = Tool_types.get_handler tool in
-    Monitor.try_with (fun () -> handler context args)
-    >>= function
+    Monitor.try_with (fun () -> handler context args) >>= function
     | Ok result -> return result
     | Error exn ->
-        let error_msg =
-          if manager.mask_error_details then "Tool execution failed"
-          else "Tool execution failed: " ^ Exn.to_string exn
-        in
-        failwith error_msg
+      let error_msg =
+        if manager.mask_error_details then "Tool execution failed"
+        else "Tool execution failed: " ^ Exn.to_string exn
+      in
+      failwith error_msg)
 
 (** Enable a tool *)
 let enable_tool manager name =
@@ -152,7 +159,8 @@ let remove_tool_tags manager name tags_to_remove =
   | Some tool ->
     let existing_tags = Tool_types.get_tags tool in
     let filtered_tags =
-      List.filter existing_tags ~f:(fun tag -> not (List.mem tags_to_remove tag ~equal:String.equal))
+      List.filter existing_tags ~f:(fun tag ->
+          not (List.mem tags_to_remove tag ~equal:String.equal))
     in
     let updated_tool = Tool_types.set_tags tool filtered_tags in
     Hashtbl.set manager.tools ~key:name ~data:updated_tool;
@@ -272,7 +280,8 @@ let get_tool_stats manager =
     List.length (List.filter all_tools ~f:Tool_types.is_enabled)
   in
   let all_tags =
-    List.fold all_tools ~init:[] ~f:(fun acc tool -> List.rev_append (Tool_types.get_tags tool) acc)
+    List.fold all_tools ~init:[] ~f:(fun acc tool ->
+        List.rev_append (Tool_types.get_tags tool) acc)
     |> List.dedup_and_sort ~compare:String.compare
   in
 

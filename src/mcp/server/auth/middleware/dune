@@ -2,13 +2,6 @@
  (name mcp_server_auth_middleware)
  (public_name ox-fast-mcp.server.auth.middleware)
  (modules auth_context bearer_auth)
- (libraries
-  core
-  async
-  cohttp
-  lwt
-  ox-fast-mcp.mcp.server.auth
-  opium
-  yojson)
+ (libraries core async cohttp lwt ox-fast-mcp.mcp.server.auth opium yojson)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))

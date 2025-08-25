@@ -3,10 +3,15 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type resumption_token = string [@@deriving yojson]
 type resumption_token_update_callback = resumption_token -> unit Lwt.t
-let resumption_token_update_callback_of_yojson (_ : Yojson.Safe.t) : resumption_token_update_callback =
-  fun _ -> Lwt.return_unit
-let resumption_token_update_callback_to_yojson (_ : resumption_token_update_callback) : Yojson.Safe.t =
+
+let resumption_token_update_callback_of_yojson (_ : Yojson.Safe.t) :
+    resumption_token_update_callback =
+ fun _ -> Lwt.return_unit
+
+let resumption_token_update_callback_to_yojson
+    (_ : resumption_token_update_callback) : Yojson.Safe.t =
   `Null
+
 let yojson_of_resumption_token_update_callback =
   resumption_token_update_callback_to_yojson
 

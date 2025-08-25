@@ -2,7 +2,8 @@
  (name test_types)
  (modules test_types)
  (libraries ox-fast-mcp.mcp core expect_test_helpers_core)
- (preprocess (pps ppx_jane ppx_expect)))
+ (preprocess
+  (pps ppx_jane ppx_expect)))
 
 (library
  (name test_mcp_server_auth_middleware_auth_context)
@@ -16,4 +17,5 @@
   ox-fast-mcp.mcp
   ox-fast-mcp.mcp.server.auth
   ox-fast-mcp.server.auth.middleware)
- (preprocess (pps ppx_jane ppx_expect)))
+ (preprocess
+  (pps ppx_jane ppx_expect)))

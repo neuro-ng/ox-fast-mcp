@@ -12,7 +12,6 @@
   logs
   lwt
   mcp)
- (modules
-  models)
+ (modules models)
  (preprocess
-  (pps ppx_jane ppx_yojson_conv))) 
+  (pps ppx_jane ppx_yojson_conv)))

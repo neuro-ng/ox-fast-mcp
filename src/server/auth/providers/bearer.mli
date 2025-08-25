@@ -1,6 +1,5 @@
 open Mcp_server_auth.Provider
 
-
 type jwk_data = {
   kty : string;  (** Key type (e.g., "RSA") - required *)
   kid : string option;  (** Key ID (optional but recommended) *)

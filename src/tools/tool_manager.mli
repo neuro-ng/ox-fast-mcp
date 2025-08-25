@@ -63,7 +63,7 @@ type t
 
 type mounted_server = {
   prefix : string option;
-  (* server field removed - Server module not available *)
+      (* server field removed - Server module not available *)
 }
 
 val create :

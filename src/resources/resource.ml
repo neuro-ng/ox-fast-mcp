@@ -42,7 +42,15 @@ let from_function ?name ?description ?mime_type ?tags ?(enabled = true) ~uri fn
   let mime_type = set_default_mime_type mime_type in
   let name = set_default_name uri name in
   let tags = Option.value tags ~default:[] in
-  { uri = Uri.to_string uri; name; mime_type; description; tags; enabled; read_fn = Some fn }
+  {
+    uri = Uri.to_string uri;
+    name;
+    mime_type;
+    description;
+    tags;
+    enabled;
+    read_fn = Some fn;
+  }
 
 let read t =
   match (t.enabled, t.read_fn) with
@@ -50,10 +58,9 @@ let read t =
   | true, None -> Lwt.fail_with "Resource has no read function"
   | true, Some fn -> fn ()
 
-(* let notify_resource_list_changed () =
-  match%lwt Mcp.Server.Context.get () with
-  | None -> Lwt.return_unit
-  | Some ctx -> Mcp.Server.Context.queue_resource_list_changed ctx *)
+(* let notify_resource_list_changed () = match%lwt Mcp.Server.Context.get ()
+   with | None -> Lwt.return_unit | Some ctx ->
+   Mcp.Server.Context.queue_resource_list_changed ctx *)
 
 let enable t =
   (* let* () = notify_resource_list_changed () in *)

@@ -10,7 +10,6 @@
   uri
   yojson
   ox-fast-mcp.mcp.shared)
- (modules
-  provider)
+ (modules provider)
  (preprocess
   (pps ppx_jane)))

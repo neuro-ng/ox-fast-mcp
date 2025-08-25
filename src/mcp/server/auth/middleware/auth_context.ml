@@ -12,11 +12,10 @@ let get_access_token () =
 module Auth_context_middleware = struct
   let create () = ()
 
-  let handle
-      (auth_result : Bearer_auth.auth_result option)
+  let handle (auth_result : Bearer_auth.auth_result option)
       (_req : Cohttp.Request.t)
-      (next : (Cohttp.Response.t * Cohttp.Body.t) Lwt.t)
-      : (Cohttp.Response.t * Cohttp.Body.t) Lwt.t =
+      (next : (Cohttp.Response.t * Cohttp.Body.t) Lwt.t) :
+      (Cohttp.Response.t * Cohttp.Body.t) Lwt.t =
     match auth_result with
     | None -> next
     | Some None -> next
