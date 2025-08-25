@@ -5,7 +5,7 @@ open Mcp_server_auth.Provider
 (* Simple logging functions instead of full Utilities.Logging *)
 let log_debug msg = Printf.eprintf "[DEBUG] Bearer: %s\n%!" msg
 let log_info msg = Printf.eprintf "[INFO] Bearer: %s\n%!" msg
-let log_error msg = Printf.eprintf "[ERROR] Bearer: %s\n%!" msg
+(* let log_error msg = Printf.eprintf "[ERROR] Bearer: %s\n%!" msg *)
 
 type jwk_data = {
   kty : string;
@@ -34,11 +34,11 @@ module RSA_key_pair = struct
     in
     { private_key = priv_pem; public_key = pub_pem }
 
-  let create_token t ?subject:(sub = "fastmcp-user")
+  let create_token _t ?subject:(sub = "fastmcp-user")
       ?issuer:(iss = "https://fastmcp.example.com") ?audience ?scopes
       ?expires_in_seconds:(exp = 3600) ?additional_claims ?kid () =
     let now = int_of_float (Core_unix.time ()) in
-    let claims =
+    let _claims =
       [
         ("iss", `String iss);
         ("sub", `String sub);
@@ -46,23 +46,23 @@ module RSA_key_pair = struct
         ("exp", `Int (now + exp));
       ]
     in
-    let claims =
+    let _claims2 =
       match audience with
-      | None -> claims
+      | None -> _claims
       | Some aud ->
-        ("aud", `List (List.map aud ~f:(fun a -> `String a))) :: claims
+        ("aud", `List (List.map aud ~f:(fun a -> `String a))) :: _claims
     in
-    let claims =
+    let _claims3 =
       match scopes with
-      | None -> claims
-      | Some s -> ("scope", `String (String.concat ~sep:" " s)) :: claims
+      | None -> _claims2
+      | Some s -> ("scope", `String (String.concat ~sep:" " s)) :: _claims2
     in
-    let claims =
+    let _claims4 =
       match additional_claims with
-      | None -> claims
-      | Some c -> c @ claims
+      | None -> _claims3
+      | Some c -> c @ _claims3
     in
-    let header =
+    let _header =
       match kid with
       | None -> [ ("alg", `String "RS256") ]
       | Some k -> [ ("alg", `String "RS256"); ("kid", `String k) ]
@@ -140,7 +140,7 @@ module Bearer_auth_provider = struct
             Lwt.fail (Failure "No key ID provided and multiple keys in cache"))
       else
         let* () = Lwt.return (log_debug ("Fetching JWKS from " ^ uri)) in
-        let* (response, body) = Cohttp_lwt_unix.Client.get (Uri.of_string uri) in
+        let* (_response, body) = Cohttp_lwt_unix.Client.get (Uri.of_string uri) in
         let* body = Cohttp_lwt.Body.to_string body in
         let jwks = Yojson.Safe.from_string body in
         let keys =
@@ -220,7 +220,7 @@ module Bearer_auth_provider = struct
 
       let load_access_token token =
         let t = get_state () in
-        let* key = get_verification_key t token in
+        let* _key = get_verification_key t token in
         match Ok (`Assoc []) with (* Placeholder - replace Jose.Jwt.verify *)
         | Error _ ->
           let* () =
@@ -314,7 +314,7 @@ module Bearer_auth_provider = struct
                   })))
 
       let revoke_token _ = Lwt.fail (Failure "Token revocation not supported")
-      let verify_token token = load_access_token token
+      (* let verify_token token = load_access_token token *)
     end : OAUTH_AUTHORIZATION_SERVER_PROVIDER)
   
   (* Also provide the functions at module level to satisfy interface *)

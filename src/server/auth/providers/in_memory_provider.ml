@@ -19,6 +19,10 @@ module In_memory_provider : sig
     unit ->
     (module OAUTH_AUTHORIZATION_SERVER_PROVIDER)
 end = struct
+  type authorization_code_t = authorization_code
+  type refresh_token_t = refresh_token  
+  type access_token_t = access_token
+  
   type t = {
     issuer_url : string;
     service_documentation_url : string option;
@@ -177,13 +181,13 @@ end = struct
           Hashtbl.set state.refresh_to_access_map ~key:refresh_token_value
             ~data:access_token_value;
           let+ () = Lwt.return () in
-          {
+          ({
             access_token = access_token_value;
             token_type = "Bearer";
-            expires_in = default_access_token_expiry_seconds;
+            expires_in = Some default_access_token_expiry_seconds;
             refresh_token = Some refresh_token_value;
             scope = Some (String.concat ~sep:" " auth_code.scopes);
-          })
+          } : Mcp_shared.Auth.oauth_token))
 
       let load_refresh_token (client : Mcp_shared.Auth.oauth_client_information_full) refresh_token =
         let state = get_state () in
@@ -199,7 +203,7 @@ end = struct
               None
             | _ -> Some token)
 
-      let exchange_refresh_token (client : Mcp_shared.Auth.oauth_client_information_full) refresh_token scopes =
+      let exchange_refresh_token (client : Mcp_shared.Auth.oauth_client_information_full) (refresh_token : refresh_token_t) scopes =
         let state = get_state () in
         let original_scopes =
           Set.of_list (module String) refresh_token.scopes
@@ -267,13 +271,13 @@ end = struct
           Hashtbl.set state.refresh_to_access_map ~key:new_refresh_token_value
             ~data:new_access_token_value;
           let+ () = Lwt.return () in
-          {
+          ({
             access_token = new_access_token_value;
             token_type = "Bearer";
-            expires_in = default_access_token_expiry_seconds;
+            expires_in = Some default_access_token_expiry_seconds;
             refresh_token = Some new_refresh_token_value;
             scope = Some (String.concat ~sep:" " scopes);
-          })
+          } : Mcp_shared.Auth.oauth_token))
 
       let load_access_token token =
         let state = get_state () in
@@ -288,14 +292,14 @@ end = struct
           | _ -> Some token_obj)
 
       let revoke_token = function
-        | `Access token ->
+        | `Access (token : access_token_t) ->
           let state = get_state () in
           Hashtbl.remove state.access_tokens token.token;
           (match Hashtbl.find state.access_to_refresh_map token.token with
           | Some refresh -> Hashtbl.remove state.refresh_tokens refresh
           | None -> ());
           Lwt.return_unit
-        | `Refresh token ->
+        | `Refresh (token : refresh_token_t) ->
           let state = get_state () in
           Hashtbl.remove state.refresh_tokens token.token;
           (match Hashtbl.find state.refresh_to_access_map token.token with
@@ -303,4 +307,42 @@ end = struct
           | None -> ());
           Lwt.return_unit
     end : OAUTH_AUTHORIZATION_SERVER_PROVIDER)
+  
+  (* Also provide the functions at module level to satisfy interface *)
+  let get_client client_id =
+    let+ () = Lwt.return () in
+    Hashtbl.find (get_state ()).clients client_id
+
+  let register_client (client_info : Mcp_shared.Auth.oauth_client_information_full) =
+    let+ () = Lwt.return () in
+    Hashtbl.set (get_state ()).clients ~key:client_info.info.client_id
+      ~data:client_info
+
+  let authorize (client : Mcp_shared.Auth.oauth_client_information_full) (auth_params : authorization_params) =
+    let (module Provider) = create () in
+    Provider.authorize client auth_params
+
+  let load_authorization_code (oauth_client : Mcp_shared.Auth.oauth_client_information_full) code =
+    let (module Provider) = create () in
+    Provider.load_authorization_code oauth_client code
+
+  let exchange_authorization_code (client : Mcp_shared.Auth.oauth_client_information_full) auth_code =
+    let (module Provider) = create () in
+    Provider.exchange_authorization_code client auth_code
+
+  let load_refresh_token (client : Mcp_shared.Auth.oauth_client_information_full) refresh_token =
+    let (module Provider) = create () in
+    Provider.load_refresh_token client refresh_token
+
+  let exchange_refresh_token (client : Mcp_shared.Auth.oauth_client_information_full) (refresh_token : refresh_token_t) scopes =
+    let (module Provider) = create () in
+    Provider.exchange_refresh_token client refresh_token scopes
+
+  let load_access_token token =
+    let (module Provider) = create () in
+    Provider.load_access_token token
+
+  let revoke_token token =
+    let (module Provider) = create () in
+    Provider.revoke_token token
 end
