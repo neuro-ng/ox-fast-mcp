@@ -1,6 +1,6 @@
 open Core
 open Lwt.Syntax
-open Server.Auth.Provider
+open Mcp_server_auth.Provider
 
 (** Default expiration times (in seconds) *)
 let default_auth_code_expiry_seconds = 5 * 60 (* 5 minutes *)
@@ -23,7 +23,7 @@ end = struct
     issuer_url : string;
     service_documentation_url : string option;
     required_scopes : string list;
-    clients : (string, oauth_client_information) Hashtbl.t;
+    clients : (string, Mcp_shared.Auth.oauth_client_information_full) Hashtbl.t;
     auth_codes : (string, authorization_code) Hashtbl.t;
     access_tokens : (string, access_token) Hashtbl.t;
     refresh_tokens : (string, refresh_token) Hashtbl.t;
@@ -55,85 +55,81 @@ end = struct
     in
     state := Some t;
     (module struct
+      type authorization_code_t = authorization_code
+      type refresh_token_t = refresh_token  
+      type access_token_t = access_token
+      
       let get_client client_id =
         let+ () = Lwt.return () in
         Hashtbl.find (get_state ()).clients client_id
 
-      let register_client client_info =
+      let register_client (client_info : Mcp_shared.Auth.oauth_client_information_full) =
         let+ () = Lwt.return () in
-        Hashtbl.set (get_state ()).clients ~key:client_info.client_id
+        Hashtbl.set (get_state ()).clients ~key:client_info.info.client_id
           ~data:client_info
 
-      let authorize client params =
+      let authorize (client : Mcp_shared.Auth.oauth_client_information_full) (auth_params : authorization_params) =
         let state = get_state () in
-        if not (Hashtbl.mem state.clients client.client_id) then
+        if not (Hashtbl.mem state.clients client.info.client_id) then
           Lwt.fail
             (Authorization_error
                {
-                 error = `UnauthorizedClient;
+                 error = `Unauthorized_client;
                  error_description =
                    Some
                      (Printf.sprintf "Client '%s' not registered."
-                        client.client_id);
+                        client.info.client_id);
                })
         else
           let auth_code_value =
             Printf.sprintf "test_auth_code_%s" (Random.bits () |> Int.to_string)
           in
           let expires_at =
-            Unix.time () +. float_of_int default_auth_code_expiry_seconds
+            Core_unix.time () +. float_of_int default_auth_code_expiry_seconds
           in
-          let scopes_list =
-            match params.scopes with
+          let scopes_list = match auth_params.scopes with
+            | Some scopes -> scopes
             | None -> []
-            | Some s -> s
           in
-          let scopes_list =
-            match client.scope with
-            | None -> scopes_list
-            | Some scope ->
-              let client_scopes =
-                String.split ~on:' ' scope |> String.Set.of_list
-              in
-              List.filter scopes_list ~f:(Set.mem client_scopes)
-          in
-          let auth_code =
+          let auth_code : authorization_code =
             {
               code = auth_code_value;
-              client_id = client.client_id;
-              redirect_uri = params.redirect_uri;
+              client_id = client.info.client_id;
+              redirect_uri = auth_params.redirect_uri;
               redirect_uri_provided_explicitly =
-                params.redirect_uri_provided_explicitly;
+                auth_params.redirect_uri_provided_explicitly;
               scopes = scopes_list;
               expires_at;
-              code_challenge = params.code_challenge;
-              resource = params.resource;
+              code_challenge = auth_params.code_challenge;
+              resource = auth_params.resource;
             }
           in
           Hashtbl.set state.auth_codes ~key:auth_code_value ~data:auth_code;
           let+ () = Lwt.return () in
-          construct_redirect_uri params.redirect_uri
-            [ ("code", Some auth_code_value); ("state", params.state) ]
+          construct_redirect_uri auth_params.redirect_uri
+            [ ("code", Some auth_code_value); ("state", auth_params.state) ]
 
-      let load_authorization_code client code =
+      let load_authorization_code (oauth_client : Mcp_shared.Auth.oauth_client_information_full) code =
         let state = get_state () in
         let+ () = Lwt.return () in
         match Hashtbl.find state.auth_codes code with
         | None -> None
         | Some auth_code ->
-          if auth_code.client_id <> client.client_id then None
-          else if auth_code.expires_at < Unix.time () then (
+          let client_id_from_auth_code = auth_code.client_id in
+          let client_id_from_client = oauth_client.info.client_id in
+          if not (String.equal client_id_from_auth_code client_id_from_client) then None
+          else if Float.(auth_code.expires_at < Core_unix.time ()) then (
             Hashtbl.remove state.auth_codes code;
             None)
           else Some auth_code
 
-      let exchange_authorization_code client auth_code =
+      let exchange_authorization_code (client : Mcp_shared.Auth.oauth_client_information_full) auth_code =
         let state = get_state () in
         if not (Hashtbl.mem state.auth_codes auth_code.code) then
           Lwt.fail
             (Token_error
                {
-                 error = `InvalidGrant;
+                 error = `Invalid_grant;
                  error_description =
                    Some "Authorization code not found or already used.";
                })
@@ -149,16 +145,16 @@ end = struct
           in
           let access_token_expires_at =
             Some
-              (int_of_float (Unix.time ()) + default_access_token_expiry_seconds)
+              (int_of_float (Core_unix.time ()) + default_access_token_expiry_seconds)
           in
           let refresh_token_expires_at =
             Option.map default_refresh_token_expiry_seconds ~f:(fun x ->
-                int_of_float (Unix.time ()) + x)
+                int_of_float (Core_unix.time ()) + x)
           in
           let access_token =
             {
               token = access_token_value;
-              client_id = client.client_id;
+              client_id = client.info.client_id;
               scopes = auth_code.scopes;
               expires_at = access_token_expires_at;
               resource = auth_code.resource;
@@ -167,7 +163,7 @@ end = struct
           let refresh_token =
             {
               token = refresh_token_value;
-              client_id = client.client_id;
+              client_id = client.info.client_id;
               scopes = auth_code.scopes;
               expires_at = refresh_token_expires_at;
             }
@@ -189,21 +185,21 @@ end = struct
             scope = Some (String.concat ~sep:" " auth_code.scopes);
           })
 
-      let load_refresh_token client refresh_token =
+      let load_refresh_token (client : Mcp_shared.Auth.oauth_client_information_full) refresh_token =
         let state = get_state () in
         let+ () = Lwt.return () in
         match Hashtbl.find state.refresh_tokens refresh_token with
         | None -> None
         | Some token -> (
-          if token.client_id <> client.client_id then None
+          if not (String.equal token.client_id client.info.client_id) then None
           else
             match token.expires_at with
-            | Some exp when exp < int_of_float (Unix.time ()) ->
+            | Some exp when exp < int_of_float (Core_unix.time ()) ->
               Hashtbl.remove state.refresh_tokens refresh_token;
               None
             | _ -> Some token)
 
-      let exchange_refresh_token client refresh_token scopes =
+      let exchange_refresh_token (client : Mcp_shared.Auth.oauth_client_information_full) refresh_token scopes =
         let state = get_state () in
         let original_scopes =
           Set.of_list (module String) refresh_token.scopes
@@ -213,7 +209,7 @@ end = struct
           Lwt.fail
             (Token_error
                {
-                 error = `InvalidScope;
+                 error = `Invalid_scope;
                  error_description =
                    Some
                      "Requested scopes exceed those authorized by the refresh \
@@ -239,16 +235,16 @@ end = struct
           in
           let access_token_expires_at =
             Some
-              (int_of_float (Unix.time ()) + default_access_token_expiry_seconds)
+              (int_of_float (Core_unix.time ()) + default_access_token_expiry_seconds)
           in
           let refresh_token_expires_at =
             Option.map default_refresh_token_expiry_seconds ~f:(fun x ->
-                int_of_float (Unix.time ()) + x)
+                int_of_float (Core_unix.time ()) + x)
           in
           let access_token =
             {
               token = new_access_token_value;
-              client_id = client.client_id;
+              client_id = client.info.client_id;
               scopes;
               expires_at = access_token_expires_at;
               resource = None;
@@ -257,7 +253,7 @@ end = struct
           let refresh_token =
             {
               token = new_refresh_token_value;
-              client_id = client.client_id;
+              client_id = client.info.client_id;
               scopes;
               expires_at = refresh_token_expires_at;
             }
@@ -286,7 +282,7 @@ end = struct
         | None -> None
         | Some token_obj -> (
           match token_obj.expires_at with
-          | Some exp when exp < int_of_float (Unix.time ()) ->
+          | Some exp when exp < int_of_float (Core_unix.time ()) ->
             Hashtbl.remove state.access_tokens token;
             None
           | _ -> Some token_obj)

@@ -1,0 +1,22 @@
+## Build Warnings Fix - Completed
+
+### Fixed Issues:
+- [x] Unused variable 'key' warning on line 139 in Map.fold function
+  - Solution: Changed `~key` to `~key:_` to indicate intentionally unused parameter
+  
+- [x] Unused variable 't' warning on line 178 in add_tool_from_fn function  
+  - Solution: Changed `t` to `_t` to indicate intentionally unused parameter
+  
+- [x] Unused variable 'exclude_args' warning on line 179 in add_tool_from_fn function
+  - Solution: Changed `exclude_args` to `_exclude_args` to indicate intentionally unused parameter
+
+### File Modified:
+- src/tools/tool_manager.ml
+
+### Final Solution:
+The third warning required a different approach due to interface constraints:
+- Cannot rename `exclude_args` to `_exclude_args` because it's defined in the .mli interface
+- Added `let _ = exclude_args in` to explicitly consume the unused variable and suppress the warning
+
+### Status: ✅ All build warnings resolved
+### Verification: ✅ Build completes successfully with no warnings or errors

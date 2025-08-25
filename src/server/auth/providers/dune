@@ -2,13 +2,16 @@
  (name auth_providers)
  (public_name ox-fast-mcp.auth_providers)
  (libraries
+  base64
   core
   cohttp
   cohttp-lwt
   cohttp-lwt-unix
   jose
   lwt
-  nocrypto
+  mirage-crypto
+  mirage-crypto-pk
+  mirage-crypto-rng
   uri
   x509
   yojson

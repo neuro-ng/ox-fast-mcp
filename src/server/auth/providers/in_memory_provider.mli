@@ -1,4 +1,4 @@
-open Shared.Auth.Provider
+open Mcp_server_auth.Provider
 
 (** In-memory OAuth provider module *)
 module In_memory_provider : sig

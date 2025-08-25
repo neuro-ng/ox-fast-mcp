@@ -1,5 +1,4 @@
-open Core
-open Shared.Auth.Provider
+open Mcp_server_auth.Provider
 
 (** Settings for the Bearer Auth Provider loaded from environment variables *)
 module Bearer_settings : sig

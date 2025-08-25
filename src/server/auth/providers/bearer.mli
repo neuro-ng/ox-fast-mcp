@@ -1,6 +1,5 @@
-open Core
-open Shared.Auth.Provider
-open Shared.Auth.Settings
+open Mcp_server_auth.Provider
+
 
 type jwk_data = {
   kty : string;  (** Key type (e.g., "RSA") - required *)
