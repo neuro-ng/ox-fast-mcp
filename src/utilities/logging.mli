@@ -32,6 +32,14 @@ module Rich_handler : sig
   val log : t -> level:Log_types.Level.t -> msg:string -> unit
 end
 
+module Simple_handler : sig
+  type t
+
+  val create : ?format_pattern:string -> unit -> t
+  val format : t -> level:Log_types.Level.t -> msg:string -> string
+  val log : t -> level:Log_types.Level.t -> msg:string -> unit
+end
+
 val configure_logging :
   ?level:Log_types.Level.t ->
   ?enable_rich_tracebacks:bool ->

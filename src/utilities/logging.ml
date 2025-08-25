@@ -62,6 +62,19 @@ module Rich_handler = struct
     else eprintf "%s\n%!" formatted
 end
 
+module Simple_handler = struct
+  type t = { formatter : Log_formatter.t }
+
+  let create ?(format_pattern = "%(level)s %(message)s") () =
+    { formatter = Log_formatter.create format_pattern }
+
+  let format t ~level ~msg = Log_formatter.format t.formatter ~level ~msg
+
+  let log t ~level ~msg =
+    let formatted = format t ~level ~msg in
+    eprintf "%s\n%!" formatted
+end
+
 let configure_logging ?(level = Log_types.Level.Info)
     ?(enable_rich_tracebacks = true) ?logger () =
   let logger =
@@ -75,15 +88,15 @@ let configure_logging ?(level = Log_types.Level.Info)
   logger
 
 module Global = struct
-  let default_logger =
-    lazy
-      (let logger = Logger.create "OxFastMCP.Global" in
-       Logger.add_handler logger (module Rich_handler);
-       logger)
+  let simple_formatter = Log_formatter.create "%(level)s %(message)s"
+  
+  let log_direct level msg =
+    let formatted = Log_formatter.format simple_formatter ~level ~msg in
+    eprintf "%s\n%!" formatted
 
-  let debug msg = Logger.debug (Lazy.force default_logger) msg
-  let info msg = Logger.info (Lazy.force default_logger) msg
-  let warning msg = Logger.warning (Lazy.force default_logger) msg
-  let error msg = Logger.error (Lazy.force default_logger) msg
-  let critical msg = Logger.critical (Lazy.force default_logger) msg
+  let debug msg = log_direct Log_types.Level.Debug msg
+  let info msg = log_direct Log_types.Level.Info msg
+  let warning msg = log_direct Log_types.Level.Warning msg
+  let error msg = log_direct Log_types.Level.Error msg
+  let critical msg = log_direct Log_types.Level.Critical msg
 end
