@@ -48,6 +48,7 @@ val configure_logging :
   Logger.t
 
 module Global : sig
+  val configure : ?with_timestamp:bool -> unit -> unit
   val debug : string -> unit
   val info : string -> unit
   val warning : string -> unit

@@ -293,4 +293,30 @@ let%expect_test "Global logger functions work correctly" =
     Global logging test result: success
     |}];
   return ()
+
+let%expect_test "Global logger timestamp configuration works correctly" =
+  (* Test that configuration functions execute without errors *)
+  (try
+     (* Test configuring without timestamp (default) *)
+     Global.configure ~with_timestamp:false ();
+     printf "✓ Configured without timestamp\n";
+     
+     (* Test configuring with timestamp *)
+     Global.configure ~with_timestamp:true ();
+     printf "✓ Configured with timestamp\n";
+     
+     (* Reset to default (without timestamp) for other tests *)
+     Global.configure ~with_timestamp:false ();
+     printf "✓ Reset to no timestamp\n";
+     
+     printf "✓ All timestamp configuration tests passed\n";
+   with
+   | exn -> printf "✗ Timestamp configuration failed: %s\n" (Exn.to_string exn));
+  [%expect {|
+    ✓ Configured without timestamp
+    ✓ Configured with timestamp
+    ✓ Reset to no timestamp
+    ✓ All timestamp configuration tests passed
+    |}];
+  return ()
   
