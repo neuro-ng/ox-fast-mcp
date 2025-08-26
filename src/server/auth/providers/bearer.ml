@@ -138,11 +138,14 @@ module Bearer_auth_provider = struct
           | _ ->
             let* () =
               Lwt.return
-                (Logger.debug logger "No key ID provided and multiple keys in cache")
+                (Logger.debug logger
+                   "No key ID provided and multiple keys in cache")
             in
             Lwt.fail (Failure "No key ID provided and multiple keys in cache"))
       else
-        let* () = Lwt.return (Logger.debug logger ("Fetching JWKS from " ^ uri)) in
+        let* () =
+          Lwt.return (Logger.debug logger ("Fetching JWKS from " ^ uri))
+        in
         let* _response, body = Cohttp_lwt_unix.Client.get (Uri.of_string uri) in
         let* body = Cohttp_lwt.Body.to_string body in
         let jwks = Yojson.Safe.from_string body in
@@ -170,7 +173,8 @@ module Bearer_auth_provider = struct
           | _ ->
             let* () =
               Lwt.return
-                (Logger.debug logger "No key ID provided and multiple keys in JWKS")
+                (Logger.debug logger
+                   "No key ID provided and multiple keys in JWKS")
             in
             Lwt.fail (Failure "No key ID provided and multiple keys in JWKS")))
 
@@ -230,7 +234,8 @@ module Bearer_auth_provider = struct
         | Error _ ->
           let* () =
             Lwt.return
-              (Logger.debug logger "Token validation failed: JWT signature/format invalid")
+              (Logger.debug logger
+                 "Token validation failed: JWT signature/format invalid")
           in
           Lwt.return None
         | Ok claims -> (
@@ -260,7 +265,8 @@ module Bearer_auth_provider = struct
             in
             let* () =
               Lwt.return
-                (Logger.info logger ("Bearer token rejected for client " ^ client_id))
+                (Logger.info logger
+                   ("Bearer token rejected for client " ^ client_id))
             in
             Lwt.return None
           | _ -> (
@@ -279,7 +285,8 @@ module Bearer_auth_provider = struct
               in
               let* () =
                 Lwt.return
-                  (Logger.info logger ("Bearer token rejected for client " ^ client_id))
+                  (Logger.info logger
+                     ("Bearer token rejected for client " ^ client_id))
               in
               Lwt.return None
             | _ -> (

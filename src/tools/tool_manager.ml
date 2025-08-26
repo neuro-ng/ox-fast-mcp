@@ -152,9 +152,10 @@ let load_tools t ~via_server =
         >>| function
         | Ok result -> result
         | Error exn ->
-          Logger.error logger ("Failed to get tools from mounted server '" 
-            ^ (Option.value mounted.prefix ~default:"<no prefix>") 
-            ^ "': " ^ (Exn.to_string exn));
+          Logger.error logger
+            ("Failed to get tools from mounted server '"
+            ^ Option.value mounted.prefix ~default:"<no prefix>"
+            ^ "': " ^ Exn.to_string exn);
           acc)
   in
   return
@@ -230,7 +231,8 @@ let call_tool t key arguments =
     >>| function
     | Ok result -> result
     | Error exn ->
-      Logger.error logger ("Error calling tool " ^ key ^ ": " ^ (Exn.to_string exn));
+      Logger.error logger
+        ("Error calling tool " ^ key ^ ": " ^ Exn.to_string exn);
       if t.mask_error_details then failwith ("Error calling tool " ^ key)
       else raise exn)
   | None ->
@@ -252,7 +254,10 @@ let call_tool t key arguments =
         | Ok result -> return result
         | Error (Not_found_s _) -> try_mounted rest
         | Error _exn ->
-          Logger.error logger ("Error calling tool " ^ key ^ " on mounted server " ^ (Option.value mounted.prefix ~default:"<no prefix>") ^ ": " ^ (Exn.to_string _exn));
+          Logger.error logger
+            ("Error calling tool " ^ key ^ " on mounted server "
+            ^ Option.value mounted.prefix ~default:"<no prefix>"
+            ^ ": " ^ Exn.to_string _exn);
           try_mounted rest)
     in
     try_mounted (List.rev t.mounted_servers)

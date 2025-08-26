@@ -494,10 +494,12 @@ class fast_mcp_openapi ~openapi_spec ~client ?(name = "OpenAPI FastMCP")
       Option.iter mcp_component_fn ~f:(fun f ->
           try
             f route tool;
-            Logger.debug logger ("Tool " ^ tool_name ^ " customized by component_fn")
+            Logger.debug logger
+              ("Tool " ^ tool_name ^ " customized by component_fn")
           with e ->
             Logger.warning logger
-                  ("Error in component_fn for tool " ^ tool_name ^ ": " ^ (Exn.to_string e) ^ ". Using component as-is."));
+              ("Error in component_fn for tool " ^ tool_name ^ ": "
+             ^ Exn.to_string e ^ ". Using component as-is."));
 
       (tool_name, tool)
 
@@ -528,10 +530,12 @@ class fast_mcp_openapi ~openapi_spec ~client ?(name = "OpenAPI FastMCP")
       Option.iter mcp_component_fn ~f:(fun f ->
           try
             f route resource;
-            Logger.debug logger ("Resource " ^ resource_name ^ " customized by component_fn")
+            Logger.debug logger
+              ("Resource " ^ resource_name ^ " customized by component_fn")
           with e ->
             Logger.warning logger
-                  ("Error in component_fn for resource " ^ resource_name ^ ": " ^ (Exn.to_string e) ^ ". Using component as-is."));
+              ("Error in component_fn for resource " ^ resource_name ^ ": "
+             ^ Exn.to_string e ^ ". Using component as-is."));
 
       (resource_uri, resource)
 
@@ -594,10 +598,12 @@ class fast_mcp_openapi ~openapi_spec ~client ?(name = "OpenAPI FastMCP")
       Option.iter mcp_component_fn ~f:(fun f ->
           try
             f route template;
-            Logger.debug logger ("Template " ^ template_name ^ " customized by component_fn")
+            Logger.debug logger
+              ("Template " ^ template_name ^ " customized by component_fn")
           with e ->
             Logger.warning logger
-                  ("Error in component_fn for template " ^ template_name ^ ": " ^ (Exn.to_string e) ^ ". Using component as-is."));
+              ("Error in component_fn for template " ^ template_name ^ ": "
+             ^ Exn.to_string e ^ ". Using component as-is."));
 
       (uri_template, template)
 
@@ -632,22 +638,33 @@ class fast_mcp_openapi ~openapi_spec ~client ?(name = "OpenAPI FastMCP")
               self#create_openapi_tool route name route_tags
             in
             (* Register tool directly with the MCP server framework *)
-            Logger.debug logger ("Registered TOOL: " ^ tool_name ^ " (" ^ (HttpRoute.get_method route) ^ " " ^ route.path ^ ") with tags: " ^ (String.concat ~sep:", " route.tags))
+            Logger.debug logger
+              ("Registered TOOL: " ^ tool_name ^ " ("
+             ^ HttpRoute.get_method route ^ " " ^ route.path ^ ") with tags: "
+              ^ String.concat ~sep:", " route.tags)
           | MCPType.Resource ->
             let uri, resource =
               self#create_openapi_resource route name route_tags
             in
             (* Register resource directly with the MCP server framework *)
-            Logger.debug logger ("Registered RESOURCE: " ^ (Uri.to_string uri) ^ " (" ^ (HttpRoute.get_method route) ^ " " ^ route.path ^ ") with tags: " ^ (String.concat ~sep:", " route.tags))
+            Logger.debug logger
+              ("Registered RESOURCE: " ^ Uri.to_string uri ^ " ("
+             ^ HttpRoute.get_method route ^ " " ^ route.path ^ ") with tags: "
+              ^ String.concat ~sep:", " route.tags)
           | MCPType.ResourceTemplate ->
             let uri_template, template =
               self#create_openapi_template route name route_tags
             in
             (* Register resource template directly with the MCP server
                framework *)
-            Logger.debug logger ("Registered TEMPLATE: " ^ uri_template ^ " (" ^ (HttpRoute.get_method route) ^ " " ^ route.path ^ ") with tags: " ^ (String.concat ~sep:", " route.tags))
+            Logger.debug logger
+              ("Registered TEMPLATE: " ^ uri_template ^ " ("
+             ^ HttpRoute.get_method route ^ " " ^ route.path ^ ") with tags: "
+              ^ String.concat ~sep:", " route.tags)
           | MCPType.Exclude ->
-            Logger.info logger ("Excluding route: " ^ (HttpRoute.get_method route) ^ " " ^ route.path))
+            Logger.info logger
+              ("Excluding route: " ^ HttpRoute.get_method route ^ " "
+             ^ route.path))
   end
 
 let format_json_for_description data =
