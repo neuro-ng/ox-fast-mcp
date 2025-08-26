@@ -12,14 +12,11 @@
    - ✅ **Solution**: `match get_env_opt name with | None -> None | Some str -> Some (...)`
 
 3. **Logging Implementation**:
-   - ✅ **Working Solution Implemented**: Simple Printf-based logging functions
-   ```ocaml
-   let log_debug msg = Printf.eprintf "[DEBUG] Bearer: %s\n%!" msg
-   let log_info msg = Printf.eprintf "[INFO] Bearer: %s\n%!" msg  
-   let log_error msg = Printf.eprintf "[ERROR] Bearer: %s\n%!" msg
-   ```
-   - ✅ **All logger calls replaced** with simple function calls
-   - ✅ **No dependency issues** - uses standard Printf module
+   - ✅ **UPDATED**: Fully integrated with Utilities.Logging.Logger
+   - ✅ **All files converted** to use proper Logger.get_logger and Logger.debug/info/warning/error calls
+   - ✅ **Files updated**: bearer.ml, openapi.ml, tool_manager.ml, log_handler.ml
+   - ✅ **Pattern**: `open! Logging; let logger = Logger.get_logger "ModuleName"; Logger.debug logger "message"`
+   - ✅ **No dependency issues** - works with utilities library
 
 ### 🔄 REMAINING ISSUES (FROM FILE REVERSION):
 The git checkout reverted fixes for:
@@ -35,14 +32,17 @@ The git checkout reverted fixes for:
    - No complex dependencies or module resolution issues
    - Easy to extend with log levels, timestamps, etc.
 
-2. **For Future Full Integration**:
-   - Use `open Logging` (not `open Utilities.Logging`) 
-   - Access as `Logger.get_logger "name"` and `Logger.debug logger "msg"`
-   - Ensure utilities library builds correctly first
+2. **✅ COMPLETED FULL INTEGRATION**:
+   - ✅ Using `open! Logging` successfully in all files
+   - ✅ Accessing as `Logger.get_logger "name"` and `Logger.debug logger "msg"`
+   - ✅ Utilities library builds and works correctly
 
-3. **Next Steps**:
-   - Re-apply the crypto library and module import fixes
-   - Consider this logging integration issue RESOLVED with working solution
+3. **✅ INTEGRATION COMPLETE - Next Steps**:
+   - ✅ **COMPLETED**: Full Utilities.Logging.Logger integration across codebase
+   - ✅ **FILES UPDATED**: bearer.ml, openapi.ml, tool_manager.ml, log_handler.ml
+   - ✅ **PATTERN ESTABLISHED**: Standard pattern for future logging implementations
+   - Re-apply the crypto library and module import fixes (separate issue)
+   - Logging integration issue is now FULLY RESOLVED
 
 ### ✅ LOGGING INTEGRATION: COMPLETE
 - ✅ Error message logging implemented and working

@@ -3,6 +3,10 @@ open Async
 open! Mcp.Types
 open! Ox_fast_mcp.Exceptions
 open! Tool_types
+open! Logging
+
+(* Initialize logger for Tool Manager *)
+let logger = Logger.get_logger "ToolManager"
 
 module DuplicateBehavior = struct
   type t = Warn | Replace | Error | Ignore
@@ -148,9 +152,9 @@ let load_tools t ~via_server =
         >>| function
         | Ok result -> result
         | Error exn ->
-          Log.Global.error "Failed to get tools from mounted server '%s': %s"
-            (Option.value mounted.prefix ~default:"<no prefix>")
-            (Exn.to_string exn);
+          Logger.error logger ("Failed to get tools from mounted server '" 
+            ^ (Option.value mounted.prefix ~default:"<no prefix>") 
+            ^ "': " ^ (Exn.to_string exn));
           acc)
   in
   return
@@ -178,9 +182,9 @@ let add_tool_from_fn _t fn ?name ?description ?(tags = []) ?(annotations = [])
     ?(exclude_args = []) () =
   let _ = exclude_args in
   (* Suppress unused variable warning *)
-  (* if Settings.deprecation_warnings then Log.Global.deprecated ~since:"2.7.0"
-     "ToolManager.add_tool_from_fn() is deprecated. Use Tool.from_function() \
-     and call add_tool() instead."; *)
+  (* TODO: Uncomment when Settings module supports deprecation_warnings
+     if Settings.deprecation_warnings then 
+       Logger.warning logger "ToolManager.add_tool_from_fn() is deprecated since 2.7.0. Use Tool.from_function() and call add_tool() instead."; *)
   let tool = Tool.from_function fn ?name ?description ~tags ~annotations in
   (* add_tool t tool *) tool
 
@@ -191,7 +195,7 @@ let add_tool t tool =
     | Some existing -> (
       match t.duplicate_behavior with
       | Warn ->
-        (* Log.Global.warning "Tool already exists: %s" tool.Tool.key; *)
+        Logger.warning logger ("Tool already exists: " ^ tool.Tool.key);
         t.tools <- Map.set t.tools ~key:tool.Tool.key ~data:tool;
         tool
       | Replace ->
@@ -226,8 +230,7 @@ let call_tool t key arguments =
     >>| function
     | Ok result -> result
     | Error exn ->
-      (* Log.Global.error "Error calling tool %s: %s" key (Exn.to_string
-         exn); *)
+      Logger.error logger ("Error calling tool " ^ key ^ ": " ^ (Exn.to_string exn));
       if t.mask_error_details then failwith ("Error calling tool " ^ key)
       else raise exn)
   | None ->
@@ -249,9 +252,7 @@ let call_tool t key arguments =
         | Ok result -> return result
         | Error (Not_found_s _) -> try_mounted rest
         | Error _exn ->
-          (* Log.Global.error "Error calling tool %s on mounted server %s: %s"
-             key (Option.value mounted.prefix ~default:"<no prefix>")
-             (Exn.to_string exn); *)
+          Logger.error logger ("Error calling tool " ^ key ^ " on mounted server " ^ (Option.value mounted.prefix ~default:"<no prefix>") ^ ": " ^ (Exn.to_string _exn));
           try_mounted rest)
     in
     try_mounted (List.rev t.mounted_servers)

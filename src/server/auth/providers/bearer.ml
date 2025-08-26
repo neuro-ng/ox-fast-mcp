@@ -1,12 +1,10 @@
 open Core
 open Lwt.Syntax
 open Mcp_server_auth.Provider
+open! Logging
 
-(* Settings module not found, will define needed types inline if necessary *)
-(* Simple logging functions instead of full Utilities.Logging *)
-let log_debug msg = Printf.eprintf "[DEBUG] Bearer: %s\n%!" msg
-let log_info msg = Printf.eprintf "[INFO] Bearer: %s\n%!" msg
-(* let log_error msg = Printf.eprintf "[ERROR] Bearer: %s\n%!" msg *)
+(* Initialize logger for Bearer authentication provider *)
+let logger = Logger.get_logger "Bearer"
 
 type jwk_data = {
   kty : string;
@@ -94,7 +92,6 @@ module Bearer_auth_provider = struct
   }
 
   let state = ref None
-  (* Using simple logging functions defined above *)
 
   let get_state () =
     match !state with
@@ -123,7 +120,7 @@ module Bearer_auth_provider = struct
     let* () = Lwt.return () in
     match t.jwks_uri with
     | None ->
-      let* () = Lwt.return (log_debug "JWKS URI not configured") in
+      let* () = Lwt.return (Logger.debug logger "JWKS URI not configured") in
       Lwt.fail (Failure "JWKS URI not configured")
     | Some uri -> (
       if Float.(current_time -. t.jwks_cache_time < t.cache_ttl) then
@@ -133,7 +130,7 @@ module Bearer_auth_provider = struct
           | Some key -> Lwt.return key
           | None ->
             let msg = Printf.sprintf "Key ID '%s' not found in cache" k in
-            let* () = Lwt.return (log_debug msg) in
+            let* () = Lwt.return (Logger.debug logger msg) in
             Lwt.fail (Failure msg))
         | None -> (
           match t.jwks_cache with
@@ -141,11 +138,11 @@ module Bearer_auth_provider = struct
           | _ ->
             let* () =
               Lwt.return
-                (log_debug "No key ID provided and multiple keys in cache")
+                (Logger.debug logger "No key ID provided and multiple keys in cache")
             in
             Lwt.fail (Failure "No key ID provided and multiple keys in cache"))
       else
-        let* () = Lwt.return (log_debug ("Fetching JWKS from " ^ uri)) in
+        let* () = Lwt.return (Logger.debug logger ("Fetching JWKS from " ^ uri)) in
         let* _response, body = Cohttp_lwt_unix.Client.get (Uri.of_string uri) in
         let* body = Cohttp_lwt.Body.to_string body in
         let jwks = Yojson.Safe.from_string body in
@@ -165,7 +162,7 @@ module Bearer_auth_provider = struct
           | Some key -> Lwt.return key
           | None ->
             let msg = Printf.sprintf "Key ID '%s' not found in JWKS" k in
-            let* () = Lwt.return (log_debug msg) in
+            let* () = Lwt.return (Logger.debug logger msg) in
             Lwt.fail (Failure msg))
         | None -> (
           match keys with
@@ -173,7 +170,7 @@ module Bearer_auth_provider = struct
           | _ ->
             let* () =
               Lwt.return
-                (log_debug "No key ID provided and multiple keys in JWKS")
+                (Logger.debug logger "No key ID provided and multiple keys in JWKS")
             in
             Lwt.fail (Failure "No key ID provided and multiple keys in JWKS")))
 
@@ -233,7 +230,7 @@ module Bearer_auth_provider = struct
         | Error _ ->
           let* () =
             Lwt.return
-              (log_debug "Token validation failed: JWT signature/format invalid")
+              (Logger.debug logger "Token validation failed: JWT signature/format invalid")
           in
           Lwt.return None
         | Ok claims -> (
@@ -257,13 +254,13 @@ module Bearer_auth_provider = struct
           | Some e when e < now ->
             let* () =
               Lwt.return
-                (log_debug
+                (Logger.debug logger
                    ("Token validation failed: expired token for client "
                   ^ client_id))
             in
             let* () =
               Lwt.return
-                (log_info ("Bearer token rejected for client " ^ client_id))
+                (Logger.info logger ("Bearer token rejected for client " ^ client_id))
             in
             Lwt.return None
           | _ -> (
@@ -276,13 +273,13 @@ module Bearer_auth_provider = struct
               ->
               let* () =
                 Lwt.return
-                  (log_debug
+                  (Logger.debug logger
                      ("Token validation failed: issuer mismatch for client "
                     ^ client_id))
               in
               let* () =
                 Lwt.return
-                  (log_info ("Bearer token rejected for client " ^ client_id))
+                  (Logger.info logger ("Bearer token rejected for client " ^ client_id))
               in
               Lwt.return None
             | _ -> (
@@ -311,13 +308,13 @@ module Bearer_auth_provider = struct
                 else
                   let* () =
                     Lwt.return
-                      (log_debug
+                      (Logger.debug logger
                          ("Token validation failed: audience mismatch for \
                            client " ^ client_id))
                   in
                   let* () =
                     Lwt.return
-                      (log_info
+                      (Logger.info logger
                          ("Bearer token rejected for client " ^ client_id))
                   in
                   Lwt.return None
