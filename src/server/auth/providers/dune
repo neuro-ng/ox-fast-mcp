@@ -1,6 +1,6 @@
 (library
- (name auth_providers)
- (public_name ox-fast-mcp.auth_providers)
+ (name server_auth_providers)
+ (public_name ox-fast-mcp.server.auth.providers)
  (libraries
   base64
   core

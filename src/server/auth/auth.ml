@@ -1,6 +1,4 @@
-open Core
-open Lwt.Syntax
-open Server.Auth.Provider
+open Mcp_server_auth.Provider
 open Settings
 
 (** OAuth provider base module *)

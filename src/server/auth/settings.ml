@@ -1,5 +1,3 @@
-open Core
-
 type client_registration_options = {
   enabled : bool;
   client_secret_expiry_seconds : int option;
