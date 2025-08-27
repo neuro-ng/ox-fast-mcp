@@ -6,8 +6,8 @@ open Middleware
 
 (* Simple logger type for middleware *)
 type logger_t = {
-  name: string;
-  level: [`Debug | `Info | `Warning | `Error | `Critical];
+  name : string;
+  level : [ `Debug | `Info | `Warning | `Error | `Critical ];
 }
 
 type error_callback = exn -> context -> unit

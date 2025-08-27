@@ -5,8 +5,8 @@ open Async
 open Tools.Tool_manager
 open Mcp.Types
 
-(** FastMCP context type placeholder *)
 type fastmcp_context = Yojson.Safe.t
+(** FastMCP context type placeholder *)
 
 (** Result types for different operations *)
 module Results : sig
@@ -75,10 +75,7 @@ module type S = sig
   (** Handle resource read requests *)
 
   val on_get_prompt :
-    t ->
-    context ->
-    get_prompt_result call_next ->
-    get_prompt_result Deferred.t
+    t -> context -> get_prompt_result call_next -> get_prompt_result Deferred.t
   (** Handle prompt get requests *)
 
   val on_list_tools :

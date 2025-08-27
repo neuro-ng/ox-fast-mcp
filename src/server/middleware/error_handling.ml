@@ -5,8 +5,8 @@ open Mcp.Types
 
 (* Simple logger type for middleware *)
 type logger_t = {
-  name: string;
-  level: [`Debug | `Info | `Warning | `Error | `Critical];
+  name : string;
+  level : [ `Debug | `Info | `Warning | `Error | `Critical ];
 }
 
 type error_callback = exn -> context -> unit
@@ -19,7 +19,7 @@ type t = {
   mutable error_counts : int String.Map.t;
 }
 
-let create ?(logger = {name = "fastmcp.errors"; level = `Info})
+let create ?(logger = { name = "fastmcp.errors"; level = `Info })
     ?(include_traceback = false) ?(error_callback = None)
     ?(transform_errors = true) () =
   {
@@ -31,15 +31,16 @@ let create ?(logger = {name = "fastmcp.errors"; level = `Info})
   }
 
 let log_error t error context =
-  let error_type =
-    Exn.to_string error |> String.split ~on:' ' |> List.hd_exn
-  in
+  let error_type = Exn.to_string error |> String.split ~on:' ' |> List.hd_exn in
   let method_ = "unknown" in
   let error_key = sprintf "%s:%s" error_type method_ in
 
   (* Update error counts *)
-  let current_count = Map.find t.error_counts error_key |> Option.value ~default:0 in
-  t.error_counts <- Map.set t.error_counts ~key:error_key ~data:(current_count + 1);
+  let current_count =
+    Map.find t.error_counts error_key |> Option.value ~default:0
+  in
+  t.error_counts <-
+    Map.set t.error_counts ~key:error_key ~data:(current_count + 1);
 
   let base_message =
     sprintf "Error in %s: %s: %s" method_ error_type (Exn.to_string error)
@@ -51,9 +52,7 @@ let log_error t error context =
   (* Call error callback if provided *)
   match t.error_callback with
   | Some callback -> (
-    try callback error context
-    with exn ->
-      ignore (t.logger.name, exn))
+    try callback error context with exn -> ignore (t.logger.name, exn))
   | None -> ()
 
 let transform_error t error =
@@ -91,7 +90,7 @@ module Retry = struct
           | Unix.Unix_error (ECONNRESET, _, _) -> true
           (* | Async_unix.Timeout -> true (* Timeout not available *) *)
           | _ -> false);
-        ]) ?(logger = {name = "fastmcp.retry"; level = `Info}) () =
+        ]) ?(logger = { name = "fastmcp.retry"; level = `Info }) () =
     {
       max_retries;
       base_delay;
@@ -121,8 +120,7 @@ module Retry = struct
           let delay = calculate_delay t attempt in
           (* Log retry warning - simplified for now *)
           ignore (t.logger.name, error, attempt, delay);
-          Clock.after (sec delay) >>= fun () ->
-          try_request (attempt + 1)
+          Clock.after (sec delay) >>= fun () -> try_request (attempt + 1)
     in
     try_request 0 >>= function
     | Ok result -> return result

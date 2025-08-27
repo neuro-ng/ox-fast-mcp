@@ -5,15 +5,15 @@ open Middleware
 
 (* Simple logger type for middleware *)
 type logger_t = {
-  name: string;
-  level: [`Debug | `Info | `Warning | `Error | `Critical];
+  name : string;
+  level : [ `Debug | `Info | `Warning | `Error | `Critical ];
 }
 
 (** Basic logging middleware *)
 module Logging : sig
   type t = {
     logger : logger_t;
-    log_level : [`Debug | `Info | `Warning | `Error | `Critical];
+    log_level : [ `Debug | `Info | `Warning | `Error | `Critical ];
     include_payloads : bool;
     max_payload_length : int;
     methods : string list option;
@@ -21,7 +21,7 @@ module Logging : sig
 
   val create :
     ?logger:logger_t ->
-    ?log_level:[`Debug | `Info | `Warning | `Error | `Critical] ->
+    ?log_level:[ `Debug | `Info | `Warning | `Error | `Critical ] ->
     ?include_payloads:bool ->
     ?max_payload_length:int ->
     ?methods:string list ->
@@ -48,14 +48,14 @@ end
 module Structured_logging : sig
   type t = {
     logger : logger_t;
-    log_level : [`Debug | `Info | `Warning | `Error | `Critical];
+    log_level : [ `Debug | `Info | `Warning | `Error | `Critical ];
     include_payloads : bool;
     methods : string list option;
   }
 
   val create :
     ?logger:logger_t ->
-    ?log_level:[`Debug | `Info | `Warning | `Error | `Critical] ->
+    ?log_level:[ `Debug | `Info | `Warning | `Error | `Critical ] ->
     ?include_payloads:bool ->
     ?methods:string list ->
     unit ->
