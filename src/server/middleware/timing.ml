@@ -11,18 +11,18 @@ module TimingMiddleware = struct
     { logger; log_level }
 
   let middleware t handler req body =
-    let method_name = req |> Request.meth |> Code.string_of_method in
-    let start_time = Unix.gettimeofday () in
+    let method_name = req |> Request.meth |> Cohttp.Code.string_of_method in
+    let start_time = Core_unix.gettimeofday () in
 
     Lwt.catch
       (fun () ->
         let* response, body' = handler req body in
-        let duration_ms = (Unix.gettimeofday () -. start_time) *. 1000.0 in
+        let duration_ms = (Core_unix.gettimeofday () -. start_time) *. 1000.0 in
         Logs.msg ~src:t.logger t.log_level (fun m ->
             m "Request %s completed in %.2fms" method_name duration_ms);
         Lwt.return (response, body'))
       (fun exn ->
-        let duration_ms = (Unix.gettimeofday () -. start_time) *. 1000.0 in
+        let duration_ms = (Core_unix.gettimeofday () -. start_time) *. 1000.0 in
         Logs.msg ~src:t.logger t.log_level (fun m ->
             m "Request %s failed after %.2fms: %s" method_name duration_ms
               (Exn.to_string exn));
@@ -38,17 +38,17 @@ module DetailedTimingMiddleware = struct
     { logger; log_level }
 
   let time_operation t operation_name handler req body =
-    let start_time = Unix.gettimeofday () in
+    let start_time = Core_unix.gettimeofday () in
 
     Lwt.catch
       (fun () ->
         let* response, body' = handler req body in
-        let duration_ms = (Unix.gettimeofday () -. start_time) *. 1000.0 in
+        let duration_ms = (Core_unix.gettimeofday () -. start_time) *. 1000.0 in
         Logs.msg ~src:t.logger t.log_level (fun m ->
             m "%s completed in %.2fms" operation_name duration_ms);
         Lwt.return (response, body'))
       (fun exn ->
-        let duration_ms = (Unix.gettimeofday () -. start_time) *. 1000.0 in
+        let duration_ms = (Core_unix.gettimeofday () -. start_time) *. 1000.0 in
         Logs.msg ~src:t.logger t.log_level (fun m ->
             m "%s failed after %.2fms: %s" operation_name duration_ms
               (Exn.to_string exn));

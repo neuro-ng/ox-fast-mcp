@@ -2,27 +2,32 @@
 
 open Core
 open Async
+open Tools.Tool_manager
+open Mcp.Types
+
+(** FastMCP context type placeholder *)
+type fastmcp_context = Yojson.Safe.t
 
 (** Result types for different operations *)
 module Results : sig
   type call_tool_result = { content : Yojson.Safe.t list; is_error : bool }
   type list_tools_result = { tools : (string * Tool.t) list }
-  type list_resources_result = { resources : Resource.t list }
+  type list_resources_result = { resources : resource list }
 
   type list_resource_templates_result = {
-    resource_templates : Resource_template.t list;
+    resource_templates : resource_template list;
   }
 
-  type list_prompts_result = { prompts : Prompt.t list }
+  type list_prompts_result = { prompts : prompt list }
 end
 
 type context = {
   message : Yojson.Safe.t;
-  fastmcp_context : Context.t option;
+  fastmcp_context : fastmcp_context option;
   source : [ `Client | `Server ];
   type_ : [ `Request | `Notification ];
   method_ : string option;
-  timestamp : Time.t;
+  timestamp : Time_ns.t;
   params : Yojson.Safe.t;
   id : string option;
   resource : string option;
@@ -65,15 +70,15 @@ module type S = sig
   val on_read_resource :
     t ->
     context ->
-    Read_resource_result.t call_next ->
-    Read_resource_result.t Deferred.t
+    read_resource_result call_next ->
+    read_resource_result Deferred.t
   (** Handle resource read requests *)
 
   val on_get_prompt :
     t ->
     context ->
-    Get_prompt_result.t call_next ->
-    Get_prompt_result.t Deferred.t
+    get_prompt_result call_next ->
+    get_prompt_result Deferred.t
   (** Handle prompt get requests *)
 
   val on_list_tools :
@@ -114,11 +119,11 @@ val make_middleware_wrapper :
 val copy_context :
   context ->
   ?message:Yojson.Safe.t ->
-  ?fastmcp_context:Context.t option ->
+  ?fastmcp_context:fastmcp_context option ->
   ?source:[ `Client | `Server ] ->
   ?type_:[ `Request | `Notification ] ->
   ?method_:string option ->
-  ?timestamp:Time.t ->
+  ?timestamp:Time_ns.t ->
   ?params:Yojson.Safe.t ->
   ?id:string option ->
   ?resource:string option ->

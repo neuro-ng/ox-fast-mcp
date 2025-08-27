@@ -4,22 +4,28 @@ open Core
 open Async
 open Middleware
 
+(* Simple logger type for middleware *)
+type logger_t = {
+  name: string;
+  level: [`Debug | `Info | `Warning | `Error | `Critical];
+}
+
 type error_callback = exn -> context -> unit
 (** Type for error callback functions *)
 
 type t = {
-  logger : Logger.t;
+  logger : logger_t;
   include_traceback : bool;
   error_callback : error_callback option;
   transform_errors : bool;
-  error_counts : int String.Map.t;
+  mutable error_counts : int String.Map.t;
 }
 (** Error handling middleware type *)
 
 val create :
-  ?logger:Logger.t ->
+  ?logger:logger_t ->
   ?include_traceback:bool ->
-  ?error_callback:error_callback ->
+  ?error_callback:error_callback option ->
   ?transform_errors:bool ->
   unit ->
   t
@@ -36,7 +42,7 @@ val log_error : t -> exn -> context -> unit
 val transform_error : t -> exn -> exn
 (** Transform non-MCP errors to proper MCP errors *)
 
-val on_message : t -> context -> call_next -> 'a Deferred.t
+val on_message : t -> context -> 'a call_next -> 'a Deferred.t
 (** Handle errors for all messages *)
 
 val get_error_stats : t -> int String.Map.t
@@ -50,7 +56,7 @@ module Retry : sig
     max_delay : float;
     backoff_multiplier : float;
     retry_exceptions : (exn -> bool) list;
-    logger : Logger.t;
+    logger : logger_t;
   }
 
   val create :
@@ -59,7 +65,7 @@ module Retry : sig
     ?max_delay:float ->
     ?backoff_multiplier:float ->
     ?retry_exceptions:(exn -> bool) list ->
-    ?logger:Logger.t ->
+    ?logger:logger_t ->
     unit ->
     t
   (** Create retry middleware
@@ -77,6 +83,6 @@ module Retry : sig
   val calculate_delay : t -> int -> float
   (** Calculate delay for the given attempt number *)
 
-  val on_request : t -> context -> call_next -> 'a Deferred.t
+  val on_request : t -> context -> 'a call_next -> 'a Deferred.t
   (** Implement retry logic for requests *)
 end

@@ -1,22 +1,27 @@
 (** Comprehensive logging middleware for FastMCP servers *)
 
-open Core
 open Async
 open Middleware
+
+(* Simple logger type for middleware *)
+type logger_t = {
+  name: string;
+  level: [`Debug | `Info | `Warning | `Error | `Critical];
+}
 
 (** Basic logging middleware *)
 module Logging : sig
   type t = {
-    logger : Logger.t;
-    log_level : Logger.Level.t;
+    logger : logger_t;
+    log_level : [`Debug | `Info | `Warning | `Error | `Critical];
     include_payloads : bool;
     max_payload_length : int;
     methods : string list option;
   }
 
   val create :
-    ?logger:Logger.t ->
-    ?log_level:Logger.Level.t ->
+    ?logger:logger_t ->
+    ?log_level:[`Debug | `Info | `Warning | `Error | `Critical] ->
     ?include_payloads:bool ->
     ?max_payload_length:int ->
     ?methods:string list ->
@@ -35,22 +40,22 @@ module Logging : sig
   val format_message : t -> context -> string
   (** Format a message for logging *)
 
-  val on_message : t -> context -> call_next -> 'a Deferred.t
+  val on_message : t -> context -> 'a call_next -> 'a Deferred.t
   (** Log all messages *)
 end
 
 (** Structured JSON logging middleware *)
 module Structured_logging : sig
   type t = {
-    logger : Logger.t;
-    log_level : Logger.Level.t;
+    logger : logger_t;
+    log_level : [`Debug | `Info | `Warning | `Error | `Critical];
     include_payloads : bool;
     methods : string list option;
   }
 
   val create :
-    ?logger:Logger.t ->
-    ?log_level:Logger.Level.t ->
+    ?logger:logger_t ->
+    ?log_level:[`Debug | `Info | `Warning | `Error | `Critical] ->
     ?include_payloads:bool ->
     ?methods:string list ->
     unit ->
@@ -67,6 +72,6 @@ module Structured_logging : sig
     t -> context -> string -> (string * Yojson.Safe.t) list -> Yojson.Safe.t
   (** Create a structured log entry *)
 
-  val on_message : t -> context -> call_next -> 'a Deferred.t
+  val on_message : t -> context -> 'a call_next -> 'a Deferred.t
   (** Log structured message information *)
 end

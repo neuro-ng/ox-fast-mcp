@@ -1,11 +1,18 @@
 (library
- (name middleware)
+ (name server_middleware)
  (public_name ox-fast-mcp.server.middleware)
  (libraries
   core
   async
   yojson
+  cohttp
+  cohttp-lwt
+  cohttp-lwt-unix
+  logs
+  lwt
   ox-fast-mcp.mcp
-  ox-fast-mcp.shared)
+  ox-fast-mcp.shared
+  ox-fast-mcp.tools
+  ox-fast-mcp.utilities)
  (preprocess
   (pps ppx_jane ppx_let))) 

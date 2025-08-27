@@ -1,25 +1,30 @@
 open Core
 open Async
+open Tools.Tool_manager
+open Mcp.Types
+
+(** FastMCP context type placeholder *)
+type fastmcp_context = Yojson.Safe.t
 
 module Results = struct
   type call_tool_result = { content : Yojson.Safe.t list; is_error : bool }
   type list_tools_result = { tools : (string * Tool.t) list }
-  type list_resources_result = { resources : Resource.t list }
+  type list_resources_result = { resources : resource list }
 
   type list_resource_templates_result = {
-    resource_templates : Resource_template.t list;
+    resource_templates : resource_template list;
   }
 
-  type list_prompts_result = { prompts : Prompt.t list }
+  type list_prompts_result = { prompts : prompt list }
 end
 
 type context = {
   message : Yojson.Safe.t;
-  fastmcp_context : Context.t option;
+  fastmcp_context : fastmcp_context option;
   source : [ `Client | `Server ];
   type_ : [ `Request | `Notification ];
   method_ : string option;
-  timestamp : Time.t;
+  timestamp : Time_ns.t;
   params : Yojson.Safe.t;
   id : string option;
   resource : string option;
@@ -46,14 +51,14 @@ module type S = sig
   val on_read_resource :
     t ->
     context ->
-    Read_resource_result.t call_next ->
-    Read_resource_result.t Deferred.t
+    read_resource_result call_next ->
+    read_resource_result Deferred.t
 
   val on_get_prompt :
     t ->
     context ->
-    Get_prompt_result.t call_next ->
-    Get_prompt_result.t Deferred.t
+    get_prompt_result call_next ->
+    get_prompt_result Deferred.t
 
   val on_list_tools :
     t ->
@@ -101,13 +106,20 @@ let copy_context context ?message ?fastmcp_context ?source ?type_ ?method_
 
 (** Base implementation that other middleware can extend *)
 module Base = struct
-  type t = unit
+  type t = unit [@@warning "-34"]
 
-  let create () = ()
+  let create () = () [@@warning "-32"]
 
-  let call _t context call_next =
-    let%bind handler = dispatch_handler _t context call_next in
-    handler context
+  let on_message _t context call_next = call_next context
+  let on_request _t context call_next = call_next context
+  let on_notification _t context call_next = call_next context
+  let on_call_tool _t context call_next = call_next context
+  let on_read_resource _t context call_next = call_next context
+  let on_get_prompt _t context call_next = call_next context
+  let on_list_tools _t context call_next = call_next context
+  let on_list_resources _t context call_next = call_next context
+  let on_list_resource_templates _t context call_next = call_next context
+  let on_list_prompts _t context call_next = call_next context
 
   let dispatch_handler _t context call_next =
     let handler = ref call_next in
@@ -134,14 +146,7 @@ module Base = struct
 
     return !handler
 
-  let on_message _t context call_next = call_next context
-  let on_request _t context call_next = call_next context
-  let on_notification _t context call_next = call_next context
-  let on_call_tool _t context call_next = call_next context
-  let on_read_resource _t context call_next = call_next context
-  let on_get_prompt _t context call_next = call_next context
-  let on_list_tools _t context call_next = call_next context
-  let on_list_resources _t context call_next = call_next context
-  let on_list_resource_templates _t context call_next = call_next context
-  let on_list_prompts _t context call_next = call_next context
+  let call _t context call_next = [@@warning "-32"]
+    let%bind handler = dispatch_handler _t context call_next in
+    handler context
 end

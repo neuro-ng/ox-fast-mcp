@@ -20,13 +20,13 @@ module TokenBucketRateLimiter = struct
       capacity;
       refill_rate;
       tokens = float_of_int capacity;
-      last_refill = Unix.gettimeofday ();
+      last_refill = Core_unix.gettimeofday ();
       mutex = Lwt_mutex.create ();
     }
 
   let consume ?(amount = 1) t =
     Lwt_mutex.with_lock t.mutex (fun () ->
-        let now = Unix.gettimeofday () in
+        let now = Core_unix.gettimeofday () in
         let elapsed = now -. t.last_refill in
 
         (* Add tokens based on elapsed time *)
@@ -35,7 +35,7 @@ module TokenBucketRateLimiter = struct
             (t.tokens +. (elapsed *. t.refill_rate));
         t.last_refill <- now;
 
-        if t.tokens >= float_of_int amount then (
+        if Float.(t.tokens >= float_of_int amount) then (
           t.tokens <- t.tokens -. float_of_int amount;
           Lwt.return true)
         else Lwt.return false)
@@ -60,13 +60,13 @@ module SlidingWindowRateLimiter = struct
 
   let is_allowed t =
     Lwt_mutex.with_lock t.mutex (fun () ->
-        let now = Unix.gettimeofday () in
+        let now = Core_unix.gettimeofday () in
         let cutoff = now -. float_of_int t.window_seconds in
 
         (* Remove old requests outside the window *)
         while
           (not (Queue.is_empty t.requests))
-          && Queue.peek_exn t.requests < cutoff
+          && Float.(Queue.peek_exn t.requests < cutoff)
         do
           ignore (Queue.dequeue_exn t.requests)
         done;
@@ -89,7 +89,7 @@ module RateLimitingMiddleware = struct
   }
 
   let create ?(max_requests_per_second = 10.0) ?(burst_capacity = None)
-      ?(get_client_id = None) ?(global_limit = false) () =
+      ?(get_client_id = fun _ -> None) ?(global_limit = false) () =
     let burst_capacity =
       Option.value burst_capacity
         ~default:(Int.of_float (max_requests_per_second *. 2.0))
@@ -97,7 +97,7 @@ module RateLimitingMiddleware = struct
     {
       max_requests_per_second;
       burst_capacity;
-      get_client_id = Option.value get_client_id ~default:(fun _ -> None);
+      get_client_id;
       global_limit;
       limiters = Hashtbl.create (module String);
       global_limiter =
@@ -146,11 +146,11 @@ module SlidingWindowRateLimitingMiddleware = struct
     limiters : (string, SlidingWindowRateLimiter.t) Hashtbl.t;
   }
 
-  let create ~max_requests ~window_minutes ?(get_client_id = None) () =
+  let create ~max_requests ~window_minutes ?(get_client_id = fun _ -> None) () =
     {
       max_requests;
       window_minutes;
-      get_client_id = Option.value get_client_id ~default:(fun _ -> None);
+      get_client_id;
       limiters = Hashtbl.create (module String);
     }
 
