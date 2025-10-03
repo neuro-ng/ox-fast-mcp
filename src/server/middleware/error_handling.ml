@@ -1,7 +1,6 @@
 open Core
 open Async
 open Middleware
-open Mcp.Types
 
 (* Simple logger type for middleware *)
 type logger_t = {
@@ -113,16 +112,14 @@ module Retry = struct
     let rec try_request attempt =
       Monitor.try_with (fun () -> call_next context) >>= function
       | Ok result -> return result
-      | Error error as e ->
-        if attempt = t.max_retries || not (should_retry t error) then
-          Deferred.return e
+      | Error error ->
+        if attempt >= t.max_retries || not (should_retry t error) then
+          raise error
         else
           let delay = calculate_delay t attempt in
           (* Log retry warning - simplified for now *)
           ignore (t.logger.name, error, attempt, delay);
           Clock.after (sec delay) >>= fun () -> try_request (attempt + 1)
     in
-    try_request 0 >>= function
-    | Ok result -> return result
-    | Error exn -> raise exn
+    try_request 0
 end

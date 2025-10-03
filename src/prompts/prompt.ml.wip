@@ -4,14 +4,12 @@ open Fmcp_types
 
 (* TODO: Define execution_context type or import from proper module *)
 type execution_context = unit
-type prompt_message = json (* TODO: Use proper type from fmcp_types *)
-
+type prompt_message = json  (* TODO: Use proper type from fmcp_types *)
 type prompt_argument = {
   name : string;
   description : string option;
   required : bool;
-}
-(* TODO: Use proper type from fmcp_types *)
+}  (* TODO: Use proper type from fmcp_types *)
 
 type prompt_handler =
   execution_context -> (string * json) list -> prompt_message list Lwt.t

@@ -1,5 +1,6 @@
 open Alcotest
-open Utilities.Openapi
+(* open Utilities.Openapi *)
+(* TODO: Update module path once Openapi structure is finalized *)
 
 (* Import helper functions *)
 let get_method = HttpRoute.get_method

@@ -3,8 +3,8 @@ open Async
 open Tools.Tool_manager
 open Mcp.Types
 
-(** FastMCP context type placeholder *)
 type fastmcp_context = Yojson.Safe.t
+(** FastMCP context type placeholder *)
 
 module Results = struct
   type call_tool_result = { content : Yojson.Safe.t list; is_error : bool }
@@ -55,10 +55,7 @@ module type S = sig
     read_resource_result Deferred.t
 
   val on_get_prompt :
-    t ->
-    context ->
-    get_prompt_result call_next ->
-    get_prompt_result Deferred.t
+    t -> context -> get_prompt_result call_next -> get_prompt_result Deferred.t
 
   val on_list_tools :
     t ->
@@ -109,7 +106,6 @@ module Base = struct
   type t = unit [@@warning "-34"]
 
   let create () = () [@@warning "-32"]
-
   let on_message _t context call_next = call_next context
   let on_request _t context call_next = call_next context
   let on_notification _t context call_next = call_next context
@@ -146,7 +142,8 @@ module Base = struct
 
     return !handler
 
-  let call _t context call_next = [@@warning "-32"]
+  let call _t context call_next =
     let%bind handler = dispatch_handler _t context call_next in
     handler context
+  [@@warning "-32"]
 end

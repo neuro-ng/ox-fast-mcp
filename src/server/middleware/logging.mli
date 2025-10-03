@@ -24,7 +24,7 @@ module Logging : sig
     ?log_level:[ `Debug | `Info | `Warning | `Error | `Critical ] ->
     ?include_payloads:bool ->
     ?max_payload_length:int ->
-    ?methods:string list ->
+    ?methods:string list option ->
     unit ->
     t
   (** Create logging middleware
@@ -57,7 +57,7 @@ module Structured_logging : sig
     ?logger:logger_t ->
     ?log_level:[ `Debug | `Info | `Warning | `Error | `Critical ] ->
     ?include_payloads:bool ->
-    ?methods:string list ->
+    ?methods:string list option ->
     unit ->
     t
   (** Create structured logging middleware

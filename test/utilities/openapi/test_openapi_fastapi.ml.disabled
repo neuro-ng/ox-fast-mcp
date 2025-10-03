@@ -1,6 +1,7 @@
 open Alcotest
 open Yojson.Safe
-open Utilities.Openapi
+(* open Utilities.Openapi *)
+(* TODO: Update module path once Openapi structure is finalized *)
 
 module TestData = struct
   let fastapi_schema =

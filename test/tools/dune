@@ -9,10 +9,11 @@
   ppx_yojson_conv_lib
   tools
   utilities
-  exceptions
+  ox-fast-mcp
   expect_test_helpers_core
   expect_test_helpers_async)
  (preprocess
   (pps ppx_jane ppx_yojson_conv ppx_expect))
  (inline_tests
-  (deps (glob_files ../../lib/tools/*.ml))))
+  (deps
+   (glob_files ../../lib/tools/*.ml))))
