@@ -15,8 +15,9 @@ open! Tool_types
 
 module DuplicateBehavior : sig
   type t = Warn | Replace | Error | Ignore
-  [@@deriving sexp, compare, equal, enumerate]
+  [@@deriving sexp, compare, equal]
 
+  val all : t list
   val of_string : string -> t Or_error.t
   val of_string_exn : string -> t
 end

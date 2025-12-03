@@ -1,5 +1,6 @@
 open Core
 open Async
+open Async.Let_syntax
 open! Mcp.Types
 open! Ox_fast_mcp.Exceptions
 open! Tool_types
@@ -10,7 +11,10 @@ let logger = Logger.get_logger "ToolManager"
 
 module DuplicateBehavior = struct
   type t = Warn | Replace | Error | Ignore
-  [@@deriving sexp, compare, equal, enumerate]
+  [@@deriving sexp, compare, equal]
+  
+  (* Enumerate all values manually since ppx_enumerate not available *)
+  let all = [ Warn; Replace; Error; Ignore ]
 
   let of_string = function
     | "warn" -> Ok Warn
@@ -29,6 +33,12 @@ module DuplicateBehavior = struct
 end
 
 module Tool = struct
+  (* Legacy handler type: no context, no Result.t *)
+  type simple_handler = Fmcp_types.json -> Fmcp_types.content_type list Deferred.t
+  
+  (* Tool internal handler: with context, Result-based *)
+  type internal_handler = Tool_types.tool_handler
+  
   type t = {
     key : string;
     name : string option;
@@ -37,9 +47,8 @@ module Tool = struct
     annotations : (string * string) list;
     parameters : Yojson.Safe.t;
     enabled : bool;
-    fn : tool_handler;
+    fn : internal_handler;  (* Stored internally as Result-based *)
   }
-  [@@deriving fields]
 
   let with_key t new_key = { t with key = new_key }
 
@@ -77,7 +86,13 @@ module Tool = struct
     | x -> [ Fmcp_types.create_text_content (serialize x) ]
 
   let from_function ?name ?description ?(tags = []) ?(annotations = [])
-      ?(_exclude_args = []) ?_serializer ?(enabled = true) fn =
+      ?(_exclude_args = []) ?(_serializer : (Fmcp_types.json -> string) option) ?(enabled = true) 
+      (simple_fn : simple_handler) =
+    (* Convert simple handler to internal handler *)
+    let internal_fn : internal_handler = fun _ctx args ->
+      simple_fn args
+      >>| fun content -> Ok { Tool_types.content; structured_content = None }
+    in
     let key =
       match name with
       | Some n -> String.lowercase n
@@ -93,7 +108,7 @@ module Tool = struct
       annotations;
       parameters = `Assoc [] (* TODO: Generate JSON schema from function type *);
       enabled;
-      fn = (fun _ctx args -> fn args);
+      fn = internal_fn;
     }
 end
 
@@ -216,25 +231,24 @@ let remove_tool t key =
 let call_tool t key arguments =
   match Map.find t.tools key with
   | Some tool -> (
-    Monitor.try_with ~extract_exn:true (fun () ->
-        let ctx =
-          {
-            Tool_types.request_id = None;
-            client_id = None;
-            session_data = Hashtbl.create (module String);
-            tools_changed = false;
-            resources_changed = false;
-            prompts_changed = false;
-          }
-        in
-        tool.Tool.fn ctx arguments)
-    >>| function
-    | Ok result -> result
-    | Error exn ->
+    let ctx =
+      {
+        Tool_types.request_id = None;
+        client_id = None;
+        session_data = Hashtbl.create (module String);
+        tools_changed = false;
+        resources_changed = false;
+        prompts_changed = false;
+      }
+    in
+    tool.Tool.fn ctx arguments
+    >>= function
+    | Ok result -> return result.Tool_types.content
+    | Error error_data ->
       Logger.error logger
-        ("Error calling tool " ^ key ^ ": " ^ Exn.to_string exn);
+        ("Error calling tool " ^ key ^ ": " ^ error_data.Exceptions.message);
       if t.mask_error_details then failwith ("Error calling tool " ^ key)
-      else raise exn)
+      else failwith error_data.Exceptions.message)
   | None ->
     (* Try mounted servers *)
     let rec try_mounted = function

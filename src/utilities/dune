@@ -2,7 +2,6 @@
  (name utilities)
  (public_name ox-fast-mcp.utilities)
  (wrapped false)
- (modules_without_implementation)
  (libraries
   core
   async

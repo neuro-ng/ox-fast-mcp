@@ -3,7 +3,7 @@ open Fmcp_types
 open Async
 
 type tool_manager = {
-  mutable tools : (string, tool) Base.Hashtbl.t;
+  mutable tools : (string, Tool_types.t) Base.Hashtbl.t;
   mutable duplicate_behavior : [ `Warn | `Error | `Replace | `Ignore ];
   mutable mask_error_details : bool;
 }
@@ -23,9 +23,9 @@ val create_tool :
   ?enabled:bool ->
   ?tags:string list ->
   ?annotations:(string * json) list option ->
-  tool_handler ->
-  tool
-(** Create a new function tool *)
+  (execution_context -> json -> content_type list Deferred.t) ->
+  Tool_types.t
+(** Create a new function tool from a legacy handler *)
 
 val from_tool :
   ?name:string ->
@@ -36,32 +36,32 @@ val from_tool :
   ?annotations:(string * json) list option ->
   ?serializer:(content_type list -> string) ->
   ?enabled:bool ->
-  tool ->
-  transformed
+  Tool_types.t ->
+  Tool_types.t
 (** Transform a tool with the specified parameters *)
 
-val to_mcp_tool : tool -> json
+val to_mcp_tool : Tool_types.t -> json
 (** Convert tool to MCP tool definition *)
 
 val validate_schema : json -> bool
 (** Validate JSON schema for tool parameters *)
 
-val register_tool : tool_manager -> tool -> unit
+val register_tool : tool_manager -> Tool_types.t -> unit
 (** Register a tool with the manager *)
 
 val remove_tool : tool_manager -> string -> unit
 (** Remove a tool from the manager *)
 
-val get_tool : tool_manager -> string -> tool option
+val get_tool : tool_manager -> string -> Tool_types.t option
 (** Get a tool by name *)
 
-val get_all_tools : tool_manager -> tool list
+val get_all_tools : tool_manager -> Tool_types.t list
 (** Get all tools *)
 
-val get_enabled_tools : tool_manager -> tool list
+val get_enabled_tools : tool_manager -> Tool_types.t list
 (** Get enabled tools only *)
 
-val filter_tools_by_tags : tool_manager -> string list -> tool list
+val filter_tools_by_tags : tool_manager -> string list -> Tool_types.t list
 (** Filter tools by tags *)
 
 val tool_count : tool_manager -> int
@@ -93,10 +93,10 @@ val add_tool_tags : tool_manager -> string -> string list -> bool
 val remove_tool_tags : tool_manager -> string -> string list -> bool
 (** Remove tags from a tool *)
 
-val create_calculator_tool : unit -> tool
+val create_calculator_tool : unit -> Tool_types.t
 (** Helper: Create a simple calculator tool for testing *)
 
-val create_text_processor_tool : unit -> tool
+val create_text_processor_tool : unit -> Tool_types.t
 (** Helper: Create a text processing tool *)
 
 val clear_tools : tool_manager -> unit
@@ -113,5 +113,5 @@ type tool_stats = {
 val get_tool_stats : tool_manager -> tool_stats
 (** Get tool statistics *)
 
-val add_transformed_tool : tool_manager -> transformed -> unit
+val add_transformed_tool : tool_manager -> Tool_types.t -> unit
 (** Add transformed tool to manager *)

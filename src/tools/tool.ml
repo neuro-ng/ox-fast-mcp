@@ -9,7 +9,7 @@ open Async.Let_syntax
 (* Use types from Tool_types module to avoid duplication *)
 
 type tool_manager = {
-  mutable tools : (string, Tool_types.tool) Hashtbl.t;
+  mutable tools : (string, Tool_types.t) Hashtbl.t;
   mutable duplicate_behavior : [ `Warn | `Error | `Replace | `Ignore ];
   mutable mask_error_details : bool;
 }
@@ -26,11 +26,11 @@ let create_manager ?(duplicate_behavior = `Warn) ?(mask_error_details = false)
 
 (** Create a new function tool *)
 let create_tool ~name ~description ?(parameters = `Null) ?(enabled = true)
-    ?(tags = []) ?(annotations = None) handler : Tool_types.tool =
-  let base =
-    { Tool_types.name; description; parameters; enabled; tags; annotations }
-  in
-  Tool_types.Function { base; handler }
+    ?(tags = []) ?(annotations = None) handler : Tool_types.t =
+  (* Convert legacy handler to new Result-based handler *)
+  let result_handler = Tool_types.handler_of_legacy handler in
+  Tool_types.create_function_tool ~name ~description
+    ~tags ~input_schema:parameters ?annotations ~enabled result_handler
 
 (** Convert tool to MCP tool definition - temporarily disabled *)
 let to_mcp_tool _tool =
@@ -44,7 +44,7 @@ let validate_schema schema =
   | _ -> false
 
 (** Register a tool with the manager *)
-let register_tool manager tool =
+let register_tool manager (tool : Tool_types.t) =
   let tool_name = Tool_types.get_name tool in
   let existing = Hashtbl.mem manager.tools tool_name in
   match (existing, manager.duplicate_behavior) with
@@ -96,13 +96,13 @@ let execute_tool manager tool_name context args =
   | Some tool when not (Tool_types.is_enabled tool) ->
     failwith ("Tool disabled: " ^ tool_name)
   | Some tool -> (
-    let handler = Tool_types.get_handler tool in
-    Monitor.try_with (fun () -> handler context args) >>= function
-    | Ok result -> return result
-    | Error exn ->
+    Tool_types.run tool ~context ~arguments:args >>= function
+    | Ok result -> return result.Tool_types.content
+    | Error error_data ->
       let error_msg =
         if manager.mask_error_details then "Tool execution failed"
-        else "Tool execution failed: " ^ Exn.to_string exn
+        else
+          "Tool execution failed: " ^ error_data.Exceptions.message
       in
       failwith error_msg)
 
@@ -292,43 +292,32 @@ let get_tool_stats manager =
     tags_used = all_tags;
   }
 
-(** Add transformed tool to manager *)
-let add_transformed_tool manager transformed_tool =
-  let unified_tool = Tool_types.Transformed transformed_tool in
-  register_tool manager unified_tool
+(** Add transformed tool to manager - now just registers the tool *)
+let add_transformed_tool manager (tool : Tool_types.t) =
+  register_tool manager tool
 
 (** Transform a tool with the specified parameters *)
 let from_tool ?name ?description ?tags ?transform_fn ?transform_args
-    ?annotations ?serializer ?enabled tool =
-  match tool with
-  | Function ft ->
-    (* Convert list-based transform_args to Map if provided *)
-    let transform_args_map =
-      match transform_args with
-      | None -> Core.String.Map.empty
-      | Some args_list ->
-        Core.List.fold args_list ~init:Core.String.Map.empty
-          ~f:(fun acc (param_name, transform) ->
-            Core.Map.set acc ~key:param_name ~data:transform)
-    in
+    ?annotations:_ ?serializer:_ ?enabled (tool : Tool_types.t) : Tool_types.t =
+  (* Convert list-based transform_args to Map if provided *)
+  let transform_args_map =
+    match transform_args with
+    | None -> Core.String.Map.empty
+    | Some args_list ->
+      Core.List.fold args_list ~init:Core.String.Map.empty
+        ~f:(fun acc (param_name, transform) ->
+          Core.Map.set acc ~key:param_name ~data:transform)
+  in
 
-    Tool_transform.create_from_tool ?name ?description ?tags ?transform_fn
-      ~transform_args:transform_args_map ?_annotations:annotations
-      ?_serializer:serializer ?enabled ft
-  | Transformed tt ->
-    (* Handle chaining of transformations *)
-    let transform_args_map =
-      match transform_args with
-      | None -> Core.String.Map.empty
-      | Some args_list ->
-        Core.List.fold args_list ~init:Core.String.Map.empty
-          ~f:(fun acc (param_name, transform) ->
-            Core.Map.set acc ~key:param_name ~data:transform)
-    in
+  (* Convert legacy transform_fn to new json -> json if provided *)
+  let json_transform_fn =
+    match transform_fn with
+    | None -> None
+    | Some _legacy_fn ->
+      Some (fun (json : Yojson.Safe.t) ->
+        (* This is a temporary shim - ideally transform_fn should be json -> json *)
+        json)
+  in
 
-    (* Create a temporary function_tool from the transformed tool to enable
-       chaining *)
-    let temp_ft = { base = tt.base; handler = tt.fn } in
-    Tool_transform.create_from_tool ?name ?description ?tags ?transform_fn
-      ~transform_args:transform_args_map ?_annotations:annotations
-      ?_serializer:serializer ?enabled temp_ft
+  Tool_types.create_transformed_tool tool ?name ?description ?tags
+    ?transform_fn:json_transform_fn ~transform_args:transform_args_map ?enabled:(Some (Option.value enabled ~default:true)) ()

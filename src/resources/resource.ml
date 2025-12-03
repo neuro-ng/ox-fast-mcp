@@ -1,4 +1,12 @@
-open Core
+(** Base module for all MCP resources
+    
+    Converted to use Async instead of Lwt for consistency with rest of codebase.
+    See: COMPLIANCE_ACTION_PLAN.md Task 1.2
+    See: PYTHON_TO_OCAML_TYPE_MAP.md Section 4 (lines 330-390)
+*)
+
+open! Core
+open! Async
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type content = Text of string | Binary of bytes [@@deriving sexp, yojson]
@@ -10,7 +18,7 @@ type t = {
   description : string option;
   tags : string list;
   enabled : bool;
-  read_fn : (unit -> content Lwt.t) option;
+  read_fn : (unit -> content Deferred.t) option;
 }
 [@@deriving yojson_of]
 
@@ -54,21 +62,22 @@ let from_function ?name ?description ?mime_type ?tags ?(enabled = true) ~uri fn
 
 let read t =
   match (t.enabled, t.read_fn) with
-  | false, _ -> Lwt.fail_with "Resource is disabled"
-  | true, None -> Lwt.fail_with "Resource has no read function"
+  | false, _ -> Deferred.Or_error.error_string "Resource is disabled" |> Deferred.Or_error.ok_exn
+  | true, None -> Deferred.Or_error.error_string "Resource has no read function" |> Deferred.Or_error.ok_exn
   | true, Some fn -> fn ()
 
-(* let notify_resource_list_changed () = match%lwt Mcp.Server.Context.get ()
-   with | None -> Lwt.return_unit | Some ctx ->
-   Mcp.Server.Context.queue_resource_list_changed ctx *)
+(* let notify_resource_list_changed () = 
+   match%bind Mcp.Server.Context.get () with 
+   | None -> return ()
+   | Some ctx -> Mcp.Server.Context.queue_resource_list_changed ctx *)
 
 let enable t =
-  (* let* () = notify_resource_list_changed () in *)
-  Lwt.return { t with enabled = true }
+  (* let%bind () = notify_resource_list_changed () in *)
+  return { t with enabled = true }
 
 let disable t =
-  (* let* () = notify_resource_list_changed () in *)
-  Lwt.return { t with enabled = false }
+  (* let%bind () = notify_resource_list_changed () in *)
+  return { t with enabled = false }
 
 let key t = t.uri
 

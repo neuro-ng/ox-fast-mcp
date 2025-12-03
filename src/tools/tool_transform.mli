@@ -18,6 +18,6 @@ val create_from_tool :
   ?_annotations:'a ->
   ?_serializer:'b ->
   ?enabled:bool ->
-  function_tool ->
-  transformed
+  Tool_types.tool_function ->
+  Tool_types.t
 (** Create a transformed tool from a parent tool *)
