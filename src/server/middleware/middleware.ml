@@ -1,6 +1,6 @@
 open Core
 open Async
-open Tools.Tool_manager
+open Tool_manager
 open Mcp.Types
 
 type fastmcp_context = Yojson.Safe.t

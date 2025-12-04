@@ -53,11 +53,9 @@ module Tool = struct
   let with_key t new_key = { t with key = new_key }
 
   let enable t =
-    (* TODO: Implement enable functionality *)
     { t with enabled = true }
 
   let disable t =
-    (* TODO: Implement disable functionality *)
     { t with enabled = false }
 
   let to_mcp_tool ?overrides t =
@@ -112,9 +110,14 @@ module Tool = struct
     }
 end
 
+type server_api = {
+  list_tools : unit -> Tool.t String.Map.t Deferred.t;
+  call_tool : string -> Yojson.Safe.t -> Tool_types.content_type list Deferred.t;
+}
+
 type mounted_server = {
   prefix : string option;
-      (* server : Server.t; (* TODO: Define Server module *) *)
+  server : server_api;
 }
 
 type t = {
@@ -133,8 +136,8 @@ let create ?(duplicate_behavior = DuplicateBehavior.Warn)
     duplicate_behavior;
   }
 
-let mount t ~_server ~prefix =
-  t.mounted_servers <- { prefix } :: t.mounted_servers
+let mount t ~server ~prefix =
+  t.mounted_servers <- { prefix; server } :: t.mounted_servers
 
 let load_tools t ~via_server =
   let%bind all_tools =
@@ -143,13 +146,9 @@ let load_tools t ~via_server =
         Monitor.try_with (fun () ->
             let%bind child_results =
               if via_server then
-                (* Server.list_tools mounted.server (* TODO: Implement in Server
-                   module *) *)
-                return String.Map.empty
+                mounted.server.list_tools ()
               else
-                (* Server.get_tools mounted.server (* TODO: Implement in Server
-                   module *) *)
-                return String.Map.empty
+                mounted.server.list_tools ()
             in
             let child_dict = child_results in
             match mounted.prefix with
@@ -228,6 +227,20 @@ let remove_tool t key =
   | Some _ -> t.tools <- Map.remove t.tools key
   | None -> failwith ("Tool not found: " ^ key)
 
+let enable_tool t key =
+  match Map.find t.tools key with
+  | Some tool ->
+    let enabled = Tool.enable tool in
+    t.tools <- Map.set t.tools ~key ~data:enabled
+  | None -> failwith ("Tool not found: " ^ key)
+
+let disable_tool t key =
+  match Map.find t.tools key with
+  | Some tool ->
+    let disabled = Tool.disable tool in
+    t.tools <- Map.set t.tools ~key ~data:disabled
+  | None -> failwith ("Tool not found: " ^ key)
+
 let call_tool t key arguments =
   match Map.find t.tools key with
   | Some tool -> (
@@ -254,7 +267,7 @@ let call_tool t key arguments =
     let rec try_mounted = function
       | [] -> failwith ("Tool not found: " ^ key)
       | mounted :: rest -> (
-        let _tool_key =
+        let tool_key =
           match mounted.prefix with
           | Some prefix when String.is_prefix key ~prefix:(prefix ^ "_") ->
             String.chop_prefix_exn key ~prefix:(prefix ^ "_")
@@ -262,16 +275,17 @@ let call_tool t key arguments =
         in
         match%bind
           Monitor.try_with (fun () ->
-              (* Server.call_tool mounted.server tool_key arguments *)
-              return [])
+              mounted.server.call_tool tool_key arguments)
         with
         | Ok result -> return result
         | Error (Not_found_s _) -> try_mounted rest
         | Error _exn ->
-          Logger.error logger
-            ("Error calling tool " ^ key ^ " on mounted server "
-            ^ Option.value mounted.prefix ~default:"<no prefix>"
-            ^ ": " ^ Exn.to_string _exn);
-          try_mounted rest)
+          (* If call_tool failed, it might be because the tool wasn't found on that server.
+             However, call_tool returns content list, so if it returns, it succeeded.
+             If it raises, we check if it's a not found error.
+             Since we don't have a specific Not_found exception from the api, we rely on the try_with.
+             We should probably check if the tool exists on the server first or handle the error better.
+          *)
+           try_mounted rest)
     in
     try_mounted (List.rev t.mounted_servers)

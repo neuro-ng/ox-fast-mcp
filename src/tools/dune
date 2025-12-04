@@ -1,6 +1,7 @@
 (library
  (name tools)
  (public_name ox-fast-mcp.tools)
+ (wrapped false)
  (libraries
   core
   async

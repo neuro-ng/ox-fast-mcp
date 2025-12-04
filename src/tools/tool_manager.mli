@@ -62,9 +62,14 @@ end
 
 type t
 
+type server_api = {
+  list_tools : unit -> Tool.t String.Map.t Deferred.t;
+  call_tool : string -> Yojson.Safe.t -> Fmcp_types.content_type list Deferred.t;
+}
+
 type mounted_server = {
   prefix : string option;
-      (* server field removed - Server module not available *)
+  server : server_api;
 }
 
 val create :
@@ -76,7 +81,7 @@ val create :
     @param duplicate_behavior How to handle duplicate tool registrations
     @param mask_error_details Whether to mask internal error details *)
 
-val mount : t -> _server:unit -> prefix:string option -> unit
+val mount : t -> server:server_api -> prefix:string option -> unit
 (** Mount a server as a source of tools. Tools from mounted servers are
     available with their prefix (if any). *)
 
@@ -114,6 +119,14 @@ val add_tool : t -> Tool.t -> Tool.t
 
 val remove_tool : t -> string -> unit
 (** Remove a tool from the manager.
+    @raise Not_found_error if the tool is not found *)
+
+val enable_tool : t -> string -> unit
+(** Enable a tool in the manager.
+    @raise Not_found_error if the tool is not found *)
+
+val disable_tool : t -> string -> unit
+(** Disable a tool in the manager.
     @raise Not_found_error if the tool is not found *)
 
 val call_tool :

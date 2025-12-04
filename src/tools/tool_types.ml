@@ -15,6 +15,8 @@ open! Async
 open Fmcp_types
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
+type content_type = Fmcp_types.content_type
+
 (* Import Exceptions module for error types *)
 module Exceptions = Ox_fast_mcp.Exceptions
 

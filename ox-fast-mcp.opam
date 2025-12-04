@@ -6,12 +6,10 @@ depends: [
   "ocaml" {>= "4.14.0"}
   "ocaml-variants" {>= "5.2.0+ox"}
   "dune" {>= "3.0" & >= "3.0"}
-  "core" {>= "v0.16.0"}
-  "core_unix" {>= "v0.16.0"}
-  "async" {>= "v0.16.0"}
-  "ppx_jane" {>= "v0.16.0"}
-  "ppx_yojson_conv" {>= "v0.16.0"}
-  "ppx_yojson_conv_lib" {>= "v0.16.0"}
+  "core" {>= "v0.18~preview"}
+  "core_unix" {>= "v0.18~preview"}
+  "async" {>= "v0.18~preview"}
+  "ppx_jane" {>= "v0.18~preview"}
   "yojson" {>= "2.1.0"}
   "base64" {>= "3.5.0"}
   "lwt"
