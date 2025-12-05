@@ -1,26 +1,24 @@
+(** Comprehensive logging middleware for OxFastMCP servers *)
+
 open Core
 open Async
 open Middleware
+open Logging
 
-(* Simple logger type for middleware *)
-type logger_t = {
-  name : string;
-  level : [ `Debug | `Info | `Warning | `Error | `Critical ];
-}
-
-module Logging = struct
+(** Basic logging middleware *)
+module Logging_middleware = struct
   type t = {
-    logger : logger_t;
-    log_level : [ `Debug | `Info | `Warning | `Error | `Critical ];
+    middleware_logger : Logger.t;
+    log_level : Level.t;
     include_payloads : bool;
     max_payload_length : int;
     methods : string list option;
   }
 
-  let create ?(logger = { name = "fastmcp.requests"; level = `Info })
-      ?(log_level = `Info) ?(include_payloads = false)
+  let create ?(middleware_logger = Logger.get_logger "OxFastMCP.Requests")
+      ?(log_level = Level.Info) ?(include_payloads = false)
       ?(max_payload_length = 1000) ?(methods = None) () =
-    { logger; log_level; include_payloads; max_payload_length; methods }
+    { middleware_logger; log_level; include_payloads; max_payload_length; methods }
 
   let format_message t context =
     let source_str =
@@ -54,6 +52,14 @@ module Logging = struct
     in
     String.concat ~sep:" " parts
 
+  let log_at_level t message =
+    match t.log_level with
+    | Level.Debug -> Logger.debug t.middleware_logger message
+    | Level.Info -> Logger.info t.middleware_logger message
+    | Level.Warning -> Logger.warning t.middleware_logger message
+    | Level.Error -> Logger.error t.middleware_logger message
+    | Level.Critical -> Logger.critical t.middleware_logger message
+
   let on_message t context call_next =
     let%bind () =
       match (t.methods, context.method_) with
@@ -61,34 +67,34 @@ module Logging = struct
         when not (List.mem methods method_name ~equal:String.equal) -> return ()
       | _, _ ->
         let message_info = format_message t context in
-        (* Logger.log t.logger t.log_level (fun () -> sprintf "Processing
-           message: %s" message_info); *)
-        ignore message_info;
+        log_at_level t (sprintf "Processing message: %s" message_info);
         return ()
     in
     Monitor.try_with (fun () -> call_next context) >>= function
     | Ok result ->
-      (* Logger.log t.logger t.log_level (fun () -> sprintf "Completed message:
-         %s" (Option.value context.method_ ~default:"unknown")); *)
+      log_at_level t (sprintf "Completed message: %s" 
+        (Option.value context.method_ ~default:"unknown"));
       return result
     | Error exn ->
-      (* Logger.log t.logger Logger.Level.Error (fun () -> sprintf "Failed
-         message: %s - %s" (Option.value context.method_ ~default:"unknown")
-         (Exn.to_string exn)); *)
+      Logger.error t.middleware_logger 
+        (sprintf "Failed message: %s - %s" 
+           (Option.value context.method_ ~default:"unknown")
+           (Exn.to_string exn));
       raise exn
 end
 
+(** Structured JSON logging middleware *)
 module Structured_logging = struct
   type t = {
-    logger : logger_t;
-    log_level : [ `Debug | `Info | `Warning | `Error | `Critical ];
+    middleware_logger : Logger.t;
+    log_level : Level.t;
     include_payloads : bool;
     methods : string list option;
   }
 
-  let create ?(logger = { name = "fastmcp.structured"; level = `Info })
-      ?(log_level = `Info) ?(include_payloads = false) ?(methods = None) () =
-    { logger; log_level; include_payloads; methods }
+  let create ?(middleware_logger = Logger.get_logger "OxFastMCP.Structured")
+      ?(log_level = Level.Info) ?(include_payloads = false) ?(methods = None) () =
+    { middleware_logger; log_level; include_payloads; methods }
 
   let create_log_entry t context event extra_fields =
     let base_fields =
@@ -114,6 +120,14 @@ module Structured_logging = struct
     in
     `Assoc (fields @ extra_fields)
 
+  let log_at_level t message =
+    match t.log_level with
+    | Level.Debug -> Logger.debug t.middleware_logger message
+    | Level.Info -> Logger.info t.middleware_logger message
+    | Level.Warning -> Logger.warning t.middleware_logger message
+    | Level.Error -> Logger.error t.middleware_logger message
+    | Level.Critical -> Logger.critical t.middleware_logger message
+
   let on_message t context call_next =
     let%bind () =
       match (t.methods, context.method_) with
@@ -121,9 +135,7 @@ module Structured_logging = struct
         when not (List.mem methods method_name ~equal:String.equal) -> return ()
       | _ ->
         let start_entry = create_log_entry t context "request_start" [] in
-        (* Logger.log t.logger t.log_level (fun () -> Yojson.Safe.to_string
-           start_entry); *)
-        ignore start_entry;
+        log_at_level t (Yojson.Safe.to_string start_entry);
         return ()
     in
     Monitor.try_with (fun () -> call_next context) >>= function
@@ -132,9 +144,7 @@ module Structured_logging = struct
         create_log_entry t context "request_success"
           [ ("result_type", `String "success") ]
       in
-      (* Logger.log t.logger t.log_level (fun () -> Yojson.Safe.to_string
-         success_entry); *)
-      ignore success_entry;
+      log_at_level t (Yojson.Safe.to_string success_entry);
       return result
     | Error exn ->
       let error_entry =
@@ -144,8 +154,6 @@ module Structured_logging = struct
             ("error_message", `String (Exn.to_string exn));
           ]
       in
-      (* Logger.log t.logger Logger.Level.Error (fun () -> Yojson.Safe.to_string
-         error_entry); *)
-      ignore error_entry;
+      Logger.error t.middleware_logger (Yojson.Safe.to_string error_entry);
       raise exn
 end

@@ -1,7 +1,0 @@
-(library
- (name server)
- (public_name ox-fast-mcp.server)
- (libraries lwt)
- (modules server))
-
-(dirs :standard \ auth middleware) 

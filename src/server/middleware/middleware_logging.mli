@@ -1,40 +1,32 @@
-(** Comprehensive logging middleware for FastMCP servers *)
+(** Comprehensive logging middleware for OxFastMCP servers *)
 
 open Async
 open Middleware
-
-(* Simple logger type for middleware *)
-type logger_t = {
-  name : string;
-  level : [ `Debug | `Info | `Warning | `Error | `Critical ];
-}
+open Logging
 
 (** Basic logging middleware *)
-module Logging : sig
+module Logging_middleware : sig
   type t = {
-    logger : logger_t;
-    log_level : [ `Debug | `Info | `Warning | `Error | `Critical ];
+    middleware_logger : Logger.t;
+    log_level : Level.t;
     include_payloads : bool;
     max_payload_length : int;
     methods : string list option;
   }
 
   val create :
-    ?logger:logger_t ->
-    ?log_level:[ `Debug | `Info | `Warning | `Error | `Critical ] ->
+    ?middleware_logger:Logger.t ->
+    ?log_level:Level.t ->
     ?include_payloads:bool ->
     ?max_payload_length:int ->
     ?methods:string list option ->
     unit ->
     t
   (** Create logging middleware
-      @param logger
-        Logger instance to use. If None, creates a logger named
-        'fastmcp.requests'
+      @param middleware_logger Logger instance to use
       @param log_level Log level for messages (default: Info)
       @param include_payloads Whether to include message payloads in logs
-      @param max_payload_length
-        Maximum length of payload to log (prevents huge logs)
+      @param max_payload_length Maximum length of payload to log
       @param methods List of methods to log. If None, logs all methods *)
 
   val format_message : t -> context -> string
@@ -47,23 +39,21 @@ end
 (** Structured JSON logging middleware *)
 module Structured_logging : sig
   type t = {
-    logger : logger_t;
-    log_level : [ `Debug | `Info | `Warning | `Error | `Critical ];
+    middleware_logger : Logger.t;
+    log_level : Level.t;
     include_payloads : bool;
     methods : string list option;
   }
 
   val create :
-    ?logger:logger_t ->
-    ?log_level:[ `Debug | `Info | `Warning | `Error | `Critical ] ->
+    ?middleware_logger:Logger.t ->
+    ?log_level:Level.t ->
     ?include_payloads:bool ->
     ?methods:string list option ->
     unit ->
     t
   (** Create structured logging middleware
-      @param logger
-        Logger instance to use. If None, creates a logger named
-        'fastmcp.structured'
+      @param middleware_logger Logger instance to use
       @param log_level Log level for messages (default: Info)
       @param include_payloads Whether to include message payloads in logs
       @param methods List of methods to log. If None, logs all methods *)

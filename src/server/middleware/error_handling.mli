@@ -3,18 +3,13 @@
 open Core
 open Async
 open Middleware
-
-(* Simple logger type for middleware *)
-type logger_t = {
-  name : string;
-  level : [ `Debug | `Info | `Warning | `Error | `Critical ];
-}
+open Logging
 
 type error_callback = exn -> context -> unit
 (** Type for error callback functions *)
 
 type t = {
-  logger : logger_t;
+  middleware_logger : Logger.t;
   include_traceback : bool;
   error_callback : error_callback option;
   transform_errors : bool;
@@ -23,15 +18,14 @@ type t = {
 (** Error handling middleware type *)
 
 val create :
-  ?logger:logger_t ->
+  ?middleware_logger:Logger.t ->
   ?include_traceback:bool ->
   ?error_callback:error_callback option ->
   ?transform_errors:bool ->
   unit ->
   t
 (** Create error handling middleware
-    @param logger
-      Logger instance for error logging. If None, uses 'fastmcp.errors'
+    @param middleware_logger Logger instance for error logging
     @param include_traceback Whether to include full traceback in error logs
     @param error_callback Optional callback function called for each error
     @param transform_errors Whether to transform non-MCP errors to McpError *)
@@ -56,7 +50,7 @@ module Retry : sig
     max_delay : float;
     backoff_multiplier : float;
     retry_exceptions : (exn -> bool) list;
-    logger : logger_t;
+    retry_logger : Logger.t;
   }
 
   val create :
@@ -65,7 +59,7 @@ module Retry : sig
     ?max_delay:float ->
     ?backoff_multiplier:float ->
     ?retry_exceptions:(exn -> bool) list ->
-    ?logger:logger_t ->
+    ?retry_logger:Logger.t ->
     unit ->
     t
   (** Create retry middleware
@@ -75,7 +69,7 @@ module Retry : sig
       @param backoff_multiplier Multiplier for exponential backoff
       @param retry_exceptions
         List of predicates that determine if an exception should trigger retries
-      @param logger Logger for retry attempts *)
+      @param retry_logger Logger for retry attempts *)
 
   val should_retry : t -> exn -> bool
   (** Determine if an error should trigger a retry *)

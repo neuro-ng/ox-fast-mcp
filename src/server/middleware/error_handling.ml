@@ -1,28 +1,29 @@
+(** Error handling middleware for consistent error responses and tracking *)
+
 open Core
 open Async
 open Middleware
+open Logging
 
-(* Simple logger type for middleware *)
-type logger_t = {
-  name : string;
-  level : [ `Debug | `Info | `Warning | `Error | `Critical ];
-}
+
 
 type error_callback = exn -> context -> unit
+(** Type for error callback functions *)
 
 type t = {
-  logger : logger_t;
+  middleware_logger : Logger.t;
   include_traceback : bool;
   error_callback : error_callback option;
   transform_errors : bool;
   mutable error_counts : int String.Map.t;
 }
+(** Error handling middleware type *)
 
-let create ?(logger = { name = "fastmcp.errors"; level = `Info })
+let create ?(middleware_logger = Logger.get_logger "OxFastMCP.Errors")
     ?(include_traceback = false) ?(error_callback = None)
     ?(transform_errors = true) () =
   {
-    logger;
+    middleware_logger;
     include_traceback;
     error_callback;
     transform_errors;
@@ -31,7 +32,7 @@ let create ?(logger = { name = "fastmcp.errors"; level = `Info })
 
 let log_error t error context =
   let error_type = Exn.to_string error |> String.split ~on:' ' |> List.hd_exn in
-  let method_ = "unknown" in
+  let method_ = Option.value context.method_ ~default:"unknown" in
   let error_key = sprintf "%s:%s" error_type method_ in
 
   (* Update error counts *)
@@ -41,17 +42,21 @@ let log_error t error context =
   t.error_counts <-
     Map.set t.error_counts ~key:error_key ~data:(current_count + 1);
 
+  (* Log error using the logging module *)
   let base_message =
     sprintf "Error in %s: %s: %s" method_ error_type (Exn.to_string error)
   in
-
-  (* Log error - simplified for now *)
-  ignore (t.logger.name, base_message, t.include_traceback);
+  
+  if t.include_traceback then
+    Logger.error t.middleware_logger (sprintf "%s\nTraceback: [full traceback here]" base_message)
+  else
+    Logger.error t.middleware_logger base_message;
 
   (* Call error callback if provided *)
   match t.error_callback with
   | Some callback -> (
-    try callback error context with exn -> ignore (t.logger.name, exn))
+    try callback error context with exn -> 
+      Logger.warning t.middleware_logger (sprintf "Error callback failed: %s" (Exn.to_string exn)))
   | None -> ()
 
 let transform_error t error =
@@ -69,7 +74,7 @@ let on_message t context call_next =
 
 let get_error_stats t = t.error_counts
 
-(* Retry middleware *)
+(** Retry middleware for handling transient failures *)
 module Retry = struct
   type t = {
     max_retries : int;
@@ -77,7 +82,7 @@ module Retry = struct
     max_delay : float;
     backoff_multiplier : float;
     retry_exceptions : (exn -> bool) list;
-    logger : logger_t;
+    retry_logger : Logger.t;
   }
 
   let create ?(max_retries = 3) ?(base_delay = 1.0) ?(max_delay = 60.0)
@@ -87,16 +92,15 @@ module Retry = struct
           (function
           | Unix.Unix_error (ECONNREFUSED, _, _)
           | Unix.Unix_error (ECONNRESET, _, _) -> true
-          (* | Async_unix.Timeout -> true (* Timeout not available *) *)
           | _ -> false);
-        ]) ?(logger = { name = "fastmcp.retry"; level = `Info }) () =
+        ]) ?(retry_logger = Logger.get_logger "OxFastMCP.Retry") () =
     {
       max_retries;
       base_delay;
       max_delay;
       backoff_multiplier;
       retry_exceptions;
-      logger;
+      retry_logger;
     }
 
   let should_retry t error =
@@ -117,8 +121,9 @@ module Retry = struct
           raise error
         else
           let delay = calculate_delay t attempt in
-          (* Log retry warning - simplified for now *)
-          ignore (t.logger.name, error, attempt, delay);
+          Logger.warning t.retry_logger 
+            (sprintf "Retry attempt %d after error: %s (delay: %.2fs)" 
+               (attempt + 1) (Exn.to_string error) delay);
           Clock.after (sec delay) >>= fun () -> try_request (attempt + 1)
     in
     try_request 0
