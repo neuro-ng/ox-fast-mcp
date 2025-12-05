@@ -13,5 +13,7 @@
   lwt
   uri)
  (inline_tests)
+ (flags
+  (:standard -alert -unsafe_multidomain))
  (preprocess
   (pps ppx_jane ppx_expect)))
