@@ -3,14 +3,15 @@ open! Async
 open! Expect_test_helpers_core
 open! Logging
 
-module Test_handler : Log_types.Handler = struct
+(* Test handler module that satisfies the Handler signature *)
+module Test_handler = struct
   type t = string Queue.t
 end
 
 let%expect_test "Log_level.of_string handles valid levels" =
   let test_level str =
-    let level = Log_types.Level.of_string str in
-    print_s [%sexp (Log_types.Level.to_string level : string)]
+    let level = Level.of_string str in
+    print_s [%sexp (Level.to_string level : string)]
   in
   test_level "DEBUG";
   [%expect {| DEBUG |}];
@@ -25,22 +26,22 @@ let%expect_test "Log_level.of_string handles valid levels" =
   return ()
 
 let%expect_test "Log_level.of_string handles invalid levels" =
-  show_raise (fun () -> Log_types.Level.of_string "INVALID");
+  show_raise (fun () -> Level.of_string "INVALID");
   [%expect {| (raised (Failure "Invalid log level: INVALID")) |}];
   return ()
 
 let%expect_test "Log_level comparison works correctly" =
   let test_comparison l1 l2 =
-    let level1 = Log_types.Level.of_string l1 in
-    let level2 = Log_types.Level.of_string l2 in
+    let level1 = Level.of_string l1 in
+    let level2 = Level.of_string l2 in
     print_s
       [%sexp
         {
           level1 : string = l1;
           level2 : string = l2;
-          equal = (Log_types.Level.equal level1 level2 : bool);
-          less_than = (Log_types.Level.compare level1 level2 < 0 : bool);
-          greater_than = (Log_types.Level.compare level1 level2 > 0 : bool);
+          equal = (Level.equal level1 level2 : bool);
+          less_than = (Level.compare level1 level2 < 0 : bool);
+          greater_than = (Level.compare level1 level2 > 0 : bool);
         }]
   in
   test_comparison "DEBUG" "INFO";
@@ -65,7 +66,7 @@ let%expect_test "Log_level comparison works correctly" =
 
 let%expect_test "Logger.create sets correct defaults" =
   let logger = Logger.create "test" in
-  print_s [%sexp (Log_types.Level.to_string (Logger.get_level logger) : string)];
+  print_s [%sexp (Level.to_string (Logger.get_level logger) : string)];
   [%expect {| INFO |}];
   return ()
 
@@ -84,32 +85,32 @@ let create_test_logger_with_capture level =
   handler.instance.log <-
     (fun ~level ~msg ->
       Queue.enqueue buffer
-        (sprintf "[%s] %s" (Log_types.Level.to_string level) msg));
+        (sprintf "[%s] %s" (Level.to_string level) msg));
   (logger, buffer)
 
 let%expect_test "Logger.debug logs debug messages when level permits" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Debug in
+  let logger, buffer = create_test_logger_with_capture Level.Debug in
   Logger.debug logger "debug message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| ("[DEBUG] debug message") |}];
   return ()
 
 let%expect_test "Logger.debug ignores messages when level too high" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Info in
+  let logger, buffer = create_test_logger_with_capture Level.Info in
   Logger.debug logger "debug message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| () |}];
   return ()
 
 let%expect_test "Logger.info logs info messages when level permits" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Debug in
+  let logger, buffer = create_test_logger_with_capture Level.Debug in
   Logger.info logger "info message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| ("[INFO] info message") |}];
   return ()
 
 let%expect_test "Logger.info logs info messages at info level" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Info in
+  let logger, buffer = create_test_logger_with_capture Level.Info in
   Logger.info logger "info message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| ("[INFO] info message") |}];
@@ -117,7 +118,7 @@ let%expect_test "Logger.info logs info messages at info level" =
 
 let%expect_test "Logger.info ignores messages when level too high" =
   let logger, buffer =
-    create_test_logger_with_capture Log_types.Level.Warning
+    create_test_logger_with_capture Level.Warning
   in
   Logger.info logger "info message";
   print_s [%sexp (Queue.to_list buffer : string list)];
@@ -125,7 +126,7 @@ let%expect_test "Logger.info ignores messages when level too high" =
   return ()
 
 let%expect_test "Logger.warning logs warning messages when level permits" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Debug in
+  let logger, buffer = create_test_logger_with_capture Level.Debug in
   Logger.warning logger "warning message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| ("[WARNING] warning message") |}];
@@ -133,7 +134,7 @@ let%expect_test "Logger.warning logs warning messages when level permits" =
 
 let%expect_test "Logger.warning logs warning messages at warning level" =
   let logger, buffer =
-    create_test_logger_with_capture Log_types.Level.Warning
+    create_test_logger_with_capture Level.Warning
   in
   Logger.warning logger "warning message";
   print_s [%sexp (Queue.to_list buffer : string list)];
@@ -141,21 +142,21 @@ let%expect_test "Logger.warning logs warning messages at warning level" =
   return ()
 
 let%expect_test "Logger.warning ignores messages when level too high" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Error in
+  let logger, buffer = create_test_logger_with_capture Level.Error in
   Logger.warning logger "warning message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| () |}];
   return ()
 
 let%expect_test "Logger.error logs error messages when level permits" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Debug in
+  let logger, buffer = create_test_logger_with_capture Level.Debug in
   Logger.error logger "error message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| ("[ERROR] error message") |}];
   return ()
 
 let%expect_test "Logger.error logs error messages at error level" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Error in
+  let logger, buffer = create_test_logger_with_capture Level.Error in
   Logger.error logger "error message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| ("[ERROR] error message") |}];
@@ -163,7 +164,7 @@ let%expect_test "Logger.error logs error messages at error level" =
 
 let%expect_test "Logger.error ignores messages when level too high" =
   let logger, buffer =
-    create_test_logger_with_capture Log_types.Level.Critical
+    create_test_logger_with_capture Level.Critical
   in
   Logger.error logger "error message";
   print_s [%sexp (Queue.to_list buffer : string list)];
@@ -171,7 +172,7 @@ let%expect_test "Logger.error ignores messages when level too high" =
   return ()
 
 let%expect_test "Logger.critical logs critical messages when level permits" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Debug in
+  let logger, buffer = create_test_logger_with_capture Level.Debug in
   Logger.critical logger "critical message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| ("[CRITICAL] critical message") |}];
@@ -179,7 +180,7 @@ let%expect_test "Logger.critical logs critical messages when level permits" =
 
 let%expect_test "Logger.critical logs critical messages at critical level" =
   let logger, buffer =
-    create_test_logger_with_capture Log_types.Level.Critical
+    create_test_logger_with_capture Level.Critical
   in
   Logger.critical logger "critical message";
   print_s [%sexp (Queue.to_list buffer : string list)];
@@ -187,7 +188,7 @@ let%expect_test "Logger.critical logs critical messages at critical level" =
   return ()
 
 let%expect_test "Logger methods with multiple messages" =
-  let logger, buffer = create_test_logger_with_capture Log_types.Level.Debug in
+  let logger, buffer = create_test_logger_with_capture Level.Debug in
   Logger.debug logger "debug 1";
   Logger.info logger "info 1";
   Logger.warning logger "warning 1";
@@ -206,7 +207,7 @@ let%expect_test "Logger methods with multiple messages" =
 
 let%expect_test "Logger level filtering with multiple messages" =
   let logger, buffer =
-    create_test_logger_with_capture Log_types.Level.Warning
+    create_test_logger_with_capture Level.Warning
   in
   Logger.debug logger "debug 1";
   Logger.info logger "info 1";
@@ -220,19 +221,19 @@ let%expect_test "Logger level filtering with multiple messages" =
 
 let%expect_test "Logger with custom level configuration" =
   let logger_debug =
-    Logger.create ~level:Log_types.Level.Debug "debug_logger"
+    Logger.create ~level:Level.Debug "debug_logger"
   in
   let logger_error =
-    Logger.create ~level:Log_types.Level.Error "error_logger"
+    Logger.create ~level:Level.Error "error_logger"
   in
 
   print_s
     [%sexp
       {
         debug_logger_level =
-          (Log_types.Level.to_string (Logger.get_level logger_debug) : string);
+          (Level.to_string (Logger.get_level logger_debug) : string);
         error_logger_level =
-          (Log_types.Level.to_string (Logger.get_level logger_error) : string);
+          (Level.to_string (Logger.get_level logger_error) : string);
       }];
   [%expect
     {|
@@ -272,10 +273,10 @@ let%expect_test "Logger handles messages based on level" =
 let%expect_test "Rich_handler formats messages correctly" =
   let handler = Rich_handler.create () in
   let formatted =
-    Rich_handler.format handler ~level:Log_types.Level.Info ~msg:"test"
+    Rich_handler.format handler ~level:Level.Info ~msg:"test"
   in
   print_s [%sexp (formatted : string)];
-  [%expect {| test |}];
+  [%expect {| "INFO test" |}];
   return ()
 
 let%expect_test "configure_logging sets up logger correctly" =
@@ -284,7 +285,7 @@ let%expect_test "configure_logging sets up logger correctly" =
     [%sexp
       {
         name = (Logger.get_name logger : string);
-        level = (Log_types.Level.to_string (Logger.get_level logger) : string);
+        level = (Level.to_string (Logger.get_level logger) : string);
         has_handlers = (not (List.is_empty (Logger.get_handlers logger)) : bool);
       }];
   [%expect

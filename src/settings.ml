@@ -3,8 +3,10 @@ open! Async
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Logging
 
-(* Use Log_types.Level for log levels *)
-module Log_level = Log_types.Level
+(* Use Logging.Level for log levels - include to inherit yojson derivers *)
+module Log_level = struct
+  include Logging.Level
+end
 
 module Duplicate_behavior = struct
   type t = Warn | Error | Replace | Ignore

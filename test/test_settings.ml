@@ -1,35 +1,35 @@
 open! Core
 open! Async
 open! Expect_test_helpers_core
-open! Log_types
+open! Logging
 open! Ox_fast_mcp.Settings
 
 let%expect_test "test log level conversion" =
   let test_cases =
     [
-      ("DEBUG", Log_types.Level.Debug);
-      ("INFO", Log_types.Level.Info);
-      ("WARNING", Log_types.Level.Warning);
-      ("ERROR", Log_types.Level.Error);
-      ("CRITICAL", Log_types.Level.Critical);
+      ("DEBUG", Logging.Level.Debug);
+      ("INFO", Logging.Level.Info);
+      ("WARNING", Logging.Level.Warning);
+      ("ERROR", Logging.Level.Error);
+      ("CRITICAL", Logging.Level.Critical);
     ]
   in
 
   List.iter test_cases ~f:(fun (str, expected) ->
-      let expected_str = Log_types.Level.to_string expected in
+      let expected_str = Logging.Level.to_string expected in
       require ~here:[%here]
         (String.equal str expected_str)
         ~if_false_then_print_s:
           (lazy
             (let error_message_string =
                sprintf "Expected %s to convert to string %s but got %s"
-                 (Log_types.Level.to_string expected)
+                 (Logging.Level.to_string expected)
                  str expected_str
              in
              [%sexp (error_message_string : string)])));
 
   List.iter test_cases ~f:(fun (_str, expected) ->
-      let expected_str = Log_types.Level.to_string expected in
+      let expected_str = Logging.Level.to_string expected in
       print_s [%sexp (expected_str : string)]);
   [%expect {|
     DEBUG
@@ -42,7 +42,7 @@ let%expect_test "test log level conversion" =
 
 let%expect_test "test log invalid level comparison" =
   (* Test invalid input *)
-  show_raise (fun () -> Log_types.Level.of_string "INVALID");
+  show_raise (fun () -> Logging.Level.of_string "INVALID");
   [%expect {| (raised (Failure "Invalid log level: INVALID")) |}];
   return ()
 

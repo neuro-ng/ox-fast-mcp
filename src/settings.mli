@@ -1,8 +1,8 @@
 open! Core
 open! Async
 
-(* Use Log_types.Level for log levels *)
-module Log_level = Log_types.Level
+(* Use Logging.Level for log levels *)
+module Log_level : module type of Logging.Level
 
 module Duplicate_behavior : sig
   type t = Warn | Error | Replace | Ignore
