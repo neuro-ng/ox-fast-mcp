@@ -1,13 +1,7 @@
 (library
  (name server)
  (public_name ox-fast-mcp.server)
- (libraries
-  core
-  async
-  yojson
-  ppx_yojson_conv_lib
-  ox_fast_mcp)
+ (libraries core async yojson ppx_yojson_conv_lib ox_fast_mcp)
  (modules context)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))
-

@@ -1,7 +1,6 @@
 open Core
 open Async
 open Expect_test_helpers_core
-
 open Tool_manager
 open Fmcp_types
 
@@ -15,33 +14,36 @@ module Server = struct
 
   let call_tool t key args =
     match List.find t.tools ~f:(fun tool -> String.equal tool.Tool.key key) with
-    | Some tool ->
-      let ctx = {
-        Tool_types.request_id = None;
-        client_id = None;
-        session_data = Hashtbl.create (module String);
-        tools_changed = false;
-        resources_changed = false;
-        prompts_changed = false;
-      } in
+    | Some tool -> (
+      let ctx =
+        {
+          Tool_types.request_id = None;
+          client_id = None;
+          session_data = Hashtbl.create (module String);
+          tools_changed = false;
+          resources_changed = false;
+          prompts_changed = false;
+        }
+      in
       let%bind result = tool.Tool.fn ctx args in
-      (match result with
-       | Ok res -> return res.Tool_types.content
-       | Error err -> failwith err.Ox_fast_mcp.Exceptions.message)
-    | None ->
-      raise (Not_found_s [%message "Tool not found" (key : string)])
+      match result with
+      | Ok res -> return res.Tool_types.content
+      | Error err -> failwith err.Ox_fast_mcp.Exceptions.message)
+    | None -> raise (Not_found_s [%message "Tool not found" (key : string)])
 end
 
 let create_server_api server =
   {
-    list_tools = (fun () -> 
-      let%bind tools_list = Server.list_tools server in
-      let tools_map = List.fold tools_list ~init:String.Map.empty ~f:(fun acc tool -> Map.set acc ~key:tool.Tool.key ~data:tool) in
-      return tools_map
-    );
+    list_tools =
+      (fun () ->
+        let%bind tools_list = Server.list_tools server in
+        let tools_map =
+          List.fold tools_list ~init:String.Map.empty ~f:(fun acc tool ->
+              Map.set acc ~key:tool.Tool.key ~data:tool)
+        in
+        return tools_map);
     call_tool = (fun key args -> Server.call_tool server key args);
   }
-
 
 module Context = struct
   type t = {
@@ -95,7 +97,6 @@ let create_test_tool name description =
     | _ -> failwith "Expected object arguments"
   in
   Tool.from_function ~name ~description handler
-
 
 let create_async_test_tool name description =
   let handler args =
@@ -201,8 +202,7 @@ let%expect_test "basic function tool" =
     call_tool manager "add" (`Assoc [ ("x", `Int 5); ("y", `Int 3) ])
   in
   (match List.hd_exn result with
-  | Text txt -> printf "(Text %s)
-" txt
+  | Text txt -> printf "(Text %s)\n" txt
   | _ -> print_endline "Non-text content");
   [%expect {| (Text 8) |}];
   return ()
@@ -213,8 +213,7 @@ let%expect_test "async function tool" =
   let _added_tool = add_tool manager double in
   let%bind result = call_tool manager "double" (`Assoc [ ("x", `Int 5) ]) in
   (match List.hd_exn result with
-  | Text txt -> printf "(Text %s)
-" txt
+  | Text txt -> printf "(Text %s)\n" txt
   | _ -> print_endline "Non-text content");
   [%expect {| (Text 10) |}];
   return ()
@@ -242,8 +241,7 @@ let%expect_test "callable object tool" =
       | _ -> failwith "Expected object arguments"
   end in
   let tool =
-    Tool.from_function ~name:Adder.name
-      ~description:Adder.description
+    Tool.from_function ~name:Adder.name ~description:Adder.description
       Adder.call
   in
   let _added_tool = add_tool manager tool in
@@ -251,8 +249,7 @@ let%expect_test "callable object tool" =
     call_tool manager "adder" (`Assoc [ ("x", `Int 5); ("y", `Int 3) ])
   in
   (match List.hd_exn result with
-  | Text txt -> printf "(Text %s)
-" txt
+  | Text txt -> printf "(Text %s)\n" txt
   | _ -> print_endline "Non-text content");
   [%expect {| (Text 8) |}];
   return ()
@@ -268,7 +265,7 @@ let%expect_test "tool not found error" =
   | Error exn ->
     print_s [%sexp (Error.of_exn exn : Error.t)];
     [%expect {| "Tool nonexistent not found" |}];
-  return ()
+    return ()
 
 let%expect_test "invalid arguments error" =
   let manager = create () in
@@ -282,7 +279,7 @@ let%expect_test "invalid arguments error" =
   | Error exn ->
     print_s [%sexp (Error.of_exn exn : Error.t)];
     [%expect {| "Expected integer for x" |}];
-  return ()
+    return ()
 
 let%expect_test "missing required argument error" =
   let manager = create () in
@@ -295,7 +292,7 @@ let%expect_test "missing required argument error" =
   | Error exn ->
     print_s [%sexp (Error.of_exn exn : Error.t)];
     [%expect {| "Required argument x not found" |}];
-  return ()
+    return ()
 
 (* Duplicate Tool Behavior Tests *)
 let%expect_test "error on duplicate tool with error behavior" =
@@ -308,7 +305,7 @@ let%expect_test "error on duplicate tool with error behavior" =
   | Error exn ->
     print_s [%sexp (Error.of_exn exn : Error.t)];
     [%expect {| "Tool already exists: add" |}];
-  return ()
+    return ()
 
 let%expect_test "ignore duplicate tool" =
   let manager = create ~duplicate_behavior:DuplicateBehavior.Ignore () in
@@ -354,14 +351,13 @@ let%expect_test "error on invalid tool name" =
   | Error exn ->
     print_s [%sexp (Error.of_exn exn : Error.t)];
     [%expect {| "Invalid tool name: name cannot be empty" |}];
-  return ()
+    return ()
 
 let%expect_test "error on invalid tool parameters" =
   let manager = create () in
   let tool =
-    Tool.from_function
-      ~name:"test" ~description:"Test tool"
-      (fun _ -> return [ create_text_content "test" ])
+    Tool.from_function ~name:"test" ~description:"Test tool" (fun _ ->
+        return [ create_text_content "test" ])
     (* Should be an object *)
   in
   match%bind Monitor.try_with (fun () -> return (add_tool manager tool)) with
@@ -369,7 +365,7 @@ let%expect_test "error on invalid tool parameters" =
   | Error exn ->
     print_s [%sexp (Error.of_exn exn : Error.t)];
     [%expect {| "Invalid parameters schema: must be an object or null" |}];
-  return ()
+    return ()
 
 (* Server integration tests *)
 let%expect_test "mount server and list tools" =
@@ -397,8 +393,7 @@ let%expect_test "call tool through mounted server" =
     call_tool manager "test_add" (`Assoc [ ("x", `Int 5); ("y", `Int 3) ])
   in
   (match List.hd_exn result with
-  | Text txt -> printf "(Text %s)
-" txt
+  | Text txt -> printf "(Text %s)\n" txt
   | _ -> print_endline "Non-text content");
   [%expect {| (Text 8) |}];
   return ()
@@ -439,16 +434,14 @@ let%expect_test "server error handling" =
   | Error exn ->
     print_s [%sexp (Error.of_exn exn : Error.t)];
     [%expect {| "Tool not found: test_nonexistent" |}];
-  return ()
+    return ()
 
 (* Tool tags tests *)
 let%expect_test "add tool with tags" =
   let manager = create () in
   let tool =
-    Tool.from_function
-      ~name:"example" ~description:"Example tool"
-      ~tags:[ "math"; "utility" ]
-      (fun _ -> return [ create_text_content "42" ])
+    Tool.from_function ~name:"example" ~description:"Example tool"
+      ~tags:[ "math"; "utility" ] (fun _ -> return [ create_text_content "42" ])
   in
   let _added_tool = add_tool manager tool in
   let%bind found_tool = get_tool manager "example" in
@@ -459,35 +452,34 @@ let%expect_test "add tool with tags" =
 let%expect_test "list tools with tag filter" =
   let manager = create () in
   let tool1 =
-    Tool.from_function
-      ~name:"math_tool" ~description:"Math tool"
-      ~tags:[ "math" ]
-      (fun _ -> return [ create_text_content "42" ])
+    Tool.from_function ~name:"math_tool" ~description:"Math tool"
+      ~tags:[ "math" ] (fun _ -> return [ create_text_content "42" ])
   in
   let tool2 =
-    Tool.from_function
-      ~name:"string_tool" ~description:"String tool"
-      ~tags:[ "string"; "utility" ]
-      (fun _ -> return [ create_text_content "hello" ])
+    Tool.from_function ~name:"string_tool" ~description:"String tool"
+      ~tags:[ "string"; "utility" ] (fun _ ->
+        return [ create_text_content "hello" ])
   in
   let tool3 =
-    Tool.from_function
-      ~name:"mixed_tool" ~description:"Mixed tool"
-      ~tags:[ "math"; "utility"; "string" ]
-      (fun _ -> return [ create_text_content "mixed" ])
+    Tool.from_function ~name:"mixed_tool" ~description:"Mixed tool"
+      ~tags:[ "math"; "utility"; "string" ] (fun _ ->
+        return [ create_text_content "mixed" ])
   in
   let _added_tool1 = add_tool manager tool1 in
   let _added_tool2 = add_tool manager tool2 in
   let _added_tool3 = add_tool manager tool3 in
   let%bind tools = get_tools manager in
   let math_tools =
-    Map.data tools |> List.filter ~f:(fun tool -> List.mem tool.Tool.tags "math" ~equal:String.equal)
+    Map.data tools
+    |> List.filter ~f:(fun tool ->
+           List.mem tool.Tool.tags "math" ~equal:String.equal)
   in
   print_endline "Math tools:";
   List.iter math_tools ~f:(fun t -> print_s [%sexp (t.Tool.key : string)]);
   let utility_tools =
     Map.data tools
-    |> List.filter ~f:(fun tool -> List.mem tool.Tool.tags "utility" ~equal:String.equal)
+    |> List.filter ~f:(fun tool ->
+           List.mem tool.Tool.tags "utility" ~equal:String.equal)
   in
   print_endline "\nUtility tools:";
   List.iter utility_tools ~f:(fun t -> print_s [%sexp (t.Tool.key : string)]);
@@ -532,8 +524,7 @@ let%expect_test "tool with list parameter" =
       (`Assoc [ ("vals", `List [ `Int 1; `Int 2; `Int 3 ]) ])
   in
   (match List.hd_exn result with
-  | Text txt -> printf "(Text %s)
-" txt
+  | Text txt -> printf "(Text %s)\n" txt
   | _ -> print_endline "Non-text content");
   [%expect {| (Text 6) |}];
   return ()
@@ -545,8 +536,7 @@ let%expect_test "execute async tool" =
   let _added_tool = add_tool manager tool in
   let%bind result = call_tool manager "double" (`Assoc [ ("x", `Int 5) ]) in
   (match List.hd_exn result with
-  | Text txt -> printf "(Text %s)
-" txt
+  | Text txt -> printf "(Text %s)\n" txt
   | _ -> print_endline "Non-text content");
   [%expect {| (Text 10) |}];
   return ()
@@ -564,7 +554,7 @@ let%expect_test "execute tool with invalid args" =
   | Error exn ->
     print_s [%sexp (Error.of_exn exn : Error.t)];
     [%expect {| "Expected integer for x" |}];
-  return ()
+    return ()
 
 (* Test tool execution with missing required argument *)
 let%expect_test "execute tool with missing required arg" =
@@ -579,7 +569,7 @@ let%expect_test "execute tool with missing required arg" =
   | Error exn ->
     print_s [%sexp (Error.of_exn exn : Error.t)];
     [%expect {| "Required argument 'x' not found" |}];
-  return ()
+    return ()
 
 (* Test tool with optional argument *)
 let%expect_test "execute tool with optional arg" =
@@ -588,8 +578,7 @@ let%expect_test "execute tool with optional arg" =
   let _added_tool = add_tool manager tool in
   let%bind result = call_tool manager "add" (`Assoc [ ("x", `Int 5) ]) in
   (match List.hd_exn result with
-  | Text txt -> printf "(Text %s)
-" txt
+  | Text txt -> printf "(Text %s)\n" txt
   | _ -> print_endline "Non-text content");
   [%expect {| (Text 15) |}];
   (* Default y=10 *)
@@ -604,8 +593,7 @@ let%expect_test "execute tool with all args" =
     call_tool manager "add" (`Assoc [ ("x", `Int 5); ("y", `Int 7) ])
   in
   (match List.hd_exn result with
-  | Text txt -> printf "(Text %s)
-" txt
+  | Text txt -> printf "(Text %s)\n" txt
   | _ -> print_endline "Non-text content");
   [%expect {| (Text 12) |}];
   return ()
@@ -627,11 +615,10 @@ let%expect_test "enable disable tool" =
     enable_tool manager "add";
     let%bind result = call_tool manager "add" (`Assoc [ ("x", `Int 5) ]) in
     (match List.hd_exn result with
-  | Text txt -> printf "(Text %s)
-" txt
-  | _ -> print_endline "Non-text content");
+    | Text txt -> printf "(Text %s)\n" txt
+    | _ -> print_endline "Non-text content");
     [%expect {| (Text 15) |}];
-  return ()
+    return ()
 
 (* Test tool with different key types *)
 let%expect_test "different key types" =
@@ -639,11 +626,15 @@ let%expect_test "different key types" =
   let tool = create_test_tool "add" "Add two numbers" in
   let _added_tool = add_tool manager tool in
   let%bind result1 = call_tool manager "add" (`Assoc [ ("x", `Int 5) ]) in
-  (match List.hd_exn result1 with | Text txt -> printf "(Text %s)\n" txt | _ -> print_endline "Non-text content");
+  (match List.hd_exn result1 with
+  | Text txt -> printf "(Text %s)\n" txt
+  | _ -> print_endline "Non-text content");
   let%bind result2 =
     call_tool manager "add" (`Assoc [ ("x", `Int 3); ("y", `Int 7) ])
   in
-  (match List.hd_exn result2 with | Text txt -> printf "(Text %s)\n" txt | _ -> print_endline "Non-text content");
+  (match List.hd_exn result2 with
+  | Text txt -> printf "(Text %s)\n" txt
+  | _ -> print_endline "Non-text content");
   [%expect {|
     (Text 15)
     (Text 10) |}];

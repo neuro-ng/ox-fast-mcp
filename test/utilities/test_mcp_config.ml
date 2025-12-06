@@ -24,7 +24,8 @@ let%expect_test "Transport_type to_string and of_string" =
 let%expect_test "Transport_type of_string variants" =
   print_s [%sexp (Transport_type.of_string "http" : Transport_type.t)];
   [%expect {| Streamable_http |}];
-  print_s [%sexp (Transport_type.of_string "streamable-http" : Transport_type.t)];
+  print_s
+    [%sexp (Transport_type.of_string "streamable-http" : Transport_type.t)];
   [%expect {| Streamable_http |}];
   return ()
 
@@ -90,7 +91,8 @@ let%expect_test "mcp_config remove server" =
 let%expect_test "stdio_mcp_server JSON round-trip" =
   let server =
     create_stdio_server ~command:"python" ~args:[ "-m"; "server" ]
-      ~env:[ ("DEBUG", "true") ] ~cwd:"/tmp" ()
+      ~env:[ ("DEBUG", "true") ]
+      ~cwd:"/tmp" ()
   in
   let json = yojson_of_stdio_mcp_server server in
   let back = stdio_mcp_server_of_yojson json in
@@ -103,7 +105,8 @@ let%expect_test "stdio_mcp_server JSON round-trip" =
 let%expect_test "remote_mcp_server JSON round-trip" =
   let server =
     create_remote_server ~url:"http://localhost:8080"
-      ~headers:[ ("Authorization", "Bearer token") ] ~timeout:5000 ()
+      ~headers:[ ("Authorization", "Bearer token") ]
+      ~timeout:5000 ()
   in
   let json = yojson_of_remote_mcp_server server in
   let back = remote_mcp_server_of_yojson json in
@@ -114,14 +117,13 @@ let%expect_test "remote_mcp_server JSON round-trip" =
 
 let%expect_test "mcp_server_of_yojson stdio" =
   let json =
-    `Assoc [ ("command", `String "node"); ("args", `List [ `String "server.js" ]) ]
+    `Assoc
+      [ ("command", `String "node"); ("args", `List [ `String "server.js" ]) ]
   in
   let server = mcp_server_of_yojson json in
   (match server with
-  | Stdio s ->
-    print_s [%sexp (s.command : string)]
-  | Remote _ ->
-    failwith "Expected Stdio server");
+  | Stdio s -> print_s [%sexp (s.command : string)]
+  | Remote _ -> failwith "Expected Stdio server");
   [%expect {| node |}];
   return ()
 
@@ -129,10 +131,8 @@ let%expect_test "mcp_server_of_yojson remote" =
   let json = `Assoc [ ("url", `String "http://localhost:8080") ] in
   let server = mcp_server_of_yojson json in
   (match server with
-  | Remote r ->
-    print_s [%sexp (r.url : string)]
-  | Stdio _ ->
-    failwith "Expected Remote server");
+  | Remote r -> print_s [%sexp (r.url : string)]
+  | Stdio _ -> failwith "Expected Remote server");
   [%expect {| http://localhost:8080 |}];
   return ()
 

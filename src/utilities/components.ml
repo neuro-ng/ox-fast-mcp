@@ -1,9 +1,8 @@
 (** Base component types for OxFastMCP
-    
+
     Implements the polymorphic component pattern for tools, prompts, resources.
-    See: PYTHON_TO_OCAML_TYPE_MAP.md Section 2 (lines 85-164)
-    See: COMPLIANCE_ACTION_PLAN.md Task 2.1
-*)
+    See: PYTHON_TO_OCAML_TYPE_MAP.md Section 2 (lines 85-164) See:
+    COMPLIANCE_ACTION_PLAN.md Task 2.1 *)
 
 open! Core
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
@@ -38,19 +37,19 @@ end
 (** Custom meta type that supports both sexp and yojson *)
 module Meta = struct
   type t = (string * Yojson.Safe.t) list
-  
+
   (* Custom yojson converters *)
   let yojson_of_t meta = `Assoc meta
-  
+
   let t_of_yojson = function
     | `Assoc assoc -> assoc
     | _ -> []
-  
+
   (* For sexp, we just store as a string representation *)
   let sexp_of_t meta =
     let json = `Assoc meta in
     Sexp.Atom (Yojson.Safe.to_string json)
-  
+
   let t_of_sexp sexp =
     match sexp with
     | Sexp.Atom s -> (
@@ -62,7 +61,6 @@ module Meta = struct
     | _ -> []
 end
 
-(** Base component record type - polymorphic over component-specific data *)
 type 'a component = {
   name : string;
   title : string option; [@default None] [@yojson_drop_if Option.is_none]
@@ -74,6 +72,7 @@ type 'a component = {
   data : 'a;
 }
 [@@deriving sexp, yojson]
+(** Base component record type - polymorphic over component-specific data *)
 
 (* Custom compare function for components *)
 let compare_component compare_a a b =
@@ -98,34 +97,26 @@ let compare_component compare_a a b =
     | c -> c)
   | c -> c
 
+type fastmcp_meta = { tags : string list } [@@deriving sexp, yojson]
 (** Metadata type for FastMCP components *)
-type fastmcp_meta = {
-  tags : string list;
-}
-[@@deriving sexp, yojson]
 
 (** Mirrored component flag *)
-type mirrored_flag = 
-  | Local
-  | Mirrored
-[@@deriving sexp, compare, yojson]
+type mirrored_flag = Local | Mirrored [@@deriving sexp, compare, yojson]
 
-(** Component with mirrored status *)
 type 'a mirrored_component = {
   component : 'a component;
   mirrored : mirrored_flag;
 }
 [@@deriving sexp, yojson]
+(** Component with mirrored status *)
 
-let create ?key ?title ?description ?(tags = String.Set.empty) ?meta ?(enabled = true) ~name ~data () =
+let create ?key ?title ?description ?(tags = String.Set.empty) ?meta
+    ?(enabled = true) ~name ~data () =
   { name; title; description; tags; meta; enabled; key; data }
 
 let key t = Option.value t.key ~default:t.name
-
 let with_key t new_key = { t with key = Some new_key }
-
 let enable t = { t with enabled = true }
-
 let disable t = { t with enabled = false }
 
 let get_meta ~include_fastmcp_meta t =
@@ -133,9 +124,7 @@ let get_meta ~include_fastmcp_meta t =
   match include_fastmcp_meta with
   | Some true | None ->
     (* Include FastMCP metadata *)
-    let fastmcp_meta = {
-      tags = Set.to_list t.tags;
-    } in
+    let fastmcp_meta = { tags = Set.to_list t.tags } in
     let fastmcp_json = yojson_of_fastmcp_meta fastmcp_meta in
     Some (("_fastmcp", fastmcp_json) :: base_meta)
   | Some false ->

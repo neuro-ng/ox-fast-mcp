@@ -6,10 +6,7 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 (** Transport types supported by MCP servers *)
 module Transport_type = struct
-  type t =
-    | Stdio
-    | Sse
-    | Streamable_http
+  type t = Stdio | Sse | Streamable_http
   [@@deriving sexp, compare, equal, yojson]
 
   let to_string = function
@@ -24,7 +21,6 @@ module Transport_type = struct
     | s -> failwithf "Unknown transport type: %s" s ()
 end
 
-(** Stdio MCP server configuration *)
 type stdio_mcp_server = {
   command : string;
   args : string list; [@default []]
@@ -35,12 +31,12 @@ type stdio_mcp_server = {
   icon : string option; [@yojson.option]
 }
 [@@deriving sexp, compare, yojson]
+(** Stdio MCP server configuration *)
 
 let create_stdio_server ~command ?(args = []) ?(env = []) ?cwd ?timeout
     ?description ?icon () =
   { command; args; env; cwd; timeout; description; icon }
 
-(** Remote MCP server configuration for HTTP/SSE transport *)
 type remote_mcp_server = {
   url : string;
   transport : Transport_type.t option; [@yojson.option]
@@ -51,42 +47,43 @@ type remote_mcp_server = {
   icon : string option; [@yojson.option]
 }
 [@@deriving sexp, compare, yojson]
+(** Remote MCP server configuration for HTTP/SSE transport *)
 
 let create_remote_server ~url ?transport ?(headers = []) ?sse_read_timeout
     ?timeout ?description ?icon () =
   { url; transport; headers; sse_read_timeout; timeout; description; icon }
 
 (** MCP server configuration - either stdio or remote *)
-type mcp_server =
-  | Stdio of stdio_mcp_server
-  | Remote of remote_mcp_server
+type mcp_server = Stdio of stdio_mcp_server | Remote of remote_mcp_server
 [@@deriving sexp, compare]
 
 let mcp_server_of_yojson json =
   match json with
-  | `Assoc fields ->
-    (match List.Assoc.find fields ~equal:String.equal "command" with
+  | `Assoc fields -> (
+    match List.Assoc.find fields ~equal:String.equal "command" with
     | Some _ -> Stdio (stdio_mcp_server_of_yojson json)
-    | None ->
-      (match List.Assoc.find fields ~equal:String.equal "url" with
+    | None -> (
+      match List.Assoc.find fields ~equal:String.equal "url" with
       | Some _ -> Remote (remote_mcp_server_of_yojson json)
-      | None -> failwith "MCP server must have either 'command' or 'url' field"))
+      | None -> failwith "MCP server must have either 'command' or 'url' field")
+    )
   | _ -> failwith "MCP server configuration must be an object"
 
 let yojson_of_mcp_server = function
   | Stdio server -> yojson_of_stdio_mcp_server server
   | Remote server -> yojson_of_remote_mcp_server server
 
-(** MCP configuration containing multiple servers *)
-type mcp_config = { mcp_servers : (string * mcp_server) list [@key "mcpServers"] }
+type mcp_config = {
+  mcp_servers : (string * mcp_server) list; [@key "mcpServers"]
+}
 [@@deriving sexp, compare, yojson]
+(** MCP configuration containing multiple servers *)
 
 let create_config ?(servers = []) () = { mcp_servers = servers }
 
 let add_server config ~name ~server =
   let servers =
-    List.filter config.mcp_servers ~f:(fun (n, _) ->
-        not (String.equal n name))
+    List.filter config.mcp_servers ~f:(fun (n, _) -> not (String.equal n name))
     @ [ (name, server) ]
   in
   { mcp_servers = servers }
@@ -105,7 +102,9 @@ let remove_server config ~name =
 let infer_transport_type_from_url url =
   let uri = Uri.of_string url in
   let path = Uri.path uri in
-  if String.is_suffix path ~suffix:"/sse" || String.is_suffix path ~suffix:"/sse/"
+  if
+    String.is_suffix path ~suffix:"/sse"
+    || String.is_suffix path ~suffix:"/sse/"
   then Transport_type.Sse
   else Transport_type.Streamable_http
 

@@ -1,8 +1,7 @@
 (** Resource Manager for OxFastMCP
-    
-    Manages a collection of resources with support for registration, retrieval, and reading.
-    Implements the Manager.S pattern for consistency.
-*)
+
+    Manages a collection of resources with support for registration, retrieval,
+    and reading. Implements the Manager.S pattern for consistency. *)
 
 open! Core
 open! Async
@@ -10,12 +9,7 @@ open! Async
 (** {1 Duplicate Behavior} *)
 
 module DuplicateBehavior : sig
-  type t =
-    | Warn
-    | Replace
-    | Error
-    | Ignore
-  [@@deriving sexp, yojson]
+  type t = Warn | Replace | Error | Ignore [@@deriving sexp, yojson]
 
   val of_string : string -> t Or_error.t
   val of_string_exn : string -> t

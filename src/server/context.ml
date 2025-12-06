@@ -1,9 +1,8 @@
 (** Execution Context for OxFastMCP
-    
+
     Centralizes context management for tool, resource, and prompt execution.
-    See: PYTHON_TO_OCAML_TYPE_MAP.md Section 8 (lines 665-687)
-    See: Task 8.1 - Centralized Context Module
-*)
+    See: PYTHON_TO_OCAML_TYPE_MAP.md Section 8 (lines 665-687) See: Task 8.1 -
+    Centralized Context Module *)
 
 open! Core
 open! Async
@@ -31,7 +30,8 @@ let create ?(request_id : string option) ?(client_id : string option) () : t =
     prompts_changed = false;
   }
 
-let create_with_session ?(request_id : string option) ?(client_id : string option)
+let create_with_session ?(request_id : string option)
+    ?(client_id : string option)
     ~(session_data : (string, Yojson.Safe.t) Hashtbl.t) () : t =
   {
     request_id;
@@ -44,14 +44,9 @@ let create_with_session ?(request_id : string option) ?(client_id : string optio
 
 (** {1 Change Notifications} *)
 
-let queue_tool_list_changed (ctx : t) : unit =
-  ctx.tools_changed <- true
-
-let queue_resource_list_changed (ctx : t) : unit =
-  ctx.resources_changed <- true
-
-let queue_prompt_list_changed (ctx : t) : unit =
-  ctx.prompts_changed <- true
+let queue_tool_list_changed (ctx : t) : unit = ctx.tools_changed <- true
+let queue_resource_list_changed (ctx : t) : unit = ctx.resources_changed <- true
+let queue_prompt_list_changed (ctx : t) : unit = ctx.prompts_changed <- true
 
 let has_changes (ctx : t) : bool =
   ctx.tools_changed || ctx.resources_changed || ctx.prompts_changed
@@ -59,7 +54,9 @@ let has_changes (ctx : t) : bool =
 let get_changed_lists (ctx : t) : string list =
   let changed = [] in
   let changed = if ctx.tools_changed then "tools" :: changed else changed in
-  let changed = if ctx.resources_changed then "resources" :: changed else changed in
+  let changed =
+    if ctx.resources_changed then "resources" :: changed else changed
+  in
   let changed = if ctx.prompts_changed then "prompts" :: changed else changed in
   List.rev changed
 
@@ -79,13 +76,11 @@ let set_session_value (ctx : t) (key : string) (value : Yojson.Safe.t) : unit =
 let remove_session_value (ctx : t) (key : string) : unit =
   Hashtbl.remove ctx.session_data key
 
-let clear_session (ctx : t) : unit =
-  Hashtbl.clear ctx.session_data
+let clear_session (ctx : t) : unit = Hashtbl.clear ctx.session_data
 
 (** {1 Context Information} *)
 
 let get_request_id (ctx : t) : string option = ctx.request_id
-
 let get_client_id (ctx : t) : string option = ctx.client_id
 
 let with_request_id (ctx : t) (request_id : string) : t =
@@ -97,4 +92,3 @@ let with_client_id (ctx : t) (client_id : string) : t =
 (** {1 Type Aliases} *)
 
 type 'a with_context = t -> 'a
-

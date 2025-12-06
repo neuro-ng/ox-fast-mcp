@@ -313,8 +313,8 @@ let%expect_test "test dotenv file loading with comments and empty lines" =
 
 let%expect_test "test dotenv file loading with values containing equals" =
   let test_env_content =
-    "FASTMCP_HOME=/path/with=equals\n"
-    ^ "FASTMCP_HOST=example.com:8080=admin\n" ^ "FASTMCP_PORT=5555\n"
+    "FASTMCP_HOME=/path/with=equals\n" ^ "FASTMCP_HOST=example.com:8080=admin\n"
+    ^ "FASTMCP_PORT=5555\n"
   in
 
   (* Create temporary .env file *)
@@ -467,9 +467,7 @@ let%expect_test "test file secrets loading with mixed files and directories" =
   let%bind () = Unix.mkdir (Filename.concat secrets_dir "subdir") in
   (* Should be skipped *)
   let%bind () =
-    Writer.save
-      (Filename.concat secrets_dir "FASTMCP_DEBUG")
-      ~contents:"false"
+    Writer.save (Filename.concat secrets_dir "FASTMCP_DEBUG") ~contents:"false"
   in
 
   let initial_settings = Settings.create ~home:home_dir () in

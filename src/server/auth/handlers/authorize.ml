@@ -1,8 +1,8 @@
 (** Enhanced authorization handler with improved error responses.
 
-    This module provides an enhanced authorization handler that wraps the MCP SDK's
-    AuthorizationHandler to provide better error messages when clients attempt to
-    authorize with unregistered client IDs.
+    This module provides an enhanced authorization handler that wraps the MCP
+    SDK's AuthorizationHandler to provide better error messages when clients
+    attempt to authorize with unregistered client IDs.
 
     The enhancement adds:
     - Content negotiation: HTML for browsers, JSON for API clients
@@ -16,7 +16,6 @@ open! Logging
 
 let logger = Logger.get_logger "Authorize"
 
-(** Authorization error response type *)
 type authorization_error_response = {
   error : string;
   error_description : string option; [@yojson.option]
@@ -25,18 +24,25 @@ type authorization_error_response = {
   authorization_server_metadata : string option; [@yojson.option]
 }
 [@@deriving yojson, sexp, compare]
+(** Authorization error response type *)
 
-(** Configuration for the authorization handler *)
 type config = {
   base_url : string;
   server_name : string option;
   server_icon_url : string option;
 }
+(** Configuration for the authorization handler *)
 
 (** Create an authorization error response *)
-let create_error_response ~error ?error_description ?state ?registration_endpoint
-    ?authorization_server_metadata () =
-  { error; error_description; state; registration_endpoint; authorization_server_metadata }
+let create_error_response ~error ?error_description ?state
+    ?registration_endpoint ?authorization_server_metadata () =
+  {
+    error;
+    error_description;
+    state;
+    registration_endpoint;
+    authorization_server_metadata;
+  }
 
 (** HTML styles for info boxes *)
 let info_box_styles =
@@ -135,10 +141,12 @@ let escape_html s =
 let create_logo ?icon_url ~alt_text () =
   match icon_url with
   | Some url ->
-    sprintf {|<img src="%s" alt="%s" class="logo" style="max-width: 80px; margin-bottom: 16px;">|}
+    sprintf
+      {|<img src="%s" alt="%s" class="logo" style="max-width: 80px; margin-bottom: 16px;">|}
       (escape_html url) (escape_html alt_text)
   | None ->
-    sprintf {|<div class="logo-placeholder" style="font-size: 2em; margin-bottom: 16px;">🔐</div>|}
+    sprintf
+      {|<div class="logo-placeholder" style="font-size: 2em; margin-bottom: 16px;">🔐</div>|}
 
 (** Create HTML page wrapper *)
 let create_page ~content ~title ~additional_styles =
@@ -188,11 +196,15 @@ let create_page ~content ~title ~additional_styles =
     (escape_html title) additional_styles content
 
 (** Create styled HTML error page for unregistered client attempts *)
-let create_unregistered_client_html ~client_id ~registration_endpoint ~discovery_endpoint
-    ?server_name ?server_icon_url ?(title = "Client Not Registered") () =
+let create_unregistered_client_html ~client_id ~registration_endpoint
+    ~discovery_endpoint ?server_name ?server_icon_url
+    ?(title = "Client Not Registered") () =
   let client_id_escaped = escape_html client_id in
-  let _ = registration_endpoint in (* Will be used in future for registration form *)
-  let _ = discovery_endpoint in (* Will be used in future for metadata link *)
+  let _ = registration_endpoint in
+  (* Will be used in future for registration form *)
+  let _ = discovery_endpoint in
+
+  (* Will be used in future for metadata link *)
 
   (* Main error message *)
   let error_box =
@@ -247,10 +259,7 @@ let create_unregistered_client_html ~client_id ~registration_endpoint ~discovery
       </div>
       %s|}
       (create_logo ?icon_url:server_icon_url ~alt_text ())
-      (escape_html title)
-      error_box
-      warning_box
-      help_link
+      (escape_html title) error_box warning_box help_link
   in
 
   (* Use same styles as consent page *)
@@ -267,62 +276,77 @@ module type AUTHORIZATION_HANDLER = sig
 end
 
 (** Create the enhanced authorization handler *)
-module Make_authorization_handler (Provider : Mcp_server_auth.Provider.OAUTH_AUTHORIZATION_SERVER_PROVIDER) = struct
-
+module Make_authorization_handler
+    (Provider : Mcp_server_auth.Provider.OAUTH_AUTHORIZATION_SERVER_PROVIDER) =
+struct
   (** Check if a client is registered *)
   let is_client_registered client_id =
     Lwt.bind (Provider.get_client client_id) (fun client ->
-      Lwt.return (Option.is_some client))
+        Lwt.return (Option.is_some client))
 
   (** Create an enhanced error response for unregistered client *)
   let create_enhanced_error_response ~client_id ~accept_header ~state ~config =
     let registration_endpoint = config.base_url ^ "/register" in
-    let discovery_endpoint = config.base_url ^ "/.well-known/oauth-authorization-server" in
+    let discovery_endpoint =
+      config.base_url ^ "/.well-known/oauth-authorization-server"
+    in
 
     (* Check Accept header for content negotiation *)
-    let prefers_html = String.is_substring accept_header ~substring:"text/html" in
+    let prefers_html =
+      String.is_substring accept_header ~substring:"text/html"
+    in
 
-    if prefers_html then begin
+    if prefers_html then (
       (* Return HTML for browsers *)
-      let html = create_unregistered_client_html
-        ~client_id
-        ~registration_endpoint
-        ~discovery_endpoint
-        ?server_name:config.server_name
-        ?server_icon_url:config.server_icon_url
-        ()
+      let html =
+        create_unregistered_client_html ~client_id ~registration_endpoint
+          ~discovery_endpoint ?server_name:config.server_name
+          ?server_icon_url:config.server_icon_url ()
       in
-      let headers = [
-        ("Content-Type", "text/html; charset=utf-8");
-        ("Cache-Control", "no-store");
-        ("Link", sprintf {|<%s>; rel="http://oauth.net/core/2.1/#registration"|} registration_endpoint);
-        ("X-Content-Type-Options", "nosniff");
-        ("X-Frame-Options", "DENY");
-      ] in
-      Logger.info logger (sprintf "Unregistered client_id=%s, returned HTML error response" client_id);
-      (400, "text/html", html, headers)
-    end else begin
+      let headers =
+        [
+          ("Content-Type", "text/html; charset=utf-8");
+          ("Cache-Control", "no-store");
+          ( "Link",
+            sprintf {|<%s>; rel="http://oauth.net/core/2.1/#registration"|}
+              registration_endpoint );
+          ("X-Content-Type-Options", "nosniff");
+          ("X-Frame-Options", "DENY");
+        ]
+      in
+      Logger.info logger
+        (sprintf "Unregistered client_id=%s, returned HTML error response"
+           client_id);
+      (400, "text/html", html, headers))
+    else
       (* Return enhanced JSON for API clients *)
-      let error_response = create_error_response
-        ~error:"invalid_request"
-        ~error_description:(sprintf
-          "Client ID '%s' is not registered with this server. \
-           MCP clients should automatically re-register by sending a POST request to \
-           the registration_endpoint and retry authorization. \
-           If this persists, clear cached authentication tokens and reconnect."
-          client_id)
-        ?state
-        ~registration_endpoint
-        ~authorization_server_metadata:discovery_endpoint
-        ()
+      let error_response =
+        create_error_response ~error:"invalid_request"
+          ~error_description:
+            (sprintf
+               "Client ID '%s' is not registered with this server. MCP clients \
+                should automatically re-register by sending a POST request to \
+                the registration_endpoint and retry authorization. If this \
+                persists, clear cached authentication tokens and reconnect."
+               client_id)
+          ?state ~registration_endpoint
+          ~authorization_server_metadata:discovery_endpoint ()
       in
-      let json = Yojson.Safe.to_string (yojson_of_authorization_error_response error_response) in
-      let headers = [
-        ("Content-Type", "application/json");
-        ("Cache-Control", "no-store");
-        ("Link", sprintf {|<%s>; rel="http://oauth.net/core/2.1/#registration"|} registration_endpoint);
-      ] in
-      Logger.info logger (sprintf "Unregistered client_id=%s, returned JSON error response" client_id);
+      let json =
+        Yojson.Safe.to_string
+          (yojson_of_authorization_error_response error_response)
+      in
+      let headers =
+        [
+          ("Content-Type", "application/json");
+          ("Cache-Control", "no-store");
+          ( "Link",
+            sprintf {|<%s>; rel="http://oauth.net/core/2.1/#registration"|}
+              registration_endpoint );
+        ]
+      in
+      Logger.info logger
+        (sprintf "Unregistered client_id=%s, returned JSON error response"
+           client_id);
       (400, "application/json", json, headers)
-    end
 end

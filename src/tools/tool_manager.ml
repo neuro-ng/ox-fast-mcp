@@ -10,9 +10,8 @@ open! Logging
 let logger = Logger.get_logger "ToolManager"
 
 module DuplicateBehavior = struct
-  type t = Warn | Replace | Error | Ignore
-  [@@deriving sexp, compare, equal]
-  
+  type t = Warn | Replace | Error | Ignore [@@deriving sexp, compare, equal]
+
   (* Enumerate all values manually since ppx_enumerate not available *)
   let all = [ Warn; Replace; Error; Ignore ]
 
@@ -34,11 +33,12 @@ end
 
 module Tool = struct
   (* Legacy handler type: no context, no Result.t *)
-  type simple_handler = Fmcp_types.json -> Fmcp_types.content_type list Deferred.t
-  
+  type simple_handler =
+    Fmcp_types.json -> Fmcp_types.content_type list Deferred.t
+
   (* Tool internal handler: with context, Result-based *)
   type internal_handler = Tool_types.tool_handler
-  
+
   type t = {
     key : string;
     name : string option;
@@ -47,16 +47,12 @@ module Tool = struct
     annotations : (string * string) list;
     parameters : Yojson.Safe.t;
     enabled : bool;
-    fn : internal_handler;  (* Stored internally as Result-based *)
+    fn : internal_handler; (* Stored internally as Result-based *)
   }
 
   let with_key t new_key = { t with key = new_key }
-
-  let enable t =
-    { t with enabled = true }
-
-  let disable t =
-    { t with enabled = false }
+  let enable t = { t with enabled = true }
+  let disable t = { t with enabled = false }
 
   let to_mcp_tool ?overrides t =
     let base =
@@ -84,12 +80,13 @@ module Tool = struct
     | x -> [ Fmcp_types.create_text_content (serialize x) ]
 
   let from_function ?name ?description ?(tags = []) ?(annotations = [])
-      ?(_exclude_args = []) ?(_serializer : (Fmcp_types.json -> string) option) ?(enabled = true) 
-      (simple_fn : simple_handler) =
+      ?(_exclude_args = []) ?(_serializer : (Fmcp_types.json -> string) option)
+      ?(enabled = true) (simple_fn : simple_handler) =
     (* Convert simple handler to internal handler *)
-    let internal_fn : internal_handler = fun _ctx args ->
-      simple_fn args
-      >>| fun content -> Ok { Tool_types.content; structured_content = None }
+    let internal_fn : internal_handler =
+     fun _ctx args ->
+      simple_fn args >>| fun content ->
+      Ok { Tool_types.content; structured_content = None }
     in
     let key =
       match name with
@@ -115,10 +112,7 @@ type server_api = {
   call_tool : string -> Yojson.Safe.t -> Tool_types.content_type list Deferred.t;
 }
 
-type mounted_server = {
-  prefix : string option;
-  server : server_api;
-}
+type mounted_server = { prefix : string option; server : server_api }
 
 type t = {
   mutable tools : Tool.t String.Map.t;
@@ -145,10 +139,8 @@ let load_tools t ~via_server =
       ~f:(fun acc mounted ->
         Monitor.try_with (fun () ->
             let%bind child_results =
-              if via_server then
-                mounted.server.list_tools ()
-              else
-                mounted.server.list_tools ()
+              if via_server then mounted.server.list_tools ()
+              else mounted.server.list_tools ()
             in
             let child_dict = child_results in
             match mounted.prefix with
@@ -254,8 +246,7 @@ let call_tool t key arguments =
         prompts_changed = false;
       }
     in
-    tool.Tool.fn ctx arguments
-    >>= function
+    tool.Tool.fn ctx arguments >>= function
     | Ok result -> return result.Tool_types.content
     | Error error_data ->
       Logger.error logger
@@ -280,12 +271,12 @@ let call_tool t key arguments =
         | Ok result -> return result
         | Error (Not_found_s _) -> try_mounted rest
         | Error _exn ->
-          (* If call_tool failed, it might be because the tool wasn't found on that server.
-             However, call_tool returns content list, so if it returns, it succeeded.
-             If it raises, we check if it's a not found error.
-             Since we don't have a specific Not_found exception from the api, we rely on the try_with.
-             We should probably check if the tool exists on the server first or handle the error better.
-          *)
-           try_mounted rest)
+          (* If call_tool failed, it might be because the tool wasn't found on
+             that server. However, call_tool returns content list, so if it
+             returns, it succeeded. If it raises, we check if it's a not found
+             error. Since we don't have a specific Not_found exception from the
+             api, we rely on the try_with. We should probably check if the tool
+             exists on the server first or handle the error better. *)
+          try_mounted rest)
     in
     try_mounted (List.rev t.mounted_servers)

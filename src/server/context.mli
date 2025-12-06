@@ -1,19 +1,14 @@
 (** Execution Context for OxFastMCP
-    
+
     Centralizes context management for tool, resource, and prompt execution.
-    See: PYTHON_TO_OCAML_TYPE_MAP.md Section 8 (lines 665-687)
-    See: Task 8.1 - Centralized Context Module
-*)
+    See: PYTHON_TO_OCAML_TYPE_MAP.md Section 8 (lines 665-687) See: Task 8.1 -
+    Centralized Context Module *)
 
 open! Core
 open! Async
 
 (** {1 Context Type} *)
 
-(** Execution context passed to handlers
-    
-    Contains request metadata and mutation flags for tracking changes.
-*)
 type t = {
   request_id : string option;  (** Optional request identifier *)
   client_id : string option;  (** Optional client identifier *)
@@ -22,14 +17,13 @@ type t = {
   mutable resources_changed : bool;  (** Flag: resources list modified *)
   mutable prompts_changed : bool;  (** Flag: prompts list modified *)
 }
+(** Execution context passed to handlers
+
+    Contains request metadata and mutation flags for tracking changes. *)
 
 (** {1 Context Creation} *)
 
-val create :
-  ?request_id:string ->
-  ?client_id:string ->
-  unit ->
-  t
+val create : ?request_id:string -> ?client_id:string -> unit -> t
 (** Create a new execution context *)
 
 val create_with_session :
@@ -90,6 +84,5 @@ val with_client_id : t -> string -> t
 
 (** {1 Type Aliases} *)
 
-(** Function that takes context as first parameter *)
 type 'a with_context = t -> 'a
-
+(** Function that takes context as first parameter *)

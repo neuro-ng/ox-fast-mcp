@@ -20,11 +20,12 @@ module Level : sig
   val level_eq : t -> t -> bool
 end
 
-(** Configure global logging behavior. *)
 val configure : ?with_timestamp:bool -> unit -> unit
+(** Configure global logging behavior. *)
 
-(** Global logging functions - the primary API. *)
 val debug : string -> unit
+(** Global logging functions - the primary API. *)
+
 val info : string -> unit
 val warning : string -> unit
 val error : string -> unit
@@ -37,9 +38,7 @@ end
 
 (** Log handler - for backward compatibility. *)
 module Log_handler : sig
-  type t = {
-    mutable log : level:Level.t -> msg:string -> unit;
-  }
+  type t = { mutable log : level:Level.t -> msg:string -> unit }
 
   val create : unit -> t
   val log : t -> level:Level.t -> msg:string -> unit
@@ -87,13 +86,13 @@ module Simple_handler : sig
   val log : t -> level:Level.t -> msg:string -> unit
 end
 
-(** Configure logging - backward compatible. *)
 val configure_logging :
   ?level:Level.t ->
   ?enable_rich_tracebacks:bool ->
   ?logger:Logger.t ->
   unit ->
   Logger.t
+(** Configure logging - backward compatible. *)
 
 (** Global module - for backward compatibility with Logging.Global.* *)
 module Global : sig
@@ -105,11 +104,11 @@ module Global : sig
   val critical : string -> unit
 end
 
-(** Client logging callback type. *)
 type handler = Level.t -> string -> unit -> unit
+(** Client logging callback type. *)
 
-(** Default log handler for client. *)
 val default_handler : handler
+(** Default log handler for client. *)
 
-(** Create logging callback for client. *)
 val create_callback : handler -> Level.t -> string -> unit
+(** Create logging callback for client. *)

@@ -1,8 +1,7 @@
 (** Tests for Resource Manager
-    
-    Basic tests for resource manager functionality.
-    Uses expect_test framework with Async support.
-*)
+
+    Basic tests for resource manager functionality. Uses expect_test framework
+    with Async support. *)
 
 open! Core
 open! Async
@@ -10,13 +9,8 @@ open! Async
 (** {1 Test Helpers} *)
 
 let create_test_resource name uri =
-  Resources.Resource_types.create_text_resource
-    ~uri
-    ~name
-    ~content:"Test content"
-    ~description:"Test resource"
-    ~tags:["test"]
-    ()
+  Resources.Resource_types.create_text_resource ~uri ~name
+    ~content:"Test content" ~description:"Test resource" ~tags:[ "test" ] ()
 
 (** {1 Manager Creation Tests} *)
 
@@ -27,10 +21,11 @@ let%expect_test "create resource manager" =
   return ()
 
 let%expect_test "create manager with options" =
-  let manager = Resources.Resource_manager.create
-    ~duplicate_behavior:Resources.Resource_manager.DuplicateBehavior.Replace
-    ~mask_error_details:true
-    () in
+  let manager =
+    Resources.Resource_manager.create
+      ~duplicate_behavior:Resources.Resource_manager.DuplicateBehavior.Replace
+      ~mask_error_details:true ()
+  in
   print_s [%sexp (Resources.Resource_manager.count manager : int)];
   [%expect {| 0 |}];
   return ()
@@ -77,9 +72,13 @@ let%expect_test "has_resource" =
   let manager = Resources.Resource_manager.create () in
   let resource = create_test_resource "test_resource" "file:///test" in
   let%bind () = Resources.Resource_manager.add manager resource in
-  print_s [%sexp (Resources.Resource_manager.has_resource manager "test_resource" : bool)];
+  print_s
+    [%sexp
+      (Resources.Resource_manager.has_resource manager "test_resource" : bool)];
   [%expect {| true |}];
-  print_s [%sexp (Resources.Resource_manager.has_resource manager "nonexistent" : bool)];
+  print_s
+    [%sexp
+      (Resources.Resource_manager.has_resource manager "nonexistent" : bool)];
   [%expect {| false |}];
   return ()
 
@@ -114,7 +113,9 @@ let%expect_test "enable/disable resource" =
   let disabled = Resources.Resource_manager.disable manager "test_resource" in
   print_s [%sexp (disabled : bool)];
   [%expect {| true |}];
-  let is_enabled = Resources.Resource_manager.is_enabled manager "test_resource" in
+  let is_enabled =
+    Resources.Resource_manager.is_enabled manager "test_resource"
+  in
   print_s [%sexp (is_enabled : bool)];
   [%expect {| false |}];
   let enabled = Resources.Resource_manager.enable manager "test_resource" in
@@ -154,7 +155,9 @@ let%expect_test "read text resource" =
   let manager = Resources.Resource_manager.create () in
   let resource = create_test_resource "test_resource" "file:///test" in
   let%bind () = Resources.Resource_manager.add manager resource in
-  let%bind result = Resources.Resource_manager.read_resource manager "test_resource" in
+  let%bind result =
+    Resources.Resource_manager.read_resource manager "test_resource"
+  in
   (match result with
   | Ok (Resources.Resource_types.Text _content) ->
     print_endline "Text content read successfully";
@@ -169,7 +172,9 @@ let%expect_test "read text resource" =
 
 let%expect_test "read nonexistent resource" =
   let manager = Resources.Resource_manager.create () in
-  let%bind result = Resources.Resource_manager.read_resource manager "nonexistent" in
+  let%bind result =
+    Resources.Resource_manager.read_resource manager "nonexistent"
+  in
   (match result with
   | Ok _ ->
     print_endline "Should not succeed";
@@ -178,4 +183,3 @@ let%expect_test "read nonexistent resource" =
     print_endline "Error as expected";
     [%expect {| Error as expected |}]);
   return ()
-

@@ -14,8 +14,7 @@ open! Tool_types
     @raise Tool_error when a tool execution fails *)
 
 module DuplicateBehavior : sig
-  type t = Warn | Replace | Error | Ignore
-  [@@deriving sexp, compare, equal]
+  type t = Warn | Replace | Error | Ignore [@@deriving sexp, compare, equal]
 
   val all : t list
   val of_string : string -> t Or_error.t
@@ -67,10 +66,7 @@ type server_api = {
   call_tool : string -> Yojson.Safe.t -> Fmcp_types.content_type list Deferred.t;
 }
 
-type mounted_server = {
-  prefix : string option;
-  server : server_api;
-}
+type mounted_server = { prefix : string option; server : server_api }
 
 val create :
   ?duplicate_behavior:DuplicateBehavior.t ->

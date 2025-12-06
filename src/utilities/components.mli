@@ -1,9 +1,8 @@
 (** Base component types for OxFastMCP
-    
+
     Implements the polymorphic component pattern for tools, prompts, resources.
-    See: PYTHON_TO_OCAML_TYPE_MAP.md Section 2 (lines 85-164)
-    See: COMPLIANCE_ACTION_PLAN.md Task 2.1
-*)
+    See: PYTHON_TO_OCAML_TYPE_MAP.md Section 2 (lines 85-164) See:
+    COMPLIANCE_ACTION_PLAN.md Task 2.1 *)
 
 open! Core
 
@@ -15,7 +14,7 @@ end
 (** Custom meta type for component metadata *)
 module Meta : sig
   type t = (string * Yojson.Safe.t) list
-  
+
   val yojson_of_t : t -> Yojson.Safe.t
   val t_of_yojson : Yojson.Safe.t -> t
   val sexp_of_t : t -> Sexp.t
@@ -35,36 +34,30 @@ type 'a component = {
 }
 [@@deriving sexp, yojson]
 (** Base type for all OxFastMCP components (tools, prompts, resources).
-    
+
     The 'a type parameter holds component-specific data:
     - For tools: tool_data
     - For resources: resource_data
     - For prompts: prompt_data
-    
-    Note: compare function is provided separately as compare_component
-*)
+
+    Note: compare function is provided separately as compare_component *)
 
 val compare_component : ('a -> 'a -> int) -> 'a component -> 'a component -> int
-(** Custom compare function for components that takes a comparison function for the data field *)
+(** Custom compare function for components that takes a comparison function for
+    the data field *)
 
+type fastmcp_meta = { tags : string list } [@@deriving sexp, yojson]
 (** Metadata type for FastMCP components *)
-type fastmcp_meta = {
-  tags : string list;
-}
-[@@deriving sexp, yojson]
 
 (** Mirrored component flag *)
-type mirrored_flag = 
-  | Local
-  | Mirrored
-[@@deriving sexp, compare, yojson]
+type mirrored_flag = Local | Mirrored [@@deriving sexp, compare, yojson]
 
-(** Component with mirrored status *)
 type 'a mirrored_component = {
   component : 'a component;
   mirrored : mirrored_flag;
 }
 [@@deriving sexp, yojson]
+(** Component with mirrored status *)
 
 val create :
   ?key:string ->
@@ -94,5 +87,9 @@ val enable : 'a component -> 'a component
 val disable : 'a component -> 'a component
 (** Disable the component *)
 
-val get_meta : include_fastmcp_meta:bool option -> 'a component -> (string * Yojson.Safe.t) list option
-(** Get metadata for the component, optionally including FastMCP-specific metadata *)
+val get_meta :
+  include_fastmcp_meta:bool option ->
+  'a component ->
+  (string * Yojson.Safe.t) list option
+(** Get metadata for the component, optionally including FastMCP-specific
+    metadata *)

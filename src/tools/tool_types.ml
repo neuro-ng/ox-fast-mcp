@@ -1,14 +1,14 @@
 (** Tool types for OxFastMCP - Refactored per PYTHON_TO_OCAML_TYPE_MAP.md
-    
+
     This module defines the tool type hierarchy following the specification:
     - Single authoritative tool type (no competing definitions)
     - Variant-based tool kinds (Function_tool, Transformed_tool)
     - Result.t for explicit error handling
-    - Integration with component base (prepared for when component becomes polymorphic)
-    
-    See: COMPLIANCE_ACTION_PLAN.md Task 1.1
-    See: PYTHON_TO_OCAML_TYPE_MAP.md Section 3 (lines 220-270)
-*)
+    - Integration with component base (prepared for when component becomes
+      polymorphic)
+
+    See: COMPLIANCE_ACTION_PLAN.md Task 1.1 See: PYTHON_TO_OCAML_TYPE_MAP.md
+    Section 3 (lines 220-270) *)
 
 open! Core
 open! Async
@@ -35,12 +35,12 @@ type execution_context = {
 
 (** {1 Tool Result Types} *)
 
-(** Tool result type matching specification *)
 type tool_result = {
   content : content_type list;
   structured_content : json option; [@yojson.option]
 }
 [@@deriving yojson]
+(** Tool result type matching specification *)
 
 (** Helper to create simple text result *)
 let create_result_from_text text =
@@ -52,30 +52,24 @@ let create_result_with_structured ~content ~structured =
 
 (** {1 Tool Handler Types} *)
 
-(** Tool handler signature with Result.t for explicit error handling 
-    This matches PYTHON_TO_OCAML_TYPE_MAP.md specification *)
 type tool_handler =
   execution_context ->
   json ->
   (tool_result, Exceptions.error_data) Deferred.Result.t
+(** Tool handler signature with Result.t for explicit error handling This
+    matches PYTHON_TO_OCAML_TYPE_MAP.md specification *)
 (* Note: No sexp derivation - function types don't support it *)
 
-(** Legacy handler type for backward compatibility - will be phased out *)
 type legacy_handler = execution_context -> json -> content_type list Deferred.t
+(** Legacy handler type for backward compatibility - will be phased out *)
 
 (** Convert legacy handler to new Result-based handler *)
 let handler_of_legacy (legacy : legacy_handler) : tool_handler =
-  fun ctx args ->
-    Monitor.try_with (fun () -> legacy ctx args)
-    >>| function
-    | Ok content -> Ok { content; structured_content = None }
-    | Error exn ->
-      Error
-        {
-          Exceptions.message = Exn.to_string exn;
-          code = None;
-          data = None;
-        }
+ fun ctx args ->
+  Monitor.try_with (fun () -> legacy ctx args) >>| function
+  | Ok content -> Ok { content; structured_content = None }
+  | Error exn ->
+    Error { Exceptions.message = Exn.to_string exn; code = None; data = None }
 
 (** {1 Argument Transform} *)
 
@@ -85,7 +79,7 @@ module Arg_transform = struct
     name : string option;
     description : string option;
     default : json option;
-    default_factory : (unit -> json) option [@sexp.opaque];
+    default_factory : (unit -> json) option; [@sexp.opaque]
     type_ : string option;
     type_schema : json option;
     hide : bool;
@@ -126,7 +120,6 @@ end
 
 (** {1 Tool Data Types} *)
 
-(** Tool-specific data matching PYTHON_TO_OCAML_TYPE_MAP.md specification *)
 type tool_data = {
   parameters : json; [@default `Null]  (** JSON schema for parameters *)
   output_schema : json option; [@yojson.option]  (** Optional output schema *)
@@ -136,15 +129,20 @@ type tool_data = {
       (** Optional custom serializer *)
 }
 [@@deriving yojson]
+(** Tool-specific data matching PYTHON_TO_OCAML_TYPE_MAP.md specification *)
 (* Note: No sexp derivation due to json fields *)
 
 (** Create default tool_data *)
 let default_tool_data =
-  { parameters = `Null; output_schema = None; annotations = None; serializer = None }
+  {
+    parameters = `Null;
+    output_schema = None;
+    annotations = None;
+    serializer = None;
+  }
 
 (** {1 Tool Function Type} *)
 
-(** Function representation matching specification *)
 type tool_function = {
   name : string;
   description : string option;
@@ -153,6 +151,7 @@ type tool_function = {
   fn : tool_handler;  (** Function with Result.t *)
   tool_data : tool_data;  (** Additional tool-specific data *)
 }
+(** Function representation matching specification *)
 (* Note: No sexp derivation due to json and function fields *)
 
 (** {1 Tool Variants} *)
@@ -162,24 +161,23 @@ type tool_kind =
   | Function_tool of tool_function
   | Transformed_tool of {
       original : tool_function;
-      transform_fn : (json -> json) option [@sexp.opaque]; [@yojson.opaque]
+      transform_fn : (json -> json) option; [@sexp.opaque] [@yojson.opaque]
           (** Optional function to transform result *)
       transform_args : Arg_transform.t String.Map.t;
           (** Argument transformations *)
-      forwarding_fn : tool_handler;  (** Function that forwards to original with transforms *)
+      forwarding_fn : tool_handler;
+          (** Function that forwards to original with transforms *)
     }
 (* Note: No sexp derivation due to function fields *)
 
 (** {1 Unified Tool Type} *)
 
+type tool_component_data = { kind : tool_kind }
 (** Component-specific data for tools - embeds tool_kind *)
-type tool_component_data = {
-  kind : tool_kind;
-}
 
-(** Main tool type - now uses polymorphic component pattern!
-    See: COMPLIANCE_ACTION_PLAN.md Task 2.1 COMPLETE *)
 type t = tool_component_data Components.component
+(** Main tool type - now uses polymorphic component pattern! See:
+    COMPLIANCE_ACTION_PLAN.md Task 2.1 COMPLETE *)
 
 (* Note: No sexp derivation due to function fields in tool_kind *)
 
@@ -242,7 +240,8 @@ let disable (tool : t) : t = Components.disable tool
 let key (tool : t) : string = Components.key tool
 
 (** Set tool key *)
-let with_key (tool : t) (new_key : string) : t = Components.with_key tool new_key
+let with_key (tool : t) (new_key : string) : t =
+  Components.with_key tool new_key
 
 (** {1 Tool Execution} *)
 
@@ -268,56 +267,55 @@ let create_function_tool ~name ?description ?(tags = []) ?key
     ?(input_schema = `Null) ?output_schema ?annotations ?serializer
     ?(enabled = true) (fn : tool_handler) : t =
   let tool_data_inner =
-    {
-      parameters = input_schema;
-      output_schema;
-      annotations;
-      serializer;
-    }
+    { parameters = input_schema; output_schema; annotations; serializer }
   in
   let tool_function =
-    { name; description; input_schema; output_schema; fn; tool_data = tool_data_inner }
+    {
+      name;
+      description;
+      input_schema;
+      output_schema;
+      fn;
+      tool_data = tool_data_inner;
+    }
   in
   let tool_component_data = { kind = Function_tool tool_function } in
-  Components.create
-    ~name
-    ?description
-    ~tags:(String.Set.of_list tags)
-    ?key
-    ~enabled
-    ~data:tool_component_data
-    ()
+  Components.create ~name ?description ~tags:(String.Set.of_list tags) ?key
+    ~enabled ~data:tool_component_data ()
 
 (** Create tool from legacy handler (for backward compatibility) *)
 let create_from_legacy_handler ~name ?description ?(tags = []) ?key
     ?(input_schema = `Null) ?output_schema ?annotations ?(enabled = true)
     (legacy_fn : legacy_handler) : t =
-  create_function_tool ~name ?description ~tags ?key ~input_schema ?output_schema
-    ?annotations ~enabled (handler_of_legacy legacy_fn)
+  create_function_tool ~name ?description ~tags ?key ~input_schema
+    ?output_schema ?annotations ~enabled
+    (handler_of_legacy legacy_fn)
 
 (** {1 Tool Transformation} *)
 
 (** Create a transformed tool from an existing tool *)
 let create_transformed_tool (base_tool : t) ?name ?description ?tags ?key
-    ?transform_fn ?(transform_args = String.Map.empty) ?(enabled = true) () : t =
+    ?transform_fn ?(transform_args = String.Map.empty) ?(enabled = true) () : t
+    =
   let original_fn = get_function base_tool.data.kind in
-  
+
   (* Create forwarding function that applies transforms *)
   let forwarding_fn : tool_handler =
-    fun ctx args ->
-      (* Apply argument transformations *)
-      let transformed_args =
-        match transform_fn with
-        | Some tf -> tf args
-        | None -> args
-      in
-      original_fn.fn ctx transformed_args
+   fun ctx args ->
+    (* Apply argument transformations *)
+    let transformed_args =
+      match transform_fn with
+      | Some tf -> tf args
+      | None -> args
+    in
+    original_fn.fn ctx transformed_args
   in
-  
+
   let kind =
-    Transformed_tool { original = original_fn; transform_fn; transform_args; forwarding_fn }
+    Transformed_tool
+      { original = original_fn; transform_fn; transform_args; forwarding_fn }
   in
-  
+
   let tool_component_data = { kind } in
   Components.create
     ~name:(Option.value name ~default:base_tool.name)
@@ -325,8 +323,7 @@ let create_transformed_tool (base_tool : t) ?name ?description ?tags ?key
     ~tags:(Option.value_map tags ~default:base_tool.tags ~f:String.Set.of_list)
     ~enabled
     ?key:(Option.first_some key base_tool.key)
-    ~data:tool_component_data
-    ()
+    ~data:tool_component_data ()
 
 (** {1 Component Integration} *)
 
@@ -334,4 +331,5 @@ let create_transformed_tool (base_tool : t) ?name ?description ?tags ?key
 let to_component (tool : t) : t = tool
 
 (** Create tool from component *)
-let from_component (component : tool_component_data Components.component) : t = component
+let from_component (component : tool_component_data Components.component) : t =
+  component

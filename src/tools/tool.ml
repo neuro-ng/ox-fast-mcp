@@ -29,8 +29,8 @@ let create_tool ~name ~description ?(parameters = `Null) ?(enabled = true)
     ?(tags = []) ?(annotations = None) handler : Tool_types.t =
   (* Convert legacy handler to new Result-based handler *)
   let result_handler = Tool_types.handler_of_legacy handler in
-  Tool_types.create_function_tool ~name ~description
-    ~tags ~input_schema:parameters ?annotations ~enabled result_handler
+  Tool_types.create_function_tool ~name ~description ~tags
+    ~input_schema:parameters ?annotations ~enabled result_handler
 
 (** Convert tool to MCP tool definition - temporarily disabled *)
 let to_mcp_tool _tool =
@@ -101,8 +101,7 @@ let execute_tool manager tool_name context args =
     | Error error_data ->
       let error_msg =
         if manager.mask_error_details then "Tool execution failed"
-        else
-          "Tool execution failed: " ^ error_data.Exceptions.message
+        else "Tool execution failed: " ^ error_data.Exceptions.message
       in
       failwith error_msg)
 
@@ -314,10 +313,14 @@ let from_tool ?name ?description ?tags ?transform_fn ?transform_args
     match transform_fn with
     | None -> None
     | Some _legacy_fn ->
-      Some (fun (json : Yojson.Safe.t) ->
-        (* This is a temporary shim - ideally transform_fn should be json -> json *)
-        json)
+      Some
+        (fun (json : Yojson.Safe.t) ->
+          (* This is a temporary shim - ideally transform_fn should be json ->
+             json *)
+          json)
   in
 
   Tool_types.create_transformed_tool tool ?name ?description ?tags
-    ?transform_fn:json_transform_fn ~transform_args:transform_args_map ?enabled:(Some (Option.value enabled ~default:true)) ()
+    ?transform_fn:json_transform_fn ~transform_args:transform_args_map
+    ?enabled:(Some (Option.value enabled ~default:true))
+    ()

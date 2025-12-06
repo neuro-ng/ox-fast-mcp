@@ -18,7 +18,13 @@ module Logging_middleware = struct
   let create ?(middleware_logger = Logger.get_logger "OxFastMCP.Requests")
       ?(log_level = Level.Info) ?(include_payloads = false)
       ?(max_payload_length = 1000) ?(methods = None) () =
-    { middleware_logger; log_level; include_payloads; max_payload_length; methods }
+    {
+      middleware_logger;
+      log_level;
+      include_payloads;
+      max_payload_length;
+      methods;
+    }
 
   let format_message t context =
     let source_str =
@@ -72,12 +78,13 @@ module Logging_middleware = struct
     in
     Monitor.try_with (fun () -> call_next context) >>= function
     | Ok result ->
-      log_at_level t (sprintf "Completed message: %s" 
-        (Option.value context.method_ ~default:"unknown"));
+      log_at_level t
+        (sprintf "Completed message: %s"
+           (Option.value context.method_ ~default:"unknown"));
       return result
     | Error exn ->
-      Logger.error t.middleware_logger 
-        (sprintf "Failed message: %s - %s" 
+      Logger.error t.middleware_logger
+        (sprintf "Failed message: %s - %s"
            (Option.value context.method_ ~default:"unknown")
            (Exn.to_string exn));
       raise exn
@@ -93,7 +100,8 @@ module Structured_logging = struct
   }
 
   let create ?(middleware_logger = Logger.get_logger "OxFastMCP.Structured")
-      ?(log_level = Level.Info) ?(include_payloads = false) ?(methods = None) () =
+      ?(log_level = Level.Info) ?(include_payloads = false) ?(methods = None) ()
+      =
     { middleware_logger; log_level; include_payloads; methods }
 
   let create_log_entry t context event extra_fields =

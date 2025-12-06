@@ -1,9 +1,8 @@
 (** Base module for all MCP resources
-    
+
     Converted to use Async instead of Lwt for consistency with rest of codebase.
-    See: COMPLIANCE_ACTION_PLAN.md Task 1.2
-    See: PYTHON_TO_OCAML_TYPE_MAP.md Section 4 (lines 330-390)
-*)
+    See: COMPLIANCE_ACTION_PLAN.md Task 1.2 See: PYTHON_TO_OCAML_TYPE_MAP.md
+    Section 4 (lines 330-390) *)
 
 open! Core
 open! Async

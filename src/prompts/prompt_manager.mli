@@ -1,8 +1,7 @@
 (** Prompt Manager for OxFastMCP
-    
-    Manages a collection of prompts with support for registration, retrieval, and rendering.
-    Implements the Manager.S pattern for consistency.
-*)
+
+    Manages a collection of prompts with support for registration, retrieval,
+    and rendering. Implements the Manager.S pattern for consistency. *)
 
 open! Core
 open! Async
@@ -10,12 +9,7 @@ open! Async
 (** {1 Duplicate Behavior} *)
 
 module DuplicateBehavior : sig
-  type t =
-    | Warn
-    | Replace
-    | Error
-    | Ignore
-  [@@deriving sexp, yojson]
+  type t = Warn | Replace | Error | Ignore [@@deriving sexp, yojson]
 
   val of_string : string -> t Or_error.t
   val of_string_exn : string -> t
@@ -82,7 +76,9 @@ val render_prompt :
   t ->
   string ->
   arguments:(string * Yojson.Safe.t) list option ->
-  (Prompt_types.prompt_message list, Ox_fast_mcp.Exceptions.error_data) Deferred.Result.t
+  ( Prompt_types.prompt_message list,
+    Ox_fast_mcp.Exceptions.error_data )
+  Deferred.Result.t
 (** Render a prompt with the given arguments *)
 
 (** {1 Utility Functions} *)
@@ -95,4 +91,3 @@ val set_duplicate_behavior : t -> DuplicateBehavior.t -> unit
 
 val set_mask_error_details : t -> bool -> unit
 (** Set whether to mask error details *)
-

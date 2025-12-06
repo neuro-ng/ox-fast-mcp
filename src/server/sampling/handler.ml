@@ -1,27 +1,28 @@
 (** Sampling handler types for OxFastMCP server.
 
-    This module defines the type alias for server-side sampling handlers
-    that process sampling requests from MCP clients. *)
+    This module defines the type alias for server-side sampling handlers that
+    process sampling requests from MCP clients. *)
 
 open! Core
 
-(** Sampling parameters for create message requests.
-    Maps to mcp.types.CreateMessageRequestParams in Python. *)
 type sampling_params = Mcp.Types.create_message_request_params
+(** Sampling parameters for create message requests. Maps to
+    mcp.types.CreateMessageRequestParams in Python. *)
 
-(** Sampling message type.
-    Maps to mcp.types.SamplingMessage in Python. *)
 type sampling_message = Mcp.Types.sampling_message
+(** Sampling message type. Maps to mcp.types.SamplingMessage in Python. *)
 
-(** Create message result type.
-    Maps to mcp.CreateMessageResult in Python. *)
 type create_message_result = Mcp.Types.create_message_result
+(** Create message result type. Maps to mcp.CreateMessageResult in Python. *)
 
 (** Result type for sampling handlers - can return string or full result *)
-type sampling_result =
-  | Text of string
-  | Full of create_message_result
+type sampling_result = Text of string | Full of create_message_result
 
+type 'ctx server_sampling_handler =
+  sampling_message list ->
+  sampling_params ->
+  'ctx ->
+  sampling_result Async.Deferred.t
 (** Server-side sampling handler type.
 
     A sampling handler receives:
@@ -46,26 +47,19 @@ type sampling_result =
     ]}
 
     In OCaml we use a function type with Deferred for async. *)
-type 'ctx server_sampling_handler =
-  sampling_message list ->
-  sampling_params ->
-  'ctx ->
-  sampling_result Async.Deferred.t
 
-(** Synchronous sampling handler variant *)
 type 'ctx server_sampling_handler_sync =
-  sampling_message list ->
-  sampling_params ->
-  'ctx ->
-  sampling_result
+  sampling_message list -> sampling_params -> 'ctx -> sampling_result
+(** Synchronous sampling handler variant *)
 
 (** Convert a sync handler to async *)
-let async_of_sync (handler : 'ctx server_sampling_handler_sync) : 'ctx server_sampling_handler =
-  fun messages params ctx ->
-    Async.return (handler messages params ctx)
+let async_of_sync (handler : 'ctx server_sampling_handler_sync) :
+    'ctx server_sampling_handler =
+ fun messages params ctx -> Async.return (handler messages params ctx)
 
 (** Create a simple text response *)
 let text_response (text : string) : sampling_result = Text text
 
 (** Create a full response with role and content *)
-let full_response (result : create_message_result) : sampling_result = Full result
+let full_response (result : create_message_result) : sampling_result =
+  Full result

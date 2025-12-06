@@ -84,8 +84,7 @@ let create_test_logger_with_capture level =
   let handler = List.hd_exn (Logger.get_handlers logger) in
   handler.instance.log <-
     (fun ~level ~msg ->
-      Queue.enqueue buffer
-        (sprintf "[%s] %s" (Level.to_string level) msg));
+      Queue.enqueue buffer (sprintf "[%s] %s" (Level.to_string level) msg));
   (logger, buffer)
 
 let%expect_test "Logger.debug logs debug messages when level permits" =
@@ -117,9 +116,7 @@ let%expect_test "Logger.info logs info messages at info level" =
   return ()
 
 let%expect_test "Logger.info ignores messages when level too high" =
-  let logger, buffer =
-    create_test_logger_with_capture Level.Warning
-  in
+  let logger, buffer = create_test_logger_with_capture Level.Warning in
   Logger.info logger "info message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| () |}];
@@ -133,9 +130,7 @@ let%expect_test "Logger.warning logs warning messages when level permits" =
   return ()
 
 let%expect_test "Logger.warning logs warning messages at warning level" =
-  let logger, buffer =
-    create_test_logger_with_capture Level.Warning
-  in
+  let logger, buffer = create_test_logger_with_capture Level.Warning in
   Logger.warning logger "warning message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| ("[WARNING] warning message") |}];
@@ -163,9 +158,7 @@ let%expect_test "Logger.error logs error messages at error level" =
   return ()
 
 let%expect_test "Logger.error ignores messages when level too high" =
-  let logger, buffer =
-    create_test_logger_with_capture Level.Critical
-  in
+  let logger, buffer = create_test_logger_with_capture Level.Critical in
   Logger.error logger "error message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| () |}];
@@ -179,9 +172,7 @@ let%expect_test "Logger.critical logs critical messages when level permits" =
   return ()
 
 let%expect_test "Logger.critical logs critical messages at critical level" =
-  let logger, buffer =
-    create_test_logger_with_capture Level.Critical
-  in
+  let logger, buffer = create_test_logger_with_capture Level.Critical in
   Logger.critical logger "critical message";
   print_s [%sexp (Queue.to_list buffer : string list)];
   [%expect {| ("[CRITICAL] critical message") |}];
@@ -206,9 +197,7 @@ let%expect_test "Logger methods with multiple messages" =
   return ()
 
 let%expect_test "Logger level filtering with multiple messages" =
-  let logger, buffer =
-    create_test_logger_with_capture Level.Warning
-  in
+  let logger, buffer = create_test_logger_with_capture Level.Warning in
   Logger.debug logger "debug 1";
   Logger.info logger "info 1";
   Logger.warning logger "warning 1";
@@ -220,12 +209,8 @@ let%expect_test "Logger level filtering with multiple messages" =
   return ()
 
 let%expect_test "Logger with custom level configuration" =
-  let logger_debug =
-    Logger.create ~level:Level.Debug "debug_logger"
-  in
-  let logger_error =
-    Logger.create ~level:Level.Error "error_logger"
-  in
+  let logger_debug = Logger.create ~level:Level.Debug "debug_logger" in
+  let logger_error = Logger.create ~level:Level.Error "error_logger" in
 
   print_s
     [%sexp
@@ -272,9 +257,7 @@ let%expect_test "Logger handles messages based on level" =
 
 let%expect_test "Rich_handler formats messages correctly" =
   let handler = Rich_handler.create () in
-  let formatted =
-    Rich_handler.format handler ~level:Level.Info ~msg:"test"
-  in
+  let formatted = Rich_handler.format handler ~level:Level.Info ~msg:"test" in
   print_s [%sexp (formatted : string)];
   [%expect {| "INFO test" |}];
   return ()

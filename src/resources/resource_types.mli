@@ -1,9 +1,8 @@
 (** Resource types for OxFastMCP
-    
+
     Implements resource type system per PYTHON_TO_OCAML_TYPE_MAP.md Section 4
-    Follows the same pattern as tool_types.mli and prompt_types.mli
-    See: Task 4.1 - Resource Integration with Component Pattern
-*)
+    Follows the same pattern as tool_types.mli and prompt_types.mli See: Task
+    4.1 - Resource Integration with Component Pattern *)
 
 open! Core
 open! Async
@@ -11,63 +10,52 @@ open! Async
 (** {1 Resource Content Types} *)
 
 (** Resource content type *)
-type content =
-  | Text of string
-  | Binary of bytes
+type content = Text of string | Binary of bytes
 [@@deriving sexp, compare, yojson]
 
 (** {1 Resource Handler} *)
 
+type reader =
+  unit -> (content, Ox_fast_mcp.Exceptions.error_data) Deferred.Result.t
 (** Resource reader function - returns Result.t for error handling *)
-type reader = unit -> (content, Ox_fast_mcp.Exceptions.error_data) Deferred.Result.t
 
 (** {1 Resource Data} *)
 
 (** Annotations module for handling JSON annotations *)
 module Annotations : sig
   type t = (string * Yojson.Safe.t) list
-  
+
   val yojson_of_t : t -> Yojson.Safe.t
   val t_of_yojson : Yojson.Safe.t -> t
 end
 
-(** Resource-specific metadata *)
 type resource_data = {
   uri : string;
   mime_type : string;
-  annotations : Annotations.t option; [@default None] [@yojson_drop_if Option.is_none]
+  annotations : Annotations.t option;
+      [@default None] [@yojson_drop_if Option.is_none]
 }
 [@@deriving yojson]
+(** Resource-specific metadata *)
 
 (** {1 Resource Kinds} *)
 
 (** Resource variants *)
 type resource_kind =
-  | Function_resource of {
-      fn : reader;
-    }
-  | Text_resource of {
-      content : string;
-    }
-  | Binary_resource of {
-      content : bytes;
-    }
-  | File_resource of {
-      path : string;
-    }
+  | Function_resource of { fn : reader }
+  | Text_resource of { content : string }
+  | Binary_resource of { content : bytes }
+  | File_resource of { path : string }
 (* Note: No sexp derivation due to function field *)
 
 (** {1 Unified Resource Type} *)
 
+type resource_component_data = { data : resource_data; kind : resource_kind }
 (** Component-specific data for resources *)
-type resource_component_data = {
-  data : resource_data;
-  kind : resource_kind;
-}
 (* Note: No sexp derivation due to function field *)
 
-(** Main resource type - uses polymorphic component pattern! *)
 type t = resource_component_data Components.component
+(** Main resource type - uses polymorphic component pattern! *)
 (* Note: No sexp derivation due to function field *)
 
 (** {1 Resource Operations} *)
@@ -192,4 +180,3 @@ val text : string -> content
 
 val binary : bytes -> content
 (** Create binary content helper *)
-

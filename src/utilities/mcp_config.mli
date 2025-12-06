@@ -5,17 +5,13 @@ open! Async
 
 (** Transport types supported by MCP servers *)
 module Transport_type : sig
-  type t =
-    | Stdio
-    | Sse
-    | Streamable_http
+  type t = Stdio | Sse | Streamable_http
   [@@deriving sexp, compare, equal, yojson]
 
   val to_string : t -> string
   val of_string : string -> t
 end
 
-(** Stdio MCP server configuration *)
 type stdio_mcp_server = {
   command : string;
   args : string list;
@@ -26,6 +22,7 @@ type stdio_mcp_server = {
   icon : string option;
 }
 [@@deriving sexp, compare, yojson]
+(** Stdio MCP server configuration *)
 
 val create_stdio_server :
   command:string ->
@@ -38,7 +35,6 @@ val create_stdio_server :
   unit ->
   stdio_mcp_server
 
-(** Remote MCP server configuration for HTTP/SSE transport *)
 type remote_mcp_server = {
   url : string;
   transport : Transport_type.t option;
@@ -49,6 +45,7 @@ type remote_mcp_server = {
   icon : string option;
 }
 [@@deriving sexp, compare, yojson]
+(** Remote MCP server configuration for HTTP/SSE transport *)
 
 val create_remote_server :
   url:string ->
@@ -62,35 +59,33 @@ val create_remote_server :
   remote_mcp_server
 
 (** MCP server configuration - either stdio or remote *)
-type mcp_server =
-  | Stdio of stdio_mcp_server
-  | Remote of remote_mcp_server
+type mcp_server = Stdio of stdio_mcp_server | Remote of remote_mcp_server
 [@@deriving sexp, compare]
 
 val mcp_server_of_yojson : Yojson.Safe.t -> mcp_server
 val yojson_of_mcp_server : mcp_server -> Yojson.Safe.t
 
-(** MCP configuration containing multiple servers *)
 type mcp_config = { mcp_servers : (string * mcp_server) list }
 [@@deriving sexp, compare, yojson]
+(** MCP configuration containing multiple servers *)
 
 val create_config : ?servers:(string * mcp_server) list -> unit -> mcp_config
 val add_server : mcp_config -> name:string -> server:mcp_server -> mcp_config
 val get_server : mcp_config -> name:string -> mcp_server option
 val remove_server : mcp_config -> name:string -> mcp_config
 
-(** Infer transport type from URL *)
 val infer_transport_type_from_url : string -> Transport_type.t
+(** Infer transport type from URL *)
 
-(** Get the effective transport type for a remote server *)
 val get_transport_type : remote_mcp_server -> Transport_type.t
+(** Get the effective transport type for a remote server *)
 
-(** Load MCP config from a JSON file *)
 val load_from_file : string -> mcp_config Deferred.t
+(** Load MCP config from a JSON file *)
 
-(** Save MCP config to a JSON file *)
 val save_to_file : mcp_config -> string -> unit Deferred.t
+(** Save MCP config to a JSON file *)
 
-(** Update a server in a config file *)
 val update_config_file :
   path:string -> name:string -> server:mcp_server -> unit Deferred.t
+(** Update a server in a config file *)

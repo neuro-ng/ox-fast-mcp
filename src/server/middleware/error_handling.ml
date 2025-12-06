@@ -5,8 +5,6 @@ open Async
 open Middleware
 open Logging
 
-
-
 type error_callback = exn -> context -> unit
 (** Type for error callback functions *)
 
@@ -46,17 +44,19 @@ let log_error t error context =
   let base_message =
     sprintf "Error in %s: %s: %s" method_ error_type (Exn.to_string error)
   in
-  
+
   if t.include_traceback then
-    Logger.error t.middleware_logger (sprintf "%s\nTraceback: [full traceback here]" base_message)
-  else
-    Logger.error t.middleware_logger base_message;
+    Logger.error t.middleware_logger
+      (sprintf "%s\nTraceback: [full traceback here]" base_message)
+  else Logger.error t.middleware_logger base_message;
 
   (* Call error callback if provided *)
   match t.error_callback with
   | Some callback -> (
-    try callback error context with exn -> 
-      Logger.warning t.middleware_logger (sprintf "Error callback failed: %s" (Exn.to_string exn)))
+    try callback error context
+    with exn ->
+      Logger.warning t.middleware_logger
+        (sprintf "Error callback failed: %s" (Exn.to_string exn)))
   | None -> ()
 
 let transform_error t error =
@@ -121,8 +121,8 @@ module Retry = struct
           raise error
         else
           let delay = calculate_delay t attempt in
-          Logger.warning t.retry_logger 
-            (sprintf "Retry attempt %d after error: %s (delay: %.2fs)" 
+          Logger.warning t.retry_logger
+            (sprintf "Retry attempt %d after error: %s (delay: %.2fs)"
                (attempt + 1) (Exn.to_string error) delay);
           Clock.after (sec delay) >>= fun () -> try_request (attempt + 1)
     in

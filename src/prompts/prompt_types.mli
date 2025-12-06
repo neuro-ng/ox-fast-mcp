@@ -1,9 +1,8 @@
 (** Prompt types for OxFastMCP
-    
+
     Implements prompt type system per PYTHON_TO_OCAML_TYPE_MAP.md Section 5
-    Follows the same pattern as tool_types.mli
-    See: COMPLIANCE_ACTION_PLAN.md Task 3.1
-*)
+    Follows the same pattern as tool_types.mli See: COMPLIANCE_ACTION_PLAN.md
+    Task 3.1 *)
 
 open! Core
 open! Async
@@ -11,57 +10,53 @@ open Fmcp_types
 
 (** {1 Prompt Arguments and Messages} *)
 
+type prompt_argument = Mcp.Types.prompt_argument [@@deriving sexp]
 (** Prompt argument definition - reuse from MCP types *)
-type prompt_argument = Mcp.Types.prompt_argument
-[@@deriving sexp]
 
+type prompt_message = Mcp.Types.prompt_message [@@deriving sexp]
 (** Prompt message - reuse from MCP types *)
-type prompt_message = Mcp.Types.prompt_message
-[@@deriving sexp]
 
 (** {1 Prompt Handler} *)
 
-(** Prompt function signature - returns Result.t for error handling *)
 type prompt_handler =
-  (string * json) list
-  -> (prompt_message list, Ox_fast_mcp.Exceptions.error_data) Deferred.Result.t
+  (string * json) list ->
+  (prompt_message list, Ox_fast_mcp.Exceptions.error_data) Deferred.Result.t
+(** Prompt function signature - returns Result.t for error handling *)
 
 (** {1 Prompt Data} *)
 
-(** Prompt-specific metadata *)
 type prompt_data = {
-  arguments : prompt_argument list option; [@default None] [@yojson_drop_if Option.is_none]
+  arguments : prompt_argument list option;
+      [@default None] [@yojson_drop_if Option.is_none]
 }
 [@@deriving sexp]
+(** Prompt-specific metadata *)
 
 (** {1 Prompt Function Type} *)
 
-(** Function prompt representation *)
 type prompt_function = {
   name : string;
   description : string option;
   prompt_data : prompt_data;
   fn : prompt_handler;
 }
+(** Function prompt representation *)
 (* Note: No sexp derivation due to function field *)
 
 (** {1 Prompt Kinds} *)
 
 (** Prompt variants *)
-type prompt_kind =
-  | Function_prompt of prompt_function
+type prompt_kind = Function_prompt of prompt_function
 (* Note: No sexp derivation due to function field in prompt_function *)
 
 (** {1 Unified Prompt Type} *)
 
+type prompt_component_data = { kind : prompt_kind }
 (** Component-specific data for prompts *)
-type prompt_component_data = {
-  kind : prompt_kind;
-}
 (* Note: No sexp derivation due to function field *)
 
-(** Main prompt type - uses polymorphic component pattern! *)
 type t = prompt_component_data Components.component
+(** Main prompt type - uses polymorphic component pattern! *)
 (* Note: No sexp derivation due to function field *)
 
 (** {1 Prompt Operations} *)
@@ -131,4 +126,3 @@ val to_component : t -> t
 
 val from_component : prompt_component_data Components.component -> t
 (** Create prompt from component *)
-

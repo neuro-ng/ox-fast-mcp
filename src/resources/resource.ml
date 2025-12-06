@@ -1,9 +1,8 @@
 (** Base module for all MCP resources
-    
+
     Converted to use Async instead of Lwt for consistency with rest of codebase.
-    See: COMPLIANCE_ACTION_PLAN.md Task 1.2
-    See: PYTHON_TO_OCAML_TYPE_MAP.md Section 4 (lines 330-390)
-*)
+    See: COMPLIANCE_ACTION_PLAN.md Task 1.2 See: PYTHON_TO_OCAML_TYPE_MAP.md
+    Section 4 (lines 330-390) *)
 
 open! Core
 open! Async
@@ -62,14 +61,17 @@ let from_function ?name ?description ?mime_type ?tags ?(enabled = true) ~uri fn
 
 let read t =
   match (t.enabled, t.read_fn) with
-  | false, _ -> Deferred.Or_error.error_string "Resource is disabled" |> Deferred.Or_error.ok_exn
-  | true, None -> Deferred.Or_error.error_string "Resource has no read function" |> Deferred.Or_error.ok_exn
+  | false, _ ->
+    Deferred.Or_error.error_string "Resource is disabled"
+    |> Deferred.Or_error.ok_exn
+  | true, None ->
+    Deferred.Or_error.error_string "Resource has no read function"
+    |> Deferred.Or_error.ok_exn
   | true, Some fn -> fn ()
 
-(* let notify_resource_list_changed () = 
-   match%bind Mcp.Server.Context.get () with 
-   | None -> return ()
-   | Some ctx -> Mcp.Server.Context.queue_resource_list_changed ctx *)
+(* let notify_resource_list_changed () = match%bind Mcp.Server.Context.get ()
+   with | None -> return () | Some ctx ->
+   Mcp.Server.Context.queue_resource_list_changed ctx *)
 
 let enable t =
   (* let%bind () = notify_resource_list_changed () in *)
