@@ -142,9 +142,9 @@ let%expect_test "test settings validation invalid port" =
   return ()
 
 let%expect_test "test environment variable loading" =
-  Unix.putenv ~key:"OXFASTMCP_HOME" ~data:"/env/home";
-  Unix.putenv ~key:"OXFASTMCP_PORT" ~data:"9000";
-  Unix.putenv ~key:"OXFASTMCP_TEST_MODE" ~data:"true";
+  Unix.putenv ~key:"FASTMCP_HOME" ~data:"/env/home";
+  Unix.putenv ~key:"FASTMCP_PORT" ~data:"9000";
+  Unix.putenv ~key:"FASTMCP_TEST_MODE" ~data:"true";
 
   let initial_settings = Settings.create () in
   let loaded_settings_result = Settings.load_from_env initial_settings in
@@ -179,8 +179,8 @@ let%expect_test "test environment variable loading" =
 
 let%expect_test "test dotenv file loading with basic key=value" =
   let test_env_content =
-    "OXFASTMCP_HOME=/dotenv/home\n" ^ "OXFASTMCP_PORT=8888\n"
-    ^ "OXFASTMCP_TEST_MODE=true\n" ^ "OXFASTMCP_DEBUG=true\n"
+    "FASTMCP_HOME=/dotenv/home\n" ^ "FASTMCP_PORT=8888\n"
+    ^ "FASTMCP_TEST_MODE=true\n" ^ "FASTMCP_DEBUG=true\n"
   in
 
   (* Create temporary .env file *)
@@ -234,8 +234,8 @@ let%expect_test "test dotenv file loading with basic key=value" =
 
 let%expect_test "test dotenv file loading with quoted values" =
   let test_env_content =
-    "OXFASTMCP_HOME=\"/quoted/home\"\n" ^ "OXFASTMCP_HOST='localhost'\n"
-    ^ "OXFASTMCP_SSE_PATH=\"/quoted/sse/\"\n" ^ "OXFASTMCP_PORT=7777\n"
+    "FASTMCP_HOME=\"/quoted/home\"\n" ^ "FASTMCP_HOST='localhost'\n"
+    ^ "FASTMCP_SSE_PATH=\"/quoted/sse/\"\n" ^ "FASTMCP_PORT=7777\n"
   in
 
   (* Create temporary .env file *)
@@ -274,9 +274,9 @@ let%expect_test "test dotenv file loading with quoted values" =
 
 let%expect_test "test dotenv file loading with comments and empty lines" =
   let test_env_content =
-    "# This is a comment\n" ^ "\n" ^ "OXFASTMCP_HOME=/comment/home\n"
-    ^ "# Another comment\n" ^ "\n" ^ "OXFASTMCP_PORT=6666\n"
-    ^ "   # Indented comment\n" ^ "OXFASTMCP_TEST_MODE=false\n"
+    "# This is a comment\n" ^ "\n" ^ "FASTMCP_HOME=/comment/home\n"
+    ^ "# Another comment\n" ^ "\n" ^ "FASTMCP_PORT=6666\n"
+    ^ "   # Indented comment\n" ^ "FASTMCP_TEST_MODE=false\n"
   in
 
   (* Create temporary .env file *)
@@ -313,8 +313,8 @@ let%expect_test "test dotenv file loading with comments and empty lines" =
 
 let%expect_test "test dotenv file loading with values containing equals" =
   let test_env_content =
-    "OXFASTMCP_HOME=/path/with=equals\n"
-    ^ "OXFASTMCP_HOST=example.com:8080=admin\n" ^ "OXFASTMCP_PORT=5555\n"
+    "FASTMCP_HOME=/path/with=equals\n"
+    ^ "FASTMCP_HOST=example.com:8080=admin\n" ^ "FASTMCP_PORT=5555\n"
   in
 
   (* Create temporary .env file *)
@@ -380,19 +380,19 @@ let%expect_test "test file secrets loading" =
   let%bind () = Unix.mkdir secrets_dir in
   let%bind () =
     Writer.save
-      (Filename.concat secrets_dir "OXFASTMCP_HOME")
+      (Filename.concat secrets_dir "FASTMCP_HOME")
       ~contents:"/secret/home"
   in
   let%bind () =
-    Writer.save (Filename.concat secrets_dir "OXFASTMCP_PORT") ~contents:"9999"
+    Writer.save (Filename.concat secrets_dir "FASTMCP_PORT") ~contents:"9999"
   in
   let%bind () =
     Writer.save
-      (Filename.concat secrets_dir "OXFASTMCP_TEST_MODE")
+      (Filename.concat secrets_dir "FASTMCP_TEST_MODE")
       ~contents:"true"
   in
   let%bind () =
-    Writer.save (Filename.concat secrets_dir "OXFASTMCP_DEBUG") ~contents:"true"
+    Writer.save (Filename.concat secrets_dir "FASTMCP_DEBUG") ~contents:"true"
   in
 
   let initial_settings = Settings.create ~home:home_dir () in
@@ -458,17 +458,17 @@ let%expect_test "test file secrets loading with mixed files and directories" =
   let%bind () = Unix.mkdir secrets_dir in
   let%bind () =
     Writer.save
-      (Filename.concat secrets_dir "OXFASTMCP_HOME")
+      (Filename.concat secrets_dir "FASTMCP_HOME")
       ~contents:"/mixed/home"
   in
   let%bind () =
-    Writer.save (Filename.concat secrets_dir "OXFASTMCP_PORT") ~contents:"4444"
+    Writer.save (Filename.concat secrets_dir "FASTMCP_PORT") ~contents:"4444"
   in
   let%bind () = Unix.mkdir (Filename.concat secrets_dir "subdir") in
   (* Should be skipped *)
   let%bind () =
     Writer.save
-      (Filename.concat secrets_dir "OXFASTMCP_DEBUG")
+      (Filename.concat secrets_dir "FASTMCP_DEBUG")
       ~contents:"false"
   in
 
@@ -517,16 +517,16 @@ let%expect_test "test settings loading priority order" =
   let secrets_dir = Filename.concat home_dir "secrets" in
 
   (* Set environment variable *)
-  Unix.putenv ~key:"OXFASTMCP_PORT" ~data:"1111";
+  Unix.putenv ~key:"FASTMCP_PORT" ~data:"1111";
 
   (* Create .env file *)
   let env_file = Filename.concat temp_dir ".env" in
-  let%bind () = Writer.save env_file ~contents:"OXFASTMCP_PORT=2222\n" in
+  let%bind () = Writer.save env_file ~contents:"FASTMCP_PORT=2222\n" in
 
   (* Create secrets file *)
   let%bind () = Unix.mkdir secrets_dir in
   let%bind () =
-    Writer.save (Filename.concat secrets_dir "OXFASTMCP_PORT") ~contents:"3333"
+    Writer.save (Filename.concat secrets_dir "FASTMCP_PORT") ~contents:"3333"
   in
 
   let%bind original_cwd = Unix.getcwd () in
@@ -555,7 +555,7 @@ let%expect_test "test settings loading priority order" =
 
   (* Cleanup *)
   let%bind () = Unix.chdir original_cwd in
-  Unix.unsetenv "OXFASTMCP_PORT";
+  Unix.unsetenv "FASTMCP_PORT";
   let%bind _output =
     Process.run_exn ~prog:"rm" ~args:[ "-rf"; temp_dir ]
       ~working_dir:original_cwd ()
@@ -588,11 +588,11 @@ let%expect_test "test settings merge functionality" =
 let%expect_test "test complex parsing scenarios" =
   let test_env_content =
     "# Complex .env file test\n" ^ "\n"
-    ^ "OXFASTMCP_SERVER_DEPENDENCIES=dep1,dep2,dep3\n"
-    ^ "OXFASTMCP_INCLUDE_TAGS=\"tag1, tag2, tag3\"\n"
-    ^ "OXFASTMCP_EXCLUDE_TAGS='exclude1,exclude2'\n"
-    ^ "OXFASTMCP_CLIENT_INIT_TIMEOUT=30.5\n" ^ "OXFASTMCP_LOG_LEVEL=DEBUG\n"
-    ^ "OXFASTMCP_RESOURCE_PREFIX_FORMAT=protocol\n"
+    ^ "FASTMCP_SERVER_DEPENDENCIES=dep1,dep2,dep3\n"
+    ^ "FASTMCP_INCLUDE_TAGS=\"tag1, tag2, tag3\"\n"
+    ^ "FASTMCP_EXCLUDE_TAGS='exclude1,exclude2'\n"
+    ^ "FASTMCP_CLIENT_INIT_TIMEOUT=30.5\n" ^ "FASTMCP_LOG_LEVEL=DEBUG\n"
+    ^ "FASTMCP_RESOURCE_PREFIX_FORMAT=protocol\n"
   in
 
   (* Create temporary .env file *)

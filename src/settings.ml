@@ -144,7 +144,7 @@ module Settings = struct
   }
   [@@deriving compare, equal, sexp, yojson]
 
-  let env_prefixes = [ "OXFASTMCP_"; "OXFASTMCP_SERVER_" ]
+  let env_prefixes = [ "FASTMCP_"; "FASTMCP_SERVER_" ]
   let env_nested_delimiter = "__"
   let env_file = ".env"
 
@@ -203,7 +203,7 @@ module Settings = struct
     if String.equal prefix "OX_FASTMCP_SERVER_" then
       Logging.Global.warning
         "Using `OX_FASTMCP_SERVER_` environment variables is deprecated. Use \
-         `OXFASTMCP_` instead."
+         `FASTMCP_` instead."
     else ();
     value
 
