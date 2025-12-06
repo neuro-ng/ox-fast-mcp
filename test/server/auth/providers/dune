@@ -1,0 +1,14 @@
+(library
+ (name test_server_auth_providers)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_expect))
+ (modules test_auth0 test_aws test_azure test_debug)
+ (libraries
+  core
+  async
+  lwt
+  expect_test_helpers_core
+  core_unix
+  ox-fast-mcp.server.auth.providers
+  ox-fast-mcp.utilities))

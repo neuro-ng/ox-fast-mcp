@@ -17,6 +17,7 @@
   yojson
   ox-fast-mcp.shared
   ox-fast-mcp.mcp.server.auth
+  ox-fast-mcp.server.auth
   ox-fast-mcp.utilities)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane ppx_yojson_conv)))

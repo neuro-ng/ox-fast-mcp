@@ -3,4 +3,16 @@
  (public_name ox-fast-mcp.server.auth)
  (preprocess
   (pps ppx_fields_conv))
- (libraries core lwt lwt.unix server_auth_providers uri uri-sexp yojson))
+ (libraries
+  core
+  core_unix
+  lwt
+  lwt.unix
+  uri
+  uri-sexp
+  yojson
+  ox-fast-mcp.mcp.server.auth
+  jose
+  mirage-crypto
+  base64
+  ptime))
