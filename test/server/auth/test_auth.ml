@@ -97,7 +97,7 @@ let%expect_test "Make_oauth_provider functor" =
     | None -> print_endline "OAuth token rejected");
 
     (* Test get_routes stub *)
-    let routes = OAuth.get_routes () in
+    let routes = OAuth.get_routes ~mcp_path:None in
     printf "Routes count: %d\n" (List.length routes);
 
     Lwt.return ());

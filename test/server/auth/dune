@@ -3,7 +3,15 @@
  (inline_tests)
  (preprocess
   (pps ppx_jane ppx_expect))
- (modules test_auth test_jwt_issuer)
+ (modules
+  test_auth
+  test_jwt_issuer
+  test_redirect_validation
+  test_oauth_proxy
+  test_oauth_proxy_redirect_validation
+  test_oauth_proxy_storage
+  test_oauth_consent_flow
+  test_oauth_mounting)
  (libraries
   core
   async
@@ -11,5 +19,6 @@
   expect_test_helpers_core
   core_unix
   base64
+  uri
   ox-fast-mcp.server.auth
   ox-fast-mcp.mcp.server.auth))

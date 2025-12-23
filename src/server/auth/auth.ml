@@ -1,56 +1,157 @@
-(* open Core *)
-(* open Lwt.Syntax *)
+(** Authentication Providers for OxFastMCP.
+
+    This module provides authentication provider implementations including:
+    - TokenVerifier: Base class for token verification
+    - RemoteAuthProvider: RFC 9728 protected resource metadata
+    - OAuthProvider: Full OAuth Authorization Server *)
+
+open Core
+open Cohttp
 open Mcp_server_auth.Provider
 open Settings
 
 module type TOKEN_VERIFIER = TOKEN_VERIFIER
 (** Token verifier module type (alias from Mcp_server_auth.Provider) *)
 
+(** Route type for HTTP endpoints *)
+type route = {
+  path : string;
+  methods : string list;
+  handler : Request.t -> (Response.t * Body.t) Lwt.t;
+}
+
 (** Authentication provider base module type *)
 module type AUTH_PROVIDER = sig
   val verify_token : string -> access_token option Lwt.t
   val base_url : string option
+  val required_scopes : string list
 
-  (* TODO: Define proper Route type. For now, using a placeholder list. *)
-  (* The Python code returns `starlette.routing.Route` list. 
-     In OCaml, this will likely be `Opium.App.builder` or similar depending on the web framework. 
-     For now, we'll return a generic list to satisfy the interface translation structure. *)
-  val get_routes : unit -> unit list
+  (** Get routes for this authentication provider.
+      
+      @param mcp_path The path where the MCP endpoint is mounted (e.g., "/mcp")
+      @return List of routes for this provider *)
+  val get_routes : mcp_path:string option -> route list
+
+  (** Get well-known discovery routes (RFC 8414, RFC 9728).
+      
+      These should be mounted at root level of the application.
+      
+      @param mcp_path The path where the MCP endpoint is mounted
+      @return List of well-known routes *)
+  val get_well_known_routes : mcp_path:string option -> route list
 end
 
-(** Remote Auth Provider *)
+(** Get resource URL by combining base_url and path *)
+let get_resource_url ~base_url ~path =
+  match path with
+  | None -> base_url
+  | Some p ->
+    let prefix = String.rstrip base_url ~drop:(Char.equal '/') in
+    let suffix = String.lstrip p ~drop:(Char.equal '/') in
+    prefix ^ "/" ^ suffix
+
+(** Create RFC 9728 protected resource metadata routes.
+    
+    Creates a well-known endpoint that advertises:
+    - The protected resource URL
+    - Authorization servers that issue valid tokens
+    - Supported scopes
+    
+    @param resource_url The URL of the protected resource
+    @param authorization_servers List of authorization server URLs
+    @param scopes_supported Optional list of supported scopes
+    @param resource_name Optional name for the resource
+    @param resource_documentation Optional documentation URL *)
+let create_protected_resource_routes ~resource_url ~authorization_servers
+    ?scopes_supported ?resource_name ?resource_documentation () =
+  (* RFC 9728: path-scoped well-known URL *)
+  let uri = Uri.of_string resource_url in
+  let resource_path = Uri.path uri in
+  let well_known_path =
+    "/.well-known/oauth-protected-resource" ^ resource_path
+  in
+  [
+    {
+      path = well_known_path;
+      methods = [ "GET" ];
+      handler =
+        (fun _req ->
+          (* Build response body per RFC 9728 *)
+          let auth_servers_json =
+            `List (List.map authorization_servers ~f:(fun s -> `String s))
+          in
+          let base_fields =
+            [
+              ("resource", `String resource_url);
+              ("authorization_servers", auth_servers_json);
+            ]
+          in
+          let optional_fields =
+            List.filter_opt
+              [
+                Option.map scopes_supported ~f:(fun scopes ->
+                    ("scopes_supported", `List (List.map scopes ~f:(fun s -> `String s))));
+                Option.map resource_name ~f:(fun name ->
+                    ("resource_name", `String name));
+                Option.map resource_documentation ~f:(fun doc ->
+                    ("resource_documentation", `String doc));
+              ]
+          in
+          let body = `Assoc (base_fields @ optional_fields) in
+          let body_string = Yojson.Safe.to_string body in
+          let headers =
+            Header.of_list
+              [
+                ("Content-Type", "application/json");
+                ("Content-Length", string_of_int (String.length body_string));
+                ("Cache-Control", "max-age=3600");
+              ]
+          in
+          let response = Response.make ~status:`OK ~headers () in
+          Lwt.return (response, Body.of_string body_string));
+    };
+  ]
+
+(** Remote Auth Provider.
+    
+    Authentication provider for resource servers that verify tokens from known
+    authorization servers. Creates RFC 9728 protected resource metadata endpoints. *)
 module Remote_auth_provider (T : TOKEN_VERIFIER) : sig
   include AUTH_PROVIDER
 
   val create :
     base_url:string ->
     authorization_servers:string list ->
+    ?required_scopes:string list ->
     ?resource_name:string ->
     ?resource_documentation:string ->
     unit ->
     (module AUTH_PROVIDER)
 end = struct
-  (* type t = { base_url : string; authorization_servers : string list;
-     resource_name : string option; resource_documentation : string option; } *)
-
-  (* This functor requires instantiation to create a specific provider instance
-     context if needed. However, the Python RemoteAuthProvider is a class. Here
-     we'll use a functor to generate a module that matches AUTH_PROVIDER. *)
-
   let verify_token = T.verify_token
-  let base_url = None (* Default for the functor itself, overridden by create *)
-  let get_routes () = []
+  let base_url = None
+  let required_scopes = []
+  let get_routes ~mcp_path:_ = []
+  let get_well_known_routes ~mcp_path:_ = []
 
-  let create ~base_url ~authorization_servers:_ ?resource_name:_
-      ?resource_documentation:_ () =
+  let create ~base_url:base_url_str ~authorization_servers ?(required_scopes = []) ?resource_name
+      ?resource_documentation () =
     (module struct
       let verify_token = T.verify_token
-      let base_url = Some base_url
+      let base_url = Some base_url_str
+      let required_scopes = required_scopes
 
-      let get_routes () =
-        (* TODO: Implement create_protected_resource_routes logic when routes.ml
-           is available *)
-        []
+      let get_routes ~mcp_path =
+        (* Get the resource URL based on the MCP path *)
+        let resource_url = get_resource_url ~base_url:base_url_str ~path:mcp_path in
+        (* Create protected resource metadata routes *)
+        create_protected_resource_routes ~resource_url ~authorization_servers
+          ~scopes_supported:required_scopes ?resource_name
+          ?resource_documentation ()
+
+      let get_well_known_routes ~mcp_path =
+        (* All routes from Remote_auth_provider are well-known routes *)
+        get_routes ~mcp_path
     end : AUTH_PROVIDER)
 end
 
@@ -88,9 +189,6 @@ module type OAUTH_PROVIDER = sig
     ?required_scopes:string list ->
     unit ->
     (module OAUTH_AUTHORIZATION_SERVER_PROVIDER)
-  (* This return type in original auth.mli was just
-     OAUTH_AUTHORIZATION_SERVER_PROVIDER, checking auth.mli... *)
-  (* In Python OAuthProvider IS an AuthProvider. *)
 end
 
 (** OAuth provider functor *)
@@ -99,17 +197,17 @@ module Make_oauth_provider (P : OAUTH_AUTHORIZATION_SERVER_PROVIDER) = struct
 
   (* Stub AUTH_PROVIDER implementation *)
   let verify_token token = load_access_token token
-
-  (* We need base_url to be passed during creation or configuration. The
-     original functor didn't take base_url. For now, we will default to None or
-     assume it's handled via closure if generic. However, to fully satisfy
-     AUTH_PROVIDER, we need to expose it. *)
   let base_url = None
+  let required_scopes = []
 
-  let get_routes () =
-    (* TODO: Implement create_auth_routes and create_protected_resource_routes
-       logic *)
+  let get_routes ~mcp_path:_ =
+    (* TODO: Implement create_auth_routes and create_protected_resource_routes *)
     []
+
+  let get_well_known_routes ~mcp_path =
+    (* Filter for well-known routes only *)
+    List.filter (get_routes ~mcp_path) ~f:(fun route ->
+        String.is_prefix route.path ~prefix:"/.well-known/")
 
   let create ~issuer_url ?service_documentation_url ?client_registration_options
       ?revocation_options ?required_scopes () =
