@@ -11,7 +11,8 @@
   test_oauth_proxy_redirect_validation
   test_oauth_proxy_storage
   test_oauth_consent_flow
-  test_oauth_mounting)
+  test_oauth_mounting
+  test_oidc_proxy)
  (libraries
   core
   async

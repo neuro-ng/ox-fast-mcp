@@ -12,7 +12,6 @@ val default_access_token_expiry_seconds : int
 val default_auth_code_expiry_seconds : int
 val http_timeout_seconds : int
 
-(** OAuth transaction state for consent flow *)
 type oauth_transaction = {
   txn_id : string;
   client_id : string;
@@ -28,8 +27,8 @@ type oauth_transaction = {
   csrf_expires_at : float option;
 }
 [@@deriving yojson, compare, sexp]
+(** OAuth transaction state for consent flow *)
 
-(** Client authorization code with PKCE and upstream tokens *)
 type client_code = {
   code : string;
   cc_client_id : string; [@key "client_id"]
@@ -42,8 +41,8 @@ type client_code = {
   cc_created_at : float; [@key "created_at"]
 }
 [@@deriving yojson, compare, sexp]
+(** Client authorization code with PKCE and upstream tokens *)
 
-(** Stored upstream OAuth tokens from identity provider *)
 type upstream_token_set = {
   upstream_token_id : string;
   access_token : string;
@@ -57,16 +56,16 @@ type upstream_token_set = {
   raw_token_data : Yojson.Safe.t;
 }
 [@@deriving yojson, compare, sexp]
+(** Stored upstream OAuth tokens from identity provider *)
 
-(** Maps OxFastMCP token JTI to upstream token ID *)
 type jti_mapping = {
   jti : string;
   upstream_token_id : string;
   jm_created_at : float; [@key "created_at"]
 }
 [@@deriving yojson, compare, sexp]
+(** Maps OxFastMCP token JTI to upstream token ID *)
 
-(** Proxy DCR client with configurable redirect URI validation *)
 type proxy_dcr_client = {
   pdc_client_id : string; [@key "client_id"]
   client_secret : string option;
@@ -76,6 +75,7 @@ type proxy_dcr_client = {
   pdc_created_at : float; [@key "created_at"]
 }
 [@@deriving yojson, compare, sexp]
+(** Proxy DCR client with configurable redirect URI validation *)
 
 (** In-Memory Storage *)
 module Storage : sig
@@ -114,7 +114,6 @@ module type TOKEN_VERIFIER = sig
     string -> Mcp_server_auth.Provider.access_token option Lwt.t
 end
 
-(** OAuth Proxy Configuration *)
 type config = {
   upstream_authorization_endpoint : string;
   upstream_token_endpoint : string;
@@ -137,11 +136,11 @@ type config = {
   required_scopes : string list;
 }
 [@@deriving compare, sexp]
+(** OAuth Proxy Configuration *)
 
-(** OAuth Proxy State *)
 type t
+(** OAuth Proxy State *)
 
-(** Create a new OAuth proxy provider *)
 val create :
   upstream_authorization_endpoint:string ->
   upstream_token_endpoint:string ->
@@ -164,14 +163,14 @@ val create :
   required_scopes:string list ->
   unit ->
   t
+(** Create a new OAuth proxy provider *)
 
-(** Set the token verifier for the proxy *)
 val set_token_verifier : t -> (module TOKEN_VERIFIER) -> unit
+(** Set the token verifier for the proxy *)
 
-(** Get client information by ID *)
 val get_client : t -> client_id:string -> proxy_dcr_client option Lwt.t
+(** Get client information by ID *)
 
-(** Register a client locally with DCR *)
 val register_client :
   t ->
   client_id:string ->
@@ -180,12 +179,12 @@ val register_client :
   ?client_name:string ->
   unit ->
   proxy_dcr_client Lwt.t
+(** Register a client locally with DCR *)
 
-(** Validate redirect URI for a client *)
 val validate_redirect_uri :
   t -> client:proxy_dcr_client -> redirect_uri:string -> bool
+(** Validate redirect URI for a client *)
 
-(** Start OAuth transaction - returns consent page URL *)
 val authorize :
   t ->
   client_id:string ->
@@ -197,42 +196,41 @@ val authorize :
   ?resource:string ->
   unit ->
   string Lwt.t
+(** Start OAuth transaction - returns consent page URL *)
 
-(** Load authorization code for validation *)
 val load_authorization_code : t -> code:string -> client_code option Lwt.t
+(** Load authorization code for validation *)
 
-(** Exchange authorization code for tokens *)
 val exchange_authorization_code :
   t ->
   client_id:string ->
   code:string ->
   code_verifier:string ->
   (Yojson.Safe.t, string) result Lwt.t
+(** Exchange authorization code for tokens *)
 
+val load_refresh_token : t -> token:string -> upstream_token_set option Lwt.t
 (** Load refresh token from local storage *)
-val load_refresh_token :
-  t -> token:string -> upstream_token_set option Lwt.t
 
-(** Exchange refresh token for new access token *)
 val exchange_refresh_token :
   t ->
   client_id:string ->
   refresh_token:string ->
   scopes:string list ->
   (Yojson.Safe.t, string) result Lwt.t
+(** Exchange refresh token for new access token *)
 
-(** Validate access token *)
 val load_access_token :
   t -> token:string -> Mcp_server_auth.Provider.access_token option Lwt.t
+(** Validate access token *)
 
-(** Revoke token locally and with upstream server if supported *)
 val revoke_token : t -> token:string -> unit Lwt.t
+(** Revoke token locally and with upstream server if supported *)
 
-(** Build upstream authorization URL from transaction *)
 val build_upstream_authorize_url :
   t -> txn_id:string -> transaction:oauth_transaction -> string
+(** Build upstream authorization URL from transaction *)
 
-(** Create consent page HTML *)
 val create_consent_html :
   client_id:string ->
   redirect_uri:string ->
@@ -243,36 +241,37 @@ val create_consent_html :
   ?server_name:string ->
   unit ->
   string
+(** Create consent page HTML *)
 
-(** Create error page HTML *)
 val create_error_html :
   error_title:string ->
   error_message:string ->
   ?error_details:(string * string) list ->
   unit ->
   string
+(** Create error page HTML *)
 
-(** Handle consent page GET request *)
 val handle_consent_get : t -> txn_id:string -> (Response.t * Body.t) Lwt.t
+(** Handle consent page GET request *)
 
-(** Handle consent page POST request *)
 val handle_consent_post :
   t ->
   txn_id:string ->
   csrf_token:string ->
   action:string ->
   (Response.t * Body.t) Lwt.t
+(** Handle consent page POST request *)
 
-(** Handle IDP callback and forward to client *)
 val handle_idp_callback :
   t -> code:string -> state:string -> (Response.t * Body.t) Lwt.t
+(** Handle IDP callback and forward to client *)
 
-(** Route handler type *)
 type route = {
   path : string;
   methods : string list;
   handler : Request.t -> (Response.t * Body.t) Lwt.t;
 }
+(** Route handler type *)
 
-(** Get OAuth routes for this proxy *)
 val get_routes : t -> route list
+(** Get OAuth routes for this proxy *)

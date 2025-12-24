@@ -4,6 +4,7 @@ open Core
 open Async
 open Middleware
 open Logging
+module Exceptions = Ox_fast_mcp.Exceptions
 
 type error_callback = exn -> context -> unit
 (** Type for error callback functions *)
@@ -60,9 +61,58 @@ let log_error t error context =
   | None -> ()
 
 let transform_error t error =
-  (* Simplified - just return the original error for now *)
-  ignore t;
-  error
+  (* Check if already an MCP error *)
+  match error with
+  | Mcp_shared.Exceptions.Mcp_error _ -> error
+  | _ when not t.transform_errors -> error
+  | Invalid_argument msg ->
+    (* ValueError/TypeError equivalent -> Invalid params *)
+    Mcp_shared.Exceptions.Mcp_error
+      { code = -32602; message = sprintf "Invalid params: %s" msg; data = None }
+  | Exceptions.Not_found_error { message; _ } ->
+    (* NotFoundError equivalent -> Resource not found *)
+    Mcp_shared.Exceptions.Mcp_error
+      {
+        code = -32001;
+        message = sprintf "Resource not found: %s" message;
+        data = None;
+      }
+  | Not_found_s sexp ->
+    (* OCaml Not_found with sexp -> Resource not found *)
+    Mcp_shared.Exceptions.Mcp_error
+      {
+        code = -32001;
+        message = sprintf "Resource not found: %s" (Sexp.to_string sexp);
+        data = None;
+      }
+  | Core_unix.Unix_error (Core_unix.ENOENT, _, path) ->
+    (* FileNotFoundError equivalent -> Resource not found *)
+    Mcp_shared.Exceptions.Mcp_error
+      {
+        code = -32001;
+        message = sprintf "Resource not found: %s" path;
+        data = None;
+      }
+  | Core_unix.Unix_error (Core_unix.EACCES, _, path) ->
+    (* PermissionError equivalent -> Permission denied *)
+    Mcp_shared.Exceptions.Mcp_error
+      {
+        code = -32000;
+        message = sprintf "Permission denied: %s" path;
+        data = None;
+      }
+  | Core_unix.Unix_error (Core_unix.ETIMEDOUT, _, _) ->
+    (* TimeoutError equivalent -> Request timeout *)
+    Mcp_shared.Exceptions.Mcp_error
+      { code = -32000; message = "Request timeout"; data = None }
+  | exn ->
+    (* Generic error -> Internal error *)
+    Mcp_shared.Exceptions.Mcp_error
+      {
+        code = -32603;
+        message = sprintf "Internal error: %s" (Exn.to_string exn);
+        data = None;
+      }
 
 let on_message t context call_next =
   Monitor.try_with (fun () -> call_next context) >>= function

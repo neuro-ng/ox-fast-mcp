@@ -3,8 +3,7 @@
 open! Core
 
 (** Default patterns for localhost-only validation *)
-let default_localhost_patterns =
-  [ "http://localhost:*"; "http://127.0.0.1:*" ]
+let default_localhost_patterns = [ "http://localhost:*"; "http://127.0.0.1:*" ]
 
 (** Check if a URI matches an allowed pattern with wildcard support.
 

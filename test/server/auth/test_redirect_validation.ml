@@ -180,9 +180,11 @@ let%expect_test "default_localhost_patterns - exist and are correct" =
   printf "Number of patterns: %d\n" (List.length default_localhost_patterns);
   List.iter default_localhost_patterns ~f:(printf "Pattern: %s\n");
   printf "Contains localhost: %b\n"
-    (List.mem default_localhost_patterns "http://localhost:*" ~equal:String.equal);
+    (List.mem default_localhost_patterns "http://localhost:*"
+       ~equal:String.equal);
   printf "Contains 127.0.0.1: %b\n"
-    (List.mem default_localhost_patterns "http://127.0.0.1:*" ~equal:String.equal);
+    (List.mem default_localhost_patterns "http://127.0.0.1:*"
+       ~equal:String.equal);
   [%expect
     {|
     Number of patterns: 2

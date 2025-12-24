@@ -1,12 +1,25 @@
 (library
- (name test_middleware)
+ (name test_server_middleware)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_expect))
+ (modules
+  test_caching
+  test_error_handling
+  test_middleware_logging
+  test_middleware
+  test_rate_limiting
+  test_timing
+  test_tool_injection)
  (libraries
   core
   async
-  ounit2
+  lwt
+  lwt.unix
+  logs
   yojson
-  ox-fast-mcp.mcp
-  ox-fast-mcp.shared
-  ox-fast-mcp.server.middleware)
- (preprocess
-  (pps ppx_jane ppx_let)))
+  expect_test_helpers_core
+  core_unix
+  ox-fast-mcp.mcp.shared
+  ox-fast-mcp.utilities
+  ox-fast-mcp.server.middleware))

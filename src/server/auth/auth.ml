@@ -13,12 +13,12 @@ open Settings
 module type TOKEN_VERIFIER = TOKEN_VERIFIER
 (** Token verifier module type (alias from Mcp_server_auth.Provider) *)
 
-(** Route type for HTTP endpoints *)
 type route = {
   path : string;
   methods : string list;
   handler : Request.t -> (Response.t * Body.t) Lwt.t;
 }
+(** Route type for HTTP endpoints *)
 
 (** Authentication provider base module type *)
 module type AUTH_PROVIDER = sig
@@ -26,19 +26,19 @@ module type AUTH_PROVIDER = sig
   val base_url : string option
   val required_scopes : string list
 
+  val get_routes : mcp_path:string option -> route list
   (** Get routes for this authentication provider.
-      
+
       @param mcp_path The path where the MCP endpoint is mounted (e.g., "/mcp")
       @return List of routes for this provider *)
-  val get_routes : mcp_path:string option -> route list
 
+  val get_well_known_routes : mcp_path:string option -> route list
   (** Get well-known discovery routes (RFC 8414, RFC 9728).
-      
+
       These should be mounted at root level of the application.
-      
+
       @param mcp_path The path where the MCP endpoint is mounted
       @return List of well-known routes *)
-  val get_well_known_routes : mcp_path:string option -> route list
 end
 
 (** Get resource URL by combining base_url and path *)
@@ -51,12 +51,12 @@ let get_resource_url ~base_url ~path =
     prefix ^ "/" ^ suffix
 
 (** Create RFC 9728 protected resource metadata routes.
-    
+
     Creates a well-known endpoint that advertises:
     - The protected resource URL
     - Authorization servers that issue valid tokens
     - Supported scopes
-    
+
     @param resource_url The URL of the protected resource
     @param authorization_servers List of authorization server URLs
     @param scopes_supported Optional list of supported scopes
@@ -90,7 +90,8 @@ let create_protected_resource_routes ~resource_url ~authorization_servers
             List.filter_opt
               [
                 Option.map scopes_supported ~f:(fun scopes ->
-                    ("scopes_supported", `List (List.map scopes ~f:(fun s -> `String s))));
+                    ( "scopes_supported",
+                      `List (List.map scopes ~f:(fun s -> `String s)) ));
                 Option.map resource_name ~f:(fun name ->
                     ("resource_name", `String name));
                 Option.map resource_documentation ~f:(fun doc ->
@@ -113,9 +114,10 @@ let create_protected_resource_routes ~resource_url ~authorization_servers
   ]
 
 (** Remote Auth Provider.
-    
+
     Authentication provider for resource servers that verify tokens from known
-    authorization servers. Creates RFC 9728 protected resource metadata endpoints. *)
+    authorization servers. Creates RFC 9728 protected resource metadata
+    endpoints. *)
 module Remote_auth_provider (T : TOKEN_VERIFIER) : sig
   include AUTH_PROVIDER
 
@@ -134,8 +136,8 @@ end = struct
   let get_routes ~mcp_path:_ = []
   let get_well_known_routes ~mcp_path:_ = []
 
-  let create ~base_url:base_url_str ~authorization_servers ?(required_scopes = []) ?resource_name
-      ?resource_documentation () =
+  let create ~base_url:base_url_str ~authorization_servers
+      ?(required_scopes = []) ?resource_name ?resource_documentation () =
     (module struct
       let verify_token = T.verify_token
       let base_url = Some base_url_str
@@ -143,7 +145,9 @@ end = struct
 
       let get_routes ~mcp_path =
         (* Get the resource URL based on the MCP path *)
-        let resource_url = get_resource_url ~base_url:base_url_str ~path:mcp_path in
+        let resource_url =
+          get_resource_url ~base_url:base_url_str ~path:mcp_path
+        in
         (* Create protected resource metadata routes *)
         create_protected_resource_routes ~resource_url ~authorization_servers
           ~scopes_supported:required_scopes ?resource_name
@@ -201,7 +205,8 @@ module Make_oauth_provider (P : OAUTH_AUTHORIZATION_SERVER_PROVIDER) = struct
   let required_scopes = []
 
   let get_routes ~mcp_path:_ =
-    (* TODO: Implement create_auth_routes and create_protected_resource_routes *)
+    (* TODO: Implement create_auth_routes and
+       create_protected_resource_routes *)
     []
 
   let get_well_known_routes ~mcp_path =

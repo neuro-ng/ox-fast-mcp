@@ -3,7 +3,18 @@
  (inline_tests)
  (preprocess
   (pps ppx_jane ppx_expect))
- (modules test_auth0 test_aws test_azure test_debug)
+ (modules
+  test_auth0
+  test_aws
+  test_azure
+  test_debug
+  test_descope
+  test_github
+  test_google
+  test_introspection
+  test_scalekit
+  test_supabase
+  test_workos)
  (libraries
   core
   async

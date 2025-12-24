@@ -1,9 +1,9 @@
 (** Tests for OAuth Proxy Provider functionality.
-    
-    Note: Tests that require Mirage_crypto_rng are skipped because the RNG
-    needs special initialization (mirage-crypto-rng-unix) which is not
-    available in this environment. The PKCE functions are tested via
-    integration tests instead. *)
+
+    Note: Tests that require Mirage_crypto_rng are skipped because the RNG needs
+    special initialization (mirage-crypto-rng-unix) which is not available in
+    this environment. The PKCE functions are tested via integration tests
+    instead. *)
 
 open! Core
 open Server_auth.Oauth_proxy
@@ -67,12 +67,11 @@ let%expect_test "Storage - basic operations" =
 let%expect_test "create_consent_html - basic" =
   let html =
     create_consent_html ~client_id:"test-client"
-      ~redirect_uri:"http://localhost:3000/callback"
-      ~scopes:[ "read"; "write" ] ~txn_id:"txn-123" ~csrf_token:"csrf-456" ()
+      ~redirect_uri:"http://localhost:3000/callback" ~scopes:[ "read"; "write" ]
+      ~txn_id:"txn-123" ~csrf_token:"csrf-456" ()
   in
   printf "Contains form: %b\n" (String.is_substring html ~substring:"<form");
-  printf "Contains txn_id: %b\n"
-    (String.is_substring html ~substring:"txn-123");
+  printf "Contains txn_id: %b\n" (String.is_substring html ~substring:"txn-123");
   printf "Contains csrf_token: %b\n"
     (String.is_substring html ~substring:"csrf-456");
   printf "Contains approve button: %b\n"
@@ -90,8 +89,8 @@ let%expect_test "create_consent_html - basic" =
 
 let%expect_test "create_error_html - basic" =
   let html =
-    create_error_html ~error_title:"Test Error" ~error_message:"Something failed"
-      ()
+    create_error_html ~error_title:"Test Error"
+      ~error_message:"Something failed" ()
   in
   printf "Contains title: %b\n"
     (String.is_substring html ~substring:"Test Error");

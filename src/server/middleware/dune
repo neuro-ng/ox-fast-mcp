@@ -5,14 +5,17 @@
   core
   async
   yojson
+  ppx_yojson_conv_lib
   cohttp
   cohttp-lwt
   cohttp-lwt-unix
   logs
   lwt
+  ox-fast-mcp
   ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.shared
   ox-fast-mcp.shared
   ox-fast-mcp.tools
   ox-fast-mcp.utilities)
  (preprocess
-  (pps ppx_jane ppx_let)))
+  (pps ppx_jane ppx_let ppx_yojson_conv)))

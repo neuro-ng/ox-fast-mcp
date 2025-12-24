@@ -1,7 +1,7 @@
 (** Tests for OAuth proxy with persistent storage.
 
     Translation of Python test_oauth_proxy_storage.py.
-    
+
     Tests the OxFastMCP OAuth Proxy storage functionality including:
     - Registering and retrieving clients
     - Client persistence in storage
@@ -19,7 +19,8 @@ open Server_auth.Oauth_proxy
 
 (** Create an OAuth proxy for testing *)
 let create_test_proxy ?allowed_client_redirect_uris () =
-  create ~upstream_authorization_endpoint:"https://github.com/login/oauth/authorize"
+  create
+    ~upstream_authorization_endpoint:"https://github.com/login/oauth/authorize"
     ~upstream_token_endpoint:"https://github.com/login/oauth/access_token"
     ~upstream_client_id:"test-client-id"
     ~upstream_client_secret:"test-client-secret"
@@ -71,12 +72,15 @@ let%expect_test "nonexistent_client_returns_none" =
 let%expect_test "proxy_dcr_client_redirect_validation" =
   Lwt_main.run
     (let proxy =
-       create_test_proxy ~allowed_client_redirect_uris:[ "http://localhost:*" ] ()
+       create_test_proxy ~allowed_client_redirect_uris:[ "http://localhost:*" ]
+         ()
      in
      (* Register client *)
      let* _registered =
-       register_client proxy ~client_id:"test-proxy-client" ~client_secret:"secret"
-         ~redirect_uris:[ "http://localhost:8080/callback" ] ()
+       register_client proxy ~client_id:"test-proxy-client"
+         ~client_secret:"secret"
+         ~redirect_uris:[ "http://localhost:8080/callback" ]
+         ()
      in
      (* Get client back *)
      let* client = get_client proxy ~client_id:"test-proxy-client" in
@@ -104,7 +108,8 @@ let%expect_test "in_memory_storage - same instance shares data" =
      let* _registered =
        register_client proxy1 ~client_id:"memory-client"
          ~client_secret:"memory-secret"
-         ~redirect_uris:[ "http://localhost:8080/callback" ] ()
+         ~redirect_uris:[ "http://localhost:8080/callback" ]
+         ()
      in
      print_endline "Client registered in proxy1";
      (* Same proxy can retrieve it *)

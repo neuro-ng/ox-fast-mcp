@@ -124,7 +124,8 @@ let%expect_test "Storage - clients can be stored and retrieved" =
   | None -> printf "Client not found\n"
   | Some c ->
     printf "Client name: %s\n" (Option.value c.client_name ~default:"None");
-    printf "Client redirect_uris: %s\n" (String.concat ~sep:", " c.redirect_uris));
+    printf "Client redirect_uris: %s\n"
+      (String.concat ~sep:", " c.redirect_uris));
   [%expect
     {|
     Client name: My Test Client
@@ -203,15 +204,16 @@ let%expect_test "Storage - collections are isolated" =
 let%expect_test "create_consent_html - contains required form elements" =
   let html =
     create_consent_html ~client_id:"test-client"
-      ~redirect_uri:"http://localhost:3000/callback"
-      ~scopes:[ "read"; "write" ] ~txn_id:"txn-abc-123"
-      ~csrf_token:"csrf-token-xyz" ()
+      ~redirect_uri:"http://localhost:3000/callback" ~scopes:[ "read"; "write" ]
+      ~txn_id:"txn-abc-123" ~csrf_token:"csrf-token-xyz" ()
   in
   printf "Contains form: %b\n" (String.is_substring html ~substring:"<form");
-  printf "Contains txn_id: %b\n" (String.is_substring html ~substring:"txn-abc-123");
+  printf "Contains txn_id: %b\n"
+    (String.is_substring html ~substring:"txn-abc-123");
   printf "Contains csrf_token: %b\n"
     (String.is_substring html ~substring:"csrf-token-xyz");
-  printf "Contains approve: %b\n" (String.is_substring html ~substring:"approve");
+  printf "Contains approve: %b\n"
+    (String.is_substring html ~substring:"approve");
   printf "Contains deny: %b\n" (String.is_substring html ~substring:"deny");
   printf "Contains POST method: %b\n"
     (String.is_substring html ~substring:"method=\"POST\"");
@@ -229,8 +231,8 @@ let%expect_test "create_consent_html - displays client and server info" =
   let html =
     create_consent_html ~client_id:"my-app"
       ~redirect_uri:"https://myapp.example.com/callback"
-      ~scopes:[ "openid"; "profile"; "email" ] ~txn_id:"txn-123"
-      ~csrf_token:"csrf-456" ~client_name:"My Application"
+      ~scopes:[ "openid"; "profile"; "email" ]
+      ~txn_id:"txn-123" ~csrf_token:"csrf-456" ~client_name:"My Application"
       ~server_name:"OxFastMCP Server" ()
   in
   printf "Contains client name: %b\n"
@@ -253,8 +255,8 @@ let%expect_test "create_consent_html - displays client and server info" =
 let%expect_test "create_consent_html - uses defaults when names not provided" =
   let html =
     create_consent_html ~client_id:"client-123"
-      ~redirect_uri:"http://localhost/callback"
-      ~scopes:[ "read" ] ~txn_id:"txn" ~csrf_token:"csrf" ()
+      ~redirect_uri:"http://localhost/callback" ~scopes:[ "read" ] ~txn_id:"txn"
+      ~csrf_token:"csrf" ()
   in
   printf "Contains client_id as fallback: %b\n"
     (String.is_substring html ~substring:"client-123");
@@ -293,14 +295,17 @@ let%expect_test "create_error_html - includes optional details" =
       ~error_message:"Token verification failed."
       ~error_details:
         [
-          ("Error Code", "invalid_token"); ("Status", "401"); ("Details", "Expired");
+          ("Error Code", "invalid_token");
+          ("Status", "401");
+          ("Details", "Expired");
         ]
       ()
   in
   printf "Contains error code: %b\n"
     (String.is_substring html ~substring:"invalid_token");
   printf "Contains status: %b\n" (String.is_substring html ~substring:"401");
-  printf "Contains details: %b\n" (String.is_substring html ~substring:"Expired");
+  printf "Contains details: %b\n"
+    (String.is_substring html ~substring:"Expired");
   [%expect
     {|
     Contains error code: true
@@ -398,7 +403,8 @@ let%expect_test "Pkce.verify - unknown method returns false" =
    OAuthProxy Configuration Tests
    ============================================================================ *)
 
-let%expect_test "Oauth_proxy.create - normalizes redirect_path with leading slash" =
+let%expect_test "Oauth_proxy.create - normalizes redirect_path with leading \
+                 slash" =
   (* Without leading slash - should be normalized *)
   let _proxy1 =
     create ~upstream_authorization_endpoint:"https://auth.example.com/authorize"
@@ -417,7 +423,8 @@ let%expect_test "Oauth_proxy.create - normalizes redirect_path with leading slas
       ~required_scopes:[ "read" ] ()
   in
   printf "Proxy created with leading slash\n";
-  [%expect {|
+  [%expect
+    {|
     Proxy created without leading slash
     Proxy created with leading slash
     |}]
@@ -428,10 +435,11 @@ let%expect_test "Oauth_proxy.create - normalizes redirect_path with leading slas
 
 let%expect_test "build_upstream_authorize_url - contains required params" =
   let proxy =
-    create ~upstream_authorization_endpoint:"https://github.com/login/oauth/authorize"
+    create
+      ~upstream_authorization_endpoint:
+        "https://github.com/login/oauth/authorize"
       ~upstream_token_endpoint:"https://github.com/login/oauth/access_token"
-      ~upstream_client_id:"my-gh-client"
-      ~upstream_client_secret:"my-gh-secret"
+      ~upstream_client_id:"my-gh-client" ~upstream_client_secret:"my-gh-secret"
       ~base_url:"https://myserver.com" ~redirect_path:"/auth/callback"
       ~required_scopes:[ "read" ] ()
   in
@@ -451,7 +459,9 @@ let%expect_test "build_upstream_authorize_url - contains required params" =
       csrf_expires_at = None;
     }
   in
-  let url = build_upstream_authorize_url proxy ~txn_id:"txn-build-test" ~transaction in
+  let url =
+    build_upstream_authorize_url proxy ~txn_id:"txn-build-test" ~transaction
+  in
   printf "Starts with upstream: %b\n"
     (String.is_prefix url ~prefix:"https://github.com/login/oauth/authorize");
   printf "Contains client_id: %b\n"

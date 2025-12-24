@@ -18,19 +18,19 @@ let enhance_description ~status_code ~error ~description =
     (* This is the "Authentication required" error *)
     "Authentication failed. The provided bearer token is invalid, expired, or \
      no longer recognized by the server. To resolve: clear authentication \
-     tokens in your MCP client and reconnect. Your client should \
-     automatically re-register and obtain new tokens."
+     tokens in your MCP client and reconnect. Your client should automatically \
+     re-register and obtain new tokens."
   | "insufficient_scope", _ ->
     (* Scope error - already has good detail from SDK *)
     description
   | _ -> description
 
-(** Configuration for require auth middleware *)
 type require_auth_config = {
   required_scopes : string list;
   resource_metadata_url : string option;
 }
 [@@deriving compare, sexp]
+(** Configuration for require auth middleware *)
 
 (** Require Auth Middleware with enhanced error messages.
 
@@ -116,8 +116,7 @@ module Require_auth_middleware = struct
     | Some (Some (auth_creds, _auth_user)) -> (
       let missing_scope =
         List.find config.required_scopes ~f:(fun required_scope ->
-            not
-              (List.mem auth_creds.scopes required_scope ~equal:String.equal))
+            not (List.mem auth_creds.scopes required_scope ~equal:String.equal))
       in
       match missing_scope with
       | Some scope ->

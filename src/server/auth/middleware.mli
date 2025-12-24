@@ -6,12 +6,12 @@
 
 open Cohttp
 
-(** Configuration for require auth middleware *)
 type require_auth_config = {
   required_scopes : string list;
   resource_metadata_url : string option;
 }
 [@@deriving compare, sexp]
+(** Configuration for require auth middleware *)
 
 (** Require Auth Middleware with enhanced error messages.
 

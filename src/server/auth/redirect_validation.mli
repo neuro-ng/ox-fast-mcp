@@ -19,9 +19,7 @@ val matches_allowed_pattern : uri:string -> pattern:string -> bool
     @return true if the URI matches the pattern *)
 
 val validate_redirect_uri :
-  redirect_uri:string option ->
-  allowed_patterns:string list option ->
-  bool
+  redirect_uri:string option -> allowed_patterns:string list option -> bool
 (** Validate a redirect URI against allowed patterns.
 
     @param redirect_uri The redirect URI to validate (None is allowed)

@@ -52,14 +52,9 @@ let http_timeout_seconds = 30
 let logger = Logger.get_logger "OAuthProxy"
 
 (* -------------------------------------------------------------------------
-   Data Models  
+   Data Models
    ------------------------------------------------------------------------- *)
 
-(** OAuth transaction state for consent flow.
-
-    Stored server-side to track active authorization flows with client context.
-    Includes CSRF tokens for consent protection per MCP security best
-    practices. *)
 type oauth_transaction = {
   txn_id : string;
   client_id : string;
@@ -75,11 +70,11 @@ type oauth_transaction = {
   csrf_expires_at : float option;
 }
 [@@deriving yojson, compare, sexp]
+(** OAuth transaction state for consent flow.
 
-(** Client authorization code with PKCE and upstream tokens.
+    Stored server-side to track active authorization flows with client context.
+    Includes CSRF tokens for consent protection per MCP security best practices. *)
 
-    Stored server-side after upstream IdP callback. Contains the upstream
-    tokens bound to the client's PKCE challenge for secure token exchange. *)
 type client_code = {
   code : string;
   cc_client_id : string; [@key "client_id"]
@@ -92,13 +87,11 @@ type client_code = {
   cc_created_at : float; [@key "created_at"]
 }
 [@@deriving yojson, compare, sexp]
+(** Client authorization code with PKCE and upstream tokens.
 
-(** Stored upstream OAuth tokens from identity provider.
+    Stored server-side after upstream IdP callback. Contains the upstream tokens
+    bound to the client's PKCE challenge for secure token exchange. *)
 
-    These tokens are obtained from the upstream provider (Google, GitHub, etc.)
-    and stored in plaintext within this model. Encryption is handled
-    transparently at the storage layer. Tokens are never exposed to MCP
-    clients. *)
 type upstream_token_set = {
   upstream_token_id : string;
   access_token : string;
@@ -112,22 +105,23 @@ type upstream_token_set = {
   raw_token_data : json;
 }
 [@@deriving yojson, compare, sexp]
+(** Stored upstream OAuth tokens from identity provider.
 
-(** Maps OxFastMCP token JTI to upstream token ID.
+    These tokens are obtained from the upstream provider (Google, GitHub, etc.)
+    and stored in plaintext within this model. Encryption is handled
+    transparently at the storage layer. Tokens are never exposed to MCP clients. *)
 
-    This allows stateless JWT validation while still being able to look up the
-    corresponding upstream token when tools need to access upstream APIs. *)
 type jti_mapping = {
   jti : string;
   upstream_token_id : string;
   jm_created_at : float; [@key "created_at"]
 }
 [@@deriving yojson, compare, sexp]
+(** Maps OxFastMCP token JTI to upstream token ID.
 
-(** Proxy DCR client with configurable redirect URI validation.
+    This allows stateless JWT validation while still being able to look up the
+    corresponding upstream token when tools need to access upstream APIs. *)
 
-    This client class is critical for the OAuth proxy to work correctly with
-    Dynamic Client Registration (DCR). *)
 type proxy_dcr_client = {
   pdc_client_id : string; [@key "client_id"]
   client_secret : string option;
@@ -137,6 +131,10 @@ type proxy_dcr_client = {
   pdc_created_at : float; [@key "created_at"]
 }
 [@@deriving yojson, compare, sexp]
+(** Proxy DCR client with configurable redirect URI validation.
+
+    This client class is critical for the OAuth proxy to work correctly with
+    Dynamic Client Registration (DCR). *)
 
 (* -------------------------------------------------------------------------
    In-Memory Storage (simplified from Python's key_value library)
@@ -219,7 +217,7 @@ module Cookie = struct
 end
 
 (* -------------------------------------------------------------------------
-   Token Verifier Interface 
+   Token Verifier Interface
    ------------------------------------------------------------------------- *)
 
 module type TOKEN_VERIFIER = sig
@@ -339,7 +337,8 @@ let set_token_verifier t verifier = t.token_verifier <- Some verifier
    ------------------------------------------------------------------------- *)
 
 (** Get client information by ID *)
-let get_client t ~client_id = Lwt.return (Storage.get t.client_store ~key:client_id)
+let get_client t ~client_id =
+  Lwt.return (Storage.get t.client_store ~key:client_id)
 
 (** Register a client locally with DCR *)
 let register_client t ~client_id ?client_secret ~redirect_uris ?client_name () =
@@ -433,7 +432,8 @@ let load_authorization_code t ~code =
   match Storage.get t.code_store ~key:code with
   | None ->
     let () =
-      Logger.debug logger (Printf.sprintf "Authorization code not found: %s" code)
+      Logger.debug logger
+        (Printf.sprintf "Authorization code not found: %s" code)
     in
     Lwt.return None
   | Some client_code ->
@@ -507,14 +507,14 @@ let exchange_refresh_token t ~client_id ~refresh_token ~scopes:_ =
   | Some upstream ->
     if not (String.equal upstream.uts_client_id client_id) then
       Lwt.return (Error "Client ID mismatch")
-    else (
+    else
       (* TODO: Actually refresh with upstream provider *)
       let () =
         Logger.info logger
           (Printf.sprintf "Refresh token exchange for client: %s" client_id)
       in
       (* Return existing upstream token for now *)
-      Lwt.return (Ok (yojson_of_upstream_token_set upstream)))
+      Lwt.return (Ok (yojson_of_upstream_token_set upstream))
 
 (* -------------------------------------------------------------------------
    Access Token Validation
@@ -541,7 +541,8 @@ let revoke_token t ~token =
   (* Remove from JTI mapping *)
   Storage.remove t.jti_mapping_store ~key:token;
   let () =
-    Logger.info logger (Printf.sprintf "Revoked token: %s..." (String.prefix token 10))
+    Logger.info logger
+      (Printf.sprintf "Revoked token: %s..." (String.prefix token 10))
   in
   (* TODO: Forward revocation to upstream if endpoint configured *)
   Lwt.return ()
@@ -571,7 +572,9 @@ let build_upstream_authorize_url t ~txn_id ~transaction =
   in
   let extra_params = Option.value t.config.extra_authorize_params ~default:[] in
   let all_params = base_params @ pkce_params @ extra_params in
-  let query = Uri.encoded_of_query (List.map all_params ~f:(fun (k, v) -> (k, [v]))) in
+  let query =
+    Uri.encoded_of_query (List.map all_params ~f:(fun (k, v) -> (k, [ v ])))
+  in
   t.config.upstream_authorization_endpoint ^ "?" ^ query
 
 (** Create consent page HTML *)
@@ -700,14 +703,14 @@ let handle_consent_post t ~txn_id ~csrf_token ~action =
       | None -> false
       | Some expected -> String.equal expected csrf_token
     in
-    if not csrf_valid then (
+    if not csrf_valid then
       let html =
         create_error_html ~error_title:"Invalid Request"
           ~error_message:"CSRF token validation failed." ()
       in
       let headers = Header.of_list [ ("Content-Type", "text/html") ] in
       let response = Response.make ~status:`Bad_request ~headers () in
-      Lwt.return (response, Body.of_string html))
+      Lwt.return (response, Body.of_string html)
     else
       match action with
       | "deny" ->
@@ -722,7 +725,9 @@ let handle_consent_post t ~txn_id ~csrf_token ~action =
         Lwt.return (response, Body.empty)
       | "approve" ->
         (* Build upstream URL and redirect *)
-        let upstream_url = build_upstream_authorize_url t ~txn_id ~transaction in
+        let upstream_url =
+          build_upstream_authorize_url t ~txn_id ~transaction
+        in
         let headers = Header.of_list [ ("Location", upstream_url) ] in
         let response = Response.make ~status:`Found ~headers () in
         Lwt.return (response, Body.empty)
@@ -765,8 +770,7 @@ let handle_idp_callback t ~code ~state =
         cc_code_challenge_method = transaction.code_challenge_method;
         cc_scopes = transaction.scopes;
         idp_tokens = `Assoc [ ("upstream_code", `String code) ];
-        expires_at =
-          now +. Float.of_int default_auth_code_expiry_seconds;
+        expires_at = now +. Float.of_int default_auth_code_expiry_seconds;
         cc_created_at = now;
       }
     in
@@ -787,24 +791,30 @@ let handle_idp_callback t ~code ~state =
     let response = Response.make ~status:`Found ~headers () in
     Lwt.return (response, Body.empty)
 
-(** Route handler type *)
 type route = {
   path : string;
   methods : string list;
   handler : Request.t -> (Response.t * Body.t) Lwt.t;
 }
+(** Route handler type *)
 
 (** Get OAuth routes for this proxy *)
 let get_routes t =
   [
-    { path = "/consent"; methods = [ "GET"; "POST" ]; handler = (fun _req ->
-        (* TODO: Parse request to get txn_id, csrf_token, action *)
-        handle_consent_get t ~txn_id:"" (* placeholder *)
-      )
+    {
+      path = "/consent";
+      methods = [ "GET"; "POST" ];
+      handler =
+        (fun _req ->
+          (* TODO: Parse request to get txn_id, csrf_token, action *)
+          handle_consent_get t ~txn_id:"" (* placeholder *));
     };
-    { path = t.config.redirect_path; methods = [ "GET" ]; handler = (fun _req ->
-        (* TODO: Parse request to get code and state *)
-        handle_idp_callback t ~code:"" ~state:"" (* placeholder *)
-      )
+    {
+      path = t.config.redirect_path;
+      methods = [ "GET" ];
+      handler =
+        (fun _req ->
+          (* TODO: Parse request to get code and state *)
+          handle_idp_callback t ~code:"" ~state:"" (* placeholder *));
     };
   ]

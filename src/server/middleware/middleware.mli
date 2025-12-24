@@ -127,3 +127,55 @@ val copy_context :
   unit ->
   context
 (** Create a copy of a context with optional updates *)
+
+(** Base middleware implementation that other middleware can extend *)
+module Base : sig
+  type t = unit
+
+  val create : unit -> t
+  val on_message : t -> context -> 'a call_next -> 'a Deferred.t
+  val on_request : t -> context -> 'a call_next -> 'a Deferred.t
+  val on_notification : t -> context -> 'a call_next -> 'a Deferred.t
+
+  val on_call_tool :
+    t ->
+    context ->
+    Results.call_tool_result call_next ->
+    Results.call_tool_result Deferred.t
+
+  val on_read_resource :
+    t ->
+    context ->
+    read_resource_result call_next ->
+    read_resource_result Deferred.t
+
+  val on_get_prompt :
+    t -> context -> get_prompt_result call_next -> get_prompt_result Deferred.t
+
+  val on_list_tools :
+    t ->
+    context ->
+    Results.list_tools_result call_next ->
+    Results.list_tools_result Deferred.t
+
+  val on_list_resources :
+    t ->
+    context ->
+    Results.list_resources_result call_next ->
+    Results.list_resources_result Deferred.t
+
+  val on_list_resource_templates :
+    t ->
+    context ->
+    Results.list_resource_templates_result call_next ->
+    Results.list_resource_templates_result Deferred.t
+
+  val on_list_prompts :
+    t ->
+    context ->
+    Results.list_prompts_result call_next ->
+    Results.list_prompts_result Deferred.t
+
+  val dispatch_handler : t -> context -> 'a call_next -> 'a call_next Deferred.t
+  val call : t -> context -> 'a call_next -> 'a Deferred.t
+end
