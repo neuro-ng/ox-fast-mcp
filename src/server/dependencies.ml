@@ -4,7 +4,7 @@ open Cohttp_lwt_unix
 
 (* Context management *)
 module Context = struct
-  type t = { mutable current_context : Server.Context.t option }
+  type t = { mutable current_context : Context.t option }
 
   let global_context = { current_context = None }
   let set_context ctx = global_context.current_context <- Some ctx
@@ -61,13 +61,17 @@ module Http_request = struct
     with _ -> String.Map.empty
 end
 
-(* Access token management - reusing from auth middleware *)
+(* Access token management - extract Bearer token from Authorization header *)
 module Access_token = struct
-  include Auth.Middleware.Bearer_auth
-
   let get_token () =
     try
       let req = Http_request.get_request () in
-      get_access_token req
+      let headers = Request.headers req in
+      match Header.get headers "authorization" with
+      | Some auth_header ->
+        if String.is_prefix auth_header ~prefix:"Bearer " then
+          Some (String.chop_prefix_exn auth_header ~prefix:"Bearer ")
+        else None
+      | None -> None
     with _ -> None
 end

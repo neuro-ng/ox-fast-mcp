@@ -1,0 +1,13 @@
+(library
+ (name test_server_context)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_expect))
+ (modules test_context)
+ (libraries
+  core
+  async
+  logs
+  yojson
+  expect_test_helpers_core
+  ox-fast-mcp.server))

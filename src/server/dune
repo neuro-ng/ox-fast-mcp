@@ -1,7 +1,19 @@
 (library
  (name server)
  (public_name ox-fast-mcp.server)
- (libraries core async yojson ppx_yojson_conv_lib ox_fast_mcp)
- (modules context)
+ (libraries
+  core
+  async
+  yojson
+  ppx_yojson_conv_lib
+  logs
+  cohttp
+  cohttp-lwt-unix
+  ox_fast_mcp
+  utilities
+  server_auth
+  ox-fast-mcp.mcp.server.auth
+  uri)
+ (modules context dependencies elicitation http proxy server)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))

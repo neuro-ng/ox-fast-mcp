@@ -1,0 +1,25 @@
+(library
+ (name test_server_http)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_expect))
+ (modules
+  test_bearer_auth_backend
+  test_custom_routes
+  test_http_auth_middleware
+  test_http_dependencies
+  test_http_middleware)
+ (libraries
+  core
+  async
+  core_unix
+  lwt
+  uri
+  cohttp
+  cohttp-lwt
+  cohttp-lwt-unix
+  expect_test_helpers_core
+  server
+  server_auth
+  ox-fast-mcp.server.auth.providers
+  ox-fast-mcp.mcp.server.auth))

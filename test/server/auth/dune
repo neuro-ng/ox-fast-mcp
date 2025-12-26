@@ -22,4 +22,5 @@
   base64
   uri
   ox-fast-mcp.server.auth
+  ox-fast-mcp.server.auth.providers
   ox-fast-mcp.mcp.server.auth))

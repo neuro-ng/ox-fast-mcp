@@ -1,0 +1,21 @@
+(library
+ (name test_server)
+ (modules
+  test_server
+  test_app_state
+  test_auth_integration
+  test_import_server
+  test_experimental_openapi_feature_flag
+  test_file_server
+  test_icons)
+ (libraries
+  core
+  async
+  server
+  yojson
+  ppx_yojson_conv_lib
+  base64
+  expect_test_helpers_core)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv ppx_expect)))

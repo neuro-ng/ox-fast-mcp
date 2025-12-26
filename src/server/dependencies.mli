@@ -1,11 +1,10 @@
 open Core
-open Cohttp
 open Cohttp_lwt_unix
 
 (** Context management *)
 module Context : sig
-  val get_context : unit -> Server.Context.t
-  val set_context : Server.Context.t -> unit
+  val get_context : unit -> Context.t
+  val set_context : Context.t -> unit
   val clear_context : unit -> unit
 end
 
@@ -26,8 +25,6 @@ end
 
 (** Access token management *)
 module Access_token : sig
-  include module type of Auth.Middleware.Bearer_auth
-
   val get_token : unit -> string option
   (** Get access token from current request.
       @return Some token if present and valid, None otherwise *)
