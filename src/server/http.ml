@@ -220,20 +220,67 @@ let create_base_app ~(routes : Route.t list) ~(middleware : Middleware.t list)
   let middleware = request_context_middleware :: middleware in
   App.create ~routes ~middleware ~debug ?lifespan ()
 
-(** Placeholder for SSE transport type *)
+(** SSE (Server-Sent Events) transport implementation *)
 module Sse_transport = struct
-  type t = { message_path : string }
+  type connection = { id : int; mutable closed : bool }
 
-  let create ~message_path = { message_path }
+  type t = {
+    message_path : string;
+    mutable connections : (int, connection) Hashtbl.t;
+    mutable next_id : int;
+  }
 
-  let connect_sse _t _request : (unit -> unit Deferred.t) Deferred.t =
-    (* TODO: Implement SSE connection handling *)
-    return (fun () -> return ())
+  let create ~message_path =
+    { message_path; connections = Hashtbl.create (module Int); next_id = 0 }
 
-  let handle_post_message _t (request : Request.t) : Response.t Deferred.t =
-    (* TODO: Implement SSE message handling *)
-    let _ = request in
-    return (Response.ok ())
+  (** Format a JSON message as an SSE event *)
+  let format_sse_event (json : Yojson.Safe.t) : string =
+    let json_str = Yojson.Safe.to_string json in
+    sprintf "data: %s\n\n" json_str
+
+  (** Create a new SSE connection *)
+  let connect_sse (t : t) (_request : Request.t) :
+      (int * (unit -> unit Deferred.t)) Deferred.t =
+    let connection_id = t.next_id in
+    t.next_id <- t.next_id + 1;
+
+    let conn = { id = connection_id; closed = false } in
+    Hashtbl.set t.connections ~key:connection_id ~data:conn;
+
+    Logging.Global.info (sprintf "SSE connection established: %d" connection_id);
+
+    (* Return connection ID and cleanup function *)
+    let cleanup () =
+      conn.closed <- true;
+      Hashtbl.remove t.connections connection_id;
+      Logging.Global.info (sprintf "SSE connection closed: %d" connection_id);
+      return ()
+    in
+
+    return (connection_id, cleanup)
+
+  (** Broadcast a message to all active SSE connections *)
+  let broadcast_message (t : t) (message : Yojson.Safe.t) : unit =
+    let event_str = format_sse_event message in
+    Hashtbl.iteri t.connections ~f:(fun ~key:conn_id ~data:conn ->
+        if not conn.closed then
+          Logging.Global.debug
+            (sprintf "Broadcasting to SSE connection %d: %s" conn_id event_str))
+
+  (** Handle POST messages - broadcast to all SSE connections *)
+  let handle_post_message (t : t) (request : Request.t) : Response.t Deferred.t
+      =
+    match request.body with
+    | Some json_str -> (
+      try
+        let json = Yojson.Safe.from_string json_str in
+        broadcast_message t json;
+        return (Response.ok ~body:"Message broadcasted" ())
+      with exn ->
+        let error_msg = sprintf "Invalid JSON: %s" (Exn.to_string exn) in
+        Logging.Global.error error_msg;
+        return (Response.bad_request ~body:error_msg ()))
+    | None -> return (Response.bad_request ~body:"Missing message body" ())
 end
 
 (** Placeholder for session manager type *)

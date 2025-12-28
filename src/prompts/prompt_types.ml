@@ -146,6 +146,7 @@ let to_mcp_prompt ?(_include_fastmcp_meta = false) (prompt : t) :
   {
     Mcp.Types.description = prompt.description;
     arguments = pf.prompt_data.arguments;
+    icons = None;
     meta = None;
     (* TODO: Add fastmcp metadata if requested *)
     base_metadata;

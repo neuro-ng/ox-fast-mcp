@@ -71,6 +71,9 @@ type t = {
   mutable prompts_changed : bool;  (** Flag: prompts list modified *)
   notification_queue : (string, unit) Hashtbl.t;  (** Pending notifications *)
   logger : Logs.src;  (** Logger source *)
+  (* Protocol handler fields *)
+  method_name : string option;  (** MCP method name *)
+  params : Yojson.Safe.t option;  (** MCP method parameters *)
 }
 (** Execution context passed to handlers *)
 
@@ -80,6 +83,8 @@ val create :
   ?request_id:string ->
   ?client_id:string ->
   ?session_id:string ->
+  ?method_name:string ->
+  ?params:Yojson.Safe.t ->
   ?logger:Logs.src ->
   unit ->
   t
@@ -89,6 +94,8 @@ val create_with_session :
   ?request_id:string ->
   ?client_id:string ->
   ?session_id:string ->
+  ?method_name:string ->
+  ?params:Yojson.Safe.t ->
   session_data:(string, Yojson.Safe.t) Hashtbl.t ->
   ?logger:Logs.src ->
   unit ->

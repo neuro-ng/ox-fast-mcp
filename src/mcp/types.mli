@@ -180,8 +180,19 @@ type base_metadata = {
 }
 [@@deriving compare, sexp]
 
+(* Icon type for server, tools, resources, and prompts *)
+type icon = {
+  src : string;
+  mime_type : string option; [@key "mimeType"] [@default None] [@yojson.option]
+  sizes : string list option; [@default None] [@yojson.option]
+}
+[@@deriving yojson, compare, sexp]
+
 type implementation = {
   version : string;
+  website_url : string option;
+      [@key "websiteUrl"] [@default None] [@yojson.option]
+  icons : icon list option; [@default None] [@yojson.option]
   base_metadata : base_metadata;
       [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson]
 }
@@ -309,6 +320,7 @@ type resource = {
   mime_type : string option; [@key "mimeType"] [@default None] [@yojson.option]
   size : int option; [@default None] [@yojson.option]
   annotations : annotations option; [@default None] [@yojson.option]
+  icons : icon list option; [@default None] [@yojson.option]
   meta : Yojson.Safe.t option; [@key "_meta"] [@default None] [@yojson.option]
   base_metadata : base_metadata;
       [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson]
@@ -323,6 +335,7 @@ type resource_template = {
   description : string option; [@default None] [@yojson.option]
   mime_type : string option; [@key "mimeType"] [@default None] [@yojson.option]
   annotations : annotations option; [@default None] [@yojson.option]
+  icons : icon list option; [@default None] [@yojson.option]
   meta : Yojson.Safe.t option; [@key "_meta"] [@default None] [@yojson.option]
   base_metadata : base_metadata;
       [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson]
@@ -442,6 +455,7 @@ type prompt_argument = {
 type prompt = {
   description : string option; [@default None] [@yojson.option]
   arguments : prompt_argument list option; [@default None] [@yojson.option]
+  icons : icon list option; [@default None] [@yojson.option]
   meta : Yojson.Safe.t option; [@key "_meta"] [@default None] [@yojson.option]
   base_metadata : base_metadata;
       [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson]
@@ -565,6 +579,7 @@ type tool = {
   output_schema : Yojson.Safe.t option;
       [@key "outputSchema"] [@default None] [@yojson.option]
   annotations : tool_annotations option; [@default None] [@yojson.option]
+  icons : icon list option; [@default None] [@yojson.option]
   meta : Yojson.Safe.t option; [@key "_meta"] [@default None] [@yojson.option]
   base_metadata : base_metadata;
       [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson]

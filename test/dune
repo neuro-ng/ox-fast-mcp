@@ -1,5 +1,6 @@
 (library
  (name test_ox_fmcp)
+ (modules test_client)
  (libraries
   core
   core_unix
@@ -8,7 +9,9 @@
   ox_fast_mcp
   ox-fast-mcp.utilities
   ox-fast-mcp.mcp
+  ox-fast-mcp.server
   ox-fast-mcp.server.auth.middleware
+  yojson
   cohttp
   lwt
   uri)

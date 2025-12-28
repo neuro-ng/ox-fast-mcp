@@ -196,6 +196,7 @@ let to_mcp_resource ?(_include_fastmcp_meta = false) (resource : t) :
     (* TODO: Compute size if available *)
     annotations = None;
     (* TODO: Add annotations if needed *)
+    icons = None;
     meta = None;
     (* TODO: Add fastmcp metadata if requested *)
     base_metadata;

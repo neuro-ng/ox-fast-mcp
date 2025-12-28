@@ -2,20 +2,20 @@
  (name test_server)
  (modules
   test_server
+  test_server_functionality
+  test_server_stats
+  test_validation
+  test_http_sse
   test_app_state
   test_auth_integration
   test_import_server
   test_experimental_openapi_feature_flag
   test_file_server
-  test_icons)
- (libraries
-  core
-  async
-  server
-  yojson
-  ppx_yojson_conv_lib
-  base64
-  expect_test_helpers_core)
+  test_icons
+  test_input_validation
+  test_log_level
+  test_logging)
+ (libraries core async yojson expect_test_helpers_core server ox_fast_mcp)
  (inline_tests)
  (preprocess
-  (pps ppx_jane ppx_yojson_conv ppx_expect)))
+  (pps ppx_jane ppx_expect ppx_yojson_conv)))

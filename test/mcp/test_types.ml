@@ -104,6 +104,7 @@ let%expect_test "resource yojson" =
       mime_type = Some "text/plain";
       size = Some 1024;
       annotations = None;
+      icons = None;
       meta = None;
       base_metadata = { name = "test-resource"; title = Some "Test Resource" };
     }
@@ -125,6 +126,7 @@ let%expect_test "resource with annotations" =
       mime_type = None;
       size = None;
       annotations = Some { audience = Some [ `User ]; priority = Some 0.5 };
+      icons = None;
       meta = None;
       base_metadata = { name = "annotated"; title = None };
     }

@@ -175,8 +175,18 @@ type empty_result = result [@@deriving yojson, compare, sexp]
 type base_metadata = { name : string; title : string option [@yojson.option] }
 [@@deriving yojson, compare, sexp]
 
+(* Icon type for server, tools, resources, and prompts *)
+type icon = {
+  src : string;
+  mime_type : string option; [@key "mimeType"] [@yojson.option]
+  sizes : string list option; [@yojson.option]
+}
+[@@deriving yojson, compare, sexp]
+
 type implementation = {
   version : string;
+  website_url : string option; [@key "websiteUrl"] [@yojson.option]
+  icons : icon list option; [@yojson.option]
   base_metadata : base_metadata;
       [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson]
 }
@@ -293,6 +303,7 @@ type resource = {
   mime_type : string option; [@key "mimeType"] [@yojson.option]
   size : int option; [@yojson.option]
   annotations : annotations option; [@yojson.option]
+  icons : icon list option; [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
   base_metadata : base_metadata;
       [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson]
@@ -310,6 +321,7 @@ type resource_template = {
   description : string option; [@yojson.option]
   mime_type : string option; [@key "mimeType"] [@yojson.option]
   annotations : annotations option; [@yojson.option]
+  icons : icon list option; [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
   base_metadata : base_metadata;
       [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson]
@@ -429,6 +441,7 @@ type prompt_argument = {
 type prompt = {
   description : string option; [@yojson.option]
   arguments : prompt_argument list option; [@yojson.option]
+  icons : icon list option; [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
   base_metadata : base_metadata;
       [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson]
@@ -546,6 +559,7 @@ type tool = {
   input_schema : json; [@key "inputSchema"]
   output_schema : json option; [@key "outputSchema"] [@yojson.option]
   annotations : tool_annotations option; [@yojson.option]
+  icons : icon list option; [@yojson.option]
   meta : json option; [@key "_meta"] [@yojson.option]
   base_metadata : base_metadata;
       [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson]

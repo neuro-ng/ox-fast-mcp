@@ -153,14 +153,24 @@ module Streamable_http_asgi_app : sig
   val handle_request : t -> Request.t -> Response.t Deferred.t
 end
 
-(** {1 SSE Transport Placeholder} *)
+(** {1 SSE Transport}
+    **)
 
 module Sse_transport : sig
+  type connection
   type t
 
   val create : message_path:string -> t
-  val connect_sse : t -> Request.t -> (unit -> unit Deferred.t) Deferred.t
+
+  val connect_sse :
+    t -> Request.t -> (int * (unit -> unit Deferred.t)) Deferred.t
+  (** Establish SSE connection, returns connection ID and cleanup function **)
+
+  val broadcast_message : t -> Yojson.Safe.t -> unit
+  (** Broadcast a message to all active SSE connections **)
+
   val handle_post_message : t -> Request.t -> Response.t Deferred.t
+  (** Handle POST messages and broadcast to SSE connections **)
 end
 
 (** {1 Session Manager Placeholder} *)

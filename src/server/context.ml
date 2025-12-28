@@ -109,6 +109,9 @@ type t = {
   mutable prompts_changed : bool;
   notification_queue : (string, unit) Hashtbl.t;
   logger : Logs.src;
+  (* Protocol handler fields *)
+  method_name : string option;
+  params : Yojson.Safe.t option;
 }
 
 (** {1 Context Creation} *)
@@ -116,7 +119,8 @@ type t = {
 let default_logger = Logs.Src.create "oxfastmcp.context"
 
 let create ?(request_id : string option) ?(client_id : string option)
-    ?(session_id : string option) ?(logger = default_logger) () : t =
+    ?(session_id : string option) ?(method_name : string option)
+    ?(params : Yojson.Safe.t option) ?(logger = default_logger) () : t =
   {
     request_id;
     client_id;
@@ -128,10 +132,13 @@ let create ?(request_id : string option) ?(client_id : string option)
     prompts_changed = false;
     notification_queue = Hashtbl.create (module String);
     logger;
+    method_name;
+    params;
   }
 
 let create_with_session ?(request_id : string option)
     ?(client_id : string option) ?(session_id : string option)
+    ?(method_name : string option) ?(params : Yojson.Safe.t option)
     ~(session_data : (string, Yojson.Safe.t) Hashtbl.t)
     ?(logger = default_logger) () : t =
   {
@@ -145,6 +152,8 @@ let create_with_session ?(request_id : string option)
     prompts_changed = false;
     notification_queue = Hashtbl.create (module String);
     logger;
+    method_name;
+    params;
   }
 
 (** {1 State Management} *)
