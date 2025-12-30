@@ -74,6 +74,7 @@ type t = {
   (* Protocol handler fields *)
   method_name : string option;  (** MCP method name *)
   params : Yojson.Safe.t option;  (** MCP method parameters *)
+  session : Session_bridge.Async_session.t option;  (** Optional MCP session *)
 }
 (** Execution context passed to handlers *)
 
@@ -86,6 +87,7 @@ val create :
   ?method_name:string ->
   ?params:Yojson.Safe.t ->
   ?logger:Logs.src ->
+  ?session:Session_bridge.Async_session.t ->
   unit ->
   t
 (** Create a new execution context *)
@@ -98,6 +100,7 @@ val create_with_session :
   ?params:Yojson.Safe.t ->
   session_data:(string, Yojson.Safe.t) Hashtbl.t ->
   ?logger:Logs.src ->
+  ?session:Session_bridge.Async_session.t ->
   unit ->
   t
 (** Create context with existing session data *)
@@ -138,6 +141,41 @@ val reset_changes : t -> unit
 
 val get_pending_notifications : t -> string list
 (** Get list of pending notification types *)
+
+val send_resources_list_changed : t -> unit Deferred.t
+(** Send notification that resources list has changed *)
+
+val send_tools_list_changed : t -> unit Deferred.t
+(** Send notification that tools list has changed *)
+
+val send_prompts_list_changed : t -> unit Deferred.t
+(** Send notification that prompts list has changed *)
+
+(** {1 Sampling and Elicitation} *)
+
+val sample :
+  t ->
+  messages:Mcp.Types.sampling_message list ->
+  ?max_tokens:int ->
+  ?system_prompt:string ->
+  ?include_context:Mcp.Types.include_context ->
+  ?temperature:float ->
+  ?stop_sequences:string list ->
+  ?metadata:Yojson.Safe.t ->
+  ?model_preferences:Mcp.Types.model_preferences ->
+  unit ->
+  Mcp.Types.client_request Deferred.t
+(** Send a sampling request to the client to generate LLM completions.
+    Raises Failure if no active session exists. *)
+
+val elicit :
+  t ->
+  message:string ->
+  requested_schema:Mcp.Types.elicit_requested_schema ->
+  unit ->
+  Mcp.Types.client_request Deferred.t
+(** Send an elicitation request to the client to prompt user input.
+    Raises Failure if no active session exists. *)
 
 (** {1 Session Data Access} *)
 

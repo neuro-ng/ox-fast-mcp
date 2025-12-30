@@ -14,7 +14,13 @@
   test_icons
   test_input_validation
   test_log_level
-  test_logging)
+  test_logging
+  test_server_helpers
+  test_server_improvements
+  test_enhanced_errors
+  test_server_utilities
+  test_session_notifications
+  test_context_sampling)
  (libraries core async yojson expect_test_helpers_core server ox_fast_mcp)
  (inline_tests)
  (preprocess

@@ -112,6 +112,7 @@ type t = {
   (* Protocol handler fields *)
   method_name : string option;
   params : Yojson.Safe.t option;
+  session : Session_bridge.Async_session.t option;
 }
 
 (** {1 Context Creation} *)
@@ -120,7 +121,8 @@ let default_logger = Logs.Src.create "oxfastmcp.context"
 
 let create ?(request_id : string option) ?(client_id : string option)
     ?(session_id : string option) ?(method_name : string option)
-    ?(params : Yojson.Safe.t option) ?(logger = default_logger) () : t =
+    ?(params : Yojson.Safe.t option) ?(logger = default_logger)
+    ?(session : Session_bridge.Async_session.t option) () : t =
   {
     request_id;
     client_id;
@@ -134,13 +136,14 @@ let create ?(request_id : string option) ?(client_id : string option)
     logger;
     method_name;
     params;
+    session;
   }
 
 let create_with_session ?(request_id : string option)
     ?(client_id : string option) ?(session_id : string option)
     ?(method_name : string option) ?(params : Yojson.Safe.t option)
     ~(session_data : (string, Yojson.Safe.t) Hashtbl.t)
-    ?(logger = default_logger) () : t =
+    ?(logger = default_logger) ?(session : Session_bridge.Async_session.t option) () : t =
   {
     request_id;
     client_id;
@@ -154,6 +157,7 @@ let create_with_session ?(request_id : string option)
     logger;
     method_name;
     params;
+    session;
   }
 
 (** {1 State Management} *)
@@ -207,6 +211,56 @@ let reset_changes (ctx : t) : unit =
 
 let get_pending_notifications (ctx : t) : string list =
   Hashtbl.keys ctx.notification_queue
+
+(** Send notification that resources list has changed *)
+let send_resources_list_changed (ctx : t) : unit Deferred.t =
+  match ctx.session with
+  | None -> return ()
+  | Some session ->
+    Session_bridge.Async_session.send_resource_list_changed session
+
+(** Send notification that tools list has changed *)
+let send_tools_list_changed (ctx : t) : unit Deferred.t =
+  match ctx.session with
+  | None -> return ()
+  | Some session ->
+    Session_bridge.Async_session.send_tool_list_changed session
+
+(** Send notification that prompts list has changed *)
+let send_prompts_list_changed (ctx : t) : unit Deferred.t =
+  match ctx.session with
+  | None -> return ()
+  | Some session ->
+    Session_bridge.Async_session.send_prompt_list_changed session
+
+(** {1 Sampling and Elicitation} *)
+
+(** Send a sampling request to the client to generate LLM completions *)
+let sample (ctx : t) ~(messages : Mcp.Types.sampling_message list)
+    ?(max_tokens = 1000) ?system_prompt ?include_context ?temperature
+    ?stop_sequences ?metadata ?model_preferences () :
+    Mcp.Types.client_request Deferred.t =
+  match ctx.session with
+  | None ->
+    failwith
+      "Cannot sample: no active session. Sampling requires an active MCP \
+       session."
+  | Some session ->
+    Session_bridge.Async_session.create_message session ~messages ~max_tokens
+      ?system_prompt ?include_context ?temperature ?stop_sequences ?metadata
+      ?model_preferences ()
+
+(** Send an elicitation request to the client to prompt user input *)
+let elicit (ctx : t) ~(message : string)
+    ~(requested_schema : Mcp.Types.elicit_requested_schema) () :
+    Mcp.Types.client_request Deferred.t =
+  match ctx.session with
+  | None ->
+    failwith
+      "Cannot elicit: no active session. Elicitation requires an active MCP \
+       session."
+  | Some session ->
+    Session_bridge.Async_session.elicit session ~message ~requested_schema ()
 
 (** {1 Session Data Access} *)
 

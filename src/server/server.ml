@@ -281,6 +281,9 @@ module Ox_fast_mcp = struct
     on_duplicate_tools : Duplicate_behavior.t;
     on_duplicate_resources : Duplicate_behavior.t;
     on_duplicate_prompts : Duplicate_behavior.t;
+    (* Statistics tracking *)
+    mutable tool_call_counts : (string, int) Hashtbl.t;
+    mutable resource_access_counts : (string, int) Hashtbl.t;
   }
 
   let generate_name () =
@@ -323,6 +326,75 @@ module Ox_fast_mcp = struct
       Error "Template URI must contain a scheme (e.g., 'file://', 'http://')"
     else Ok ()
 
+  (** {2 Name Normalization} *)
+
+  (** Normalize a tool name to valid format.
+      Converts to lowercase, replaces spaces and invalid chars with underscores,
+      ensures starts with letter or underscore. *)
+  let normalize_tool_name name =
+    let normalized =
+      name
+      |> String.lowercase
+      |> String.map ~f:(fun c ->
+             if Char.is_alphanum c || Char.equal c '_' then c else '_')
+    in
+    (* Ensure it starts with letter or underscore *)
+    if String.is_empty normalized then "_"
+    else if Char.is_digit normalized.[0] then
+      "_" ^ normalized
+    else normalized
+
+  (** {2 Public Validation Helpers} *)
+
+  (** Check if a tool name is valid *)
+  let is_valid_tool_name name =
+    Result.is_ok (validate_tool_name name)
+
+  (** Check if a URI is valid *)
+  let is_valid_uri uri =
+    Result.is_ok (validate_resource_uri uri)
+
+  (** Check if a prompt name is valid *)
+  let is_valid_prompt_name name =
+    Result.is_ok (validate_prompt_name name)
+
+  (** Check if a template URI is valid *)
+  let is_valid_template_uri uri =
+    Result.is_ok (validate_template_uri uri)
+
+  (** {2 Similar Name Suggestions} *)
+
+  (** Suggest similar component names using Levenshtein-like similarity *)
+  let suggest_similar_names target available =
+    let distance s1 s2 =
+      let len1 = String.length s1 in
+      let len2 = String.length s2 in
+      let matrix = Array.make_matrix ~dimx:(len1 + 1) ~dimy:(len2 + 1) 0 in
+      for i = 0 to len1 do
+        matrix.(i).(0) <- i
+      done;
+      for j = 0 to len2 do
+        matrix.(0).(j) <- j
+      done;
+      for i = 1 to len1 do
+        for j = 1 to len2 do
+          let cost = if Char.equal s1.[i - 1] s2.[j - 1] then 0 else 1 in
+          matrix.(i).(j) <-
+            Int.min
+              (Int.min (matrix.(i - 1).(j) + 1) (matrix.(i).(j - 1) + 1))
+              (matrix.(i - 1).(j - 1) + cost)
+        done
+      done;
+      matrix.(len1).(len2)
+    in
+    available
+    |> List.map ~f:(fun name -> name, distance target name)
+    |> List.sort ~compare:(fun (_, d1) (_, d2) -> Int.compare d1 d2)
+    |> List.take_while ~f:(fun (_, dist) -> dist <= 3)
+    |> List.map ~f:fst
+    |> List.take_while ~f:(fun _ -> true)
+    |> (fun l -> List.take l 5)
+
   let create ?name ?version ?instructions ?website_url ?(icons = [])
       ?(resource_prefix_format = Resource_prefix_format.Protocol) ?include_tags
       ?exclude_tags ?(strict_input_validation = false)
@@ -364,6 +436,9 @@ module Ox_fast_mcp = struct
       on_duplicate_tools;
       on_duplicate_resources;
       on_duplicate_prompts;
+      (* Initialize statistics *)
+      tool_call_counts = Hashtbl.create (module String);
+      resource_access_counts = Hashtbl.create (module String);
     }
 
   (** Apply middleware chain to a handler *)
@@ -567,7 +642,18 @@ module Ox_fast_mcp = struct
   let get_resource t ~key =
     match Hashtbl.find (get_resources t) key with
     | Some resource -> return resource
-    | None -> raise_s [%message "Unknown resource" (key : string)]
+    | None ->
+      let available = get_resources t |> Hashtbl.keys |> List.of_list in
+      let suggestions = suggest_similar_names key available in
+      (match suggestions with
+      | [] -> raise_s [%message "Unknown resource" (key : string)]
+      | sugg ->
+        let suggestion_str = String.concat ~sep:", " sugg in
+        raise_s
+          [%message
+            "Unknown resource"
+              (key : string)
+              ~did_you_mean:(suggestion_str : string)])
 
   let list_resources_mcp t =
     get_resources t |> Hashtbl.data
@@ -636,7 +722,18 @@ module Ox_fast_mcp = struct
   let get_template t ~key =
     match Hashtbl.find (get_templates t) key with
     | Some template -> return template
-    | None -> raise_s [%message "Unknown resource template" (key : string)]
+    | None ->
+      let available = get_templates t |> Hashtbl.keys |> List.of_list in
+      let suggestions = suggest_similar_names key available in
+      (match suggestions with
+      | [] -> raise_s [%message "Unknown resource template" (key : string)]
+      | sugg ->
+        let suggestion_str = String.concat ~sep:", " sugg in
+        raise_s
+          [%message
+            "Unknown resource template"
+              (key : string)
+              ~did_you_mean:(suggestion_str : string)])
 
   let list_templates_mcp t =
     get_templates t |> Hashtbl.data
@@ -695,7 +792,18 @@ module Ox_fast_mcp = struct
   let get_prompt_component t ~key =
     match Hashtbl.find (get_prompts t) key with
     | Some prompt -> return prompt
-    | None -> raise_s [%message "Unknown prompt" (key : string)]
+    | None ->
+      let available = get_prompts t |> Hashtbl.keys |> List.of_list in
+      let suggestions = suggest_similar_names key available in
+      (match suggestions with
+      | [] -> raise_s [%message "Unknown prompt" (key : string)]
+      | sugg ->
+        let suggestion_str = String.concat ~sep:", " sugg in
+        raise_s
+          [%message
+            "Unknown prompt"
+              (key : string)
+              ~did_you_mean:(suggestion_str : string)])
 
   let list_prompts_mcp t =
     get_prompts t |> Hashtbl.data
@@ -748,12 +856,170 @@ module Ox_fast_mcp = struct
   let add_templates t templates =
     List.iter templates ~f:(fun template -> add_template t template)
 
+  (** {2 Server Inspection & Discovery} *)
+
+  (** Get comprehensive server description *)
+  let describe_server t =
+    `Assoc
+      [
+        ("name", `String t.name);
+        ( "version",
+          match t.version with
+          | Some v -> `String v
+          | None -> `String "0.1.0" );
+        ( "instructions",
+          match t.instructions with
+          | Some i -> `String i
+          | None -> `Null );
+        ("tool_count", `Int (Hashtbl.length (get_tools t)));
+        ("resource_count", `Int (Hashtbl.length (get_resources t)));
+        ("template_count", `Int (Hashtbl.length (get_templates t)));
+        ("prompt_count", `Int (Hashtbl.length (get_prompts t)));
+        ("mounted_server_count", `Int (List.length t.mounted_servers));
+        ("middleware_count", `Int (List.length t.middleware));
+        ("strict_input_validation", `Bool t.strict_input_validation);
+        ("include_fastmcp_meta", `Bool t.include_fastmcp_meta);
+      ]
+
+  (** Find tools with a specific tag *)
+  let find_tools_by_tag t ~tag =
+    get_tools t |> Hashtbl.data
+    |> List.filter ~f:(fun tool -> Set.mem tool.Tool.tags tag)
+
+  (** Find resources by URI scheme *)
+  let find_resources_by_scheme t ~scheme =
+    get_resources t |> Hashtbl.data
+    |> List.filter ~f:(fun resource ->
+           String.is_prefix resource.Resource.uri ~prefix:(scheme ^ "://"))
+
+  (** Find prompts with a specific tag *)
+  let find_prompts_by_tag t ~tag =
+    get_prompts t |> Hashtbl.data
+    |> List.filter ~f:(fun prompt -> Set.mem prompt.Prompt.tags tag)
+
+  (** Validate server configuration *)
+  let validate_server t =
+    let errors = ref [] in
+    (* Check for empty name *)
+    if String.is_empty t.name then
+      errors := "Server name cannot be empty" :: !errors;
+    (* Check for duplicate tool names *)
+    let tool_names = get_tools t |> Hashtbl.keys |> Hash_set.of_list (module String) in
+    if Hash_set.length tool_names < Hashtbl.length (get_tools t) then
+      errors := "Duplicate tool names detected" :: !errors;
+    (* Check for invalid URIs *)
+    get_resources t |> Hashtbl.iter ~f:(fun resource ->
+        match validate_resource_uri resource.Resource.uri with
+        | Error msg -> errors := sprintf "Invalid resource URI: %s" msg :: !errors
+        | Ok () -> ());
+    (* Return result *)
+    if List.is_empty !errors then Ok ()
+    else Error (List.rev !errors)
+
+  (** {2 Statistics & Debug Utilities} *)
+
+  (** Get all component names organized by type *)
+  let list_all_component_names t =
+    `Assoc
+      [
+        ("tools", `List (Hashtbl.keys (get_tools t) |> List.of_list |> List.map ~f:(fun s -> `String s)));
+        ("resources", `List (Hashtbl.keys (get_resources t) |> List.of_list |> List.map ~f:(fun s -> `String s)));
+        ("prompts", `List (Hashtbl.keys (get_prompts t) |> List.of_list |> List.map ~f:(fun s -> `String s)));
+        ("templates", `List (Hashtbl.keys (get_templates t) |> List.of_list |> List.map ~f:(fun s -> `String s)));
+      ]
+
+  (** Count components grouped by tag *)
+  let component_count_by_tag t =
+    let tag_counts = Hashtbl.create (module String) in
+    let increment_tag tag  =
+      Hashtbl.update tag_counts tag ~f:(function
+        | None -> 1
+        | Some count -> count + 1)
+    in
+    (* Count tool tags *)
+    get_tools t |> Hashtbl.iter ~f:(fun tool ->
+        Set.iter tool.Tool.tags ~f:increment_tag);
+    (* Count resource tags *)
+    get_resources t |> Hashtbl.iter ~f:(fun resource ->
+        Set.iter resource.Resource.tags ~f:increment_tag);
+    (* Count prompt tags *)
+    get_prompts t |> Hashtbl.iter ~f:(fun prompt ->
+        Set.iter prompt.Prompt.tags ~f:increment_tag);
+    (* Convert to sorted list *)
+    Hashtbl.to_alist tag_counts
+    |> List.sort ~compare:(fun (_, c1) (_, c2) -> Int.compare c2 c1)
+
+  (** Get tool call statistics *)
+  let get_tool_stats t =
+    Hashtbl.to_alist t.tool_call_counts
+    |> List.sort ~compare:(fun (_, c1) (_, c2) -> Int.compare c2 c1)
+
+  (** Get resource access statistics *)
+  let get_resource_stats t =
+    Hashtbl.to_alist t.resource_access_counts
+    |> List.sort ~compare:(fun (_, c1) (_, c2) -> Int.compare c2 c1)
+
+  (** Reset all statistics *)
+  let reset_stats t =
+    Hashtbl.clear t.tool_call_counts;
+    Hashtbl.clear t.resource_access_counts
+
+  (** Comprehensive health check *)
+  let health_check t =
+    try
+      let validation = validate_server t in
+      let tool_count = Hashtbl.length (get_tools t) in
+      let resource_count = Hashtbl.length (get_resources t) in
+      let status = match validation with
+        | Ok () -> "healthy"
+        | Error _ -> "degraded"
+      in
+      Ok (`Assoc [
+        ("status", `String status);
+        ("server_name", `String t.name);
+        ("tool_count", `Int tool_count);
+        ("resource_count", `Int resource_count);
+        ("validation", match validation with
+          | Ok () -> `String "passed"
+          | Error errs -> `Assoc [("errors", `List (List.map errs ~f:(fun e -> `String e)))]);
+      ])
+    with exn ->
+      Error (Exn.to_string exn)
+
   let rec call_tool t ~name ~arguments =
     match Hashtbl.find t.tools name with
     | Some tool ->
       if not (should_enable_component t ~tags:tool.tags) then
         raise_s [%message "Tool is disabled" (name : string)]
-      else tool.handler arguments
+      else
+        (* Apply input validation if enabled *)
+        let validated_args =
+          if t.strict_input_validation then
+            (* Strict mode: require exact type matches *)
+            match
+              Input_validation.validate_tool_input ~mode:Strict
+                ~schema:tool.parameters ~input:arguments
+            with
+            | Ok args -> args
+            | Error errors ->
+              let error_msg = Input_validation.format_errors errors in
+              raise_s
+                [%message
+                  "Input validation failed (strict mode)"
+                    (name : string)
+                    (error_msg : string)]
+          else
+            (* Lenient mode (default): attempt type coercion *)
+            match
+              Input_validation.validate_tool_input ~mode:Lenient
+                ~schema:tool.parameters ~input:arguments
+            with
+            | Ok args -> args
+            | Error _errors ->
+              (* In lenient mode, fall back to original arguments if coercion fails *)
+              arguments
+        in
+        tool.handler validated_args
     | None ->
       (* Not found locally, try mounted servers *)
       let rec try_mounted servers =
@@ -761,11 +1027,21 @@ module Ox_fast_mcp = struct
         | [] ->
           (* Not found anywhere *)
           let available = get_tools t |> Hashtbl.keys |> List.of_list in
-          raise_s
-            [%message
-              "Unknown tool"
-                (name : string)
-                ~available:(List.take available 10 : string list)]
+          let suggestions = suggest_similar_names name available in
+          (match suggestions with
+          | [] ->
+            raise_s
+              [%message
+                "Unknown tool"
+                  (name : string)
+                  ~available:(List.take available 10 : string list)]
+          | sugg ->
+            let suggestion_str = String.concat ~sep:", " sugg in
+            raise_s
+              [%message
+                "Unknown tool"
+                  (name : string)
+                  ~did_you_mean:(suggestion_str : string)])
         | mounted :: rest -> (
           match mounted.prefix with
           | Some prefix ->
@@ -1160,11 +1436,41 @@ module Ox_fast_mcp = struct
 
     process_loop ()
 
-  let run_http_async ?log_level _t ~transport:_ ~host:_ ~port:_ =
-    Option.iter log_level ~f:(fun level ->
-        Logging.Global.info (sprintf "Setting log level to %s" level));
-    Logging.Global.info "Starting OxFastMCP server with HTTP transport";
-    return ()
+  let run_http_async ?log_level t ~transport ~host ~port =
+    let%bind () =
+      (match log_level with
+       | Some level -> 
+         (* Capitalize for Async's Log.Level.of_string - expects "Info", "Debug", "Error" *)
+         Log.Global.set_level (Log.Level.of_string (String.capitalize level))
+       | None -> ());
+      Log.Global.info "Starting HTTP server on %s:%d with %s transport" host port
+        (Transport.to_string transport);
+      Deferred.unit
+    in
+    
+    (* Create HTTP app based on transport *)
+    let app =
+      match transport with
+      | Transport.Sse ->
+        Http.create_sse_app
+          ~server:(`Assoc [("name", `String t.name)])
+          ~message_path:"/messages"
+          ~sse_path:"/sse"
+          ()
+      | Transport.Streamable_http ->
+        Http.create_streamable_http_app
+          ~server:(`Assoc [("name", `String t.name)])
+          ~streamable_http_path:"/mcp/v1"
+          ()
+      | _ ->
+        raise_s [%message "Invalid HTTP transport" (transport : Transport.t)]
+    in
+    
+    (* Configure server *)
+    let config = Http.Server_config.{ host; port; backlog = 10 } in
+    
+    (* Start HTTP server *)
+    Http.start_http_server ~config ~app ()
 
   let run_async t ?(transport = Transport.Stdio) ?host ?port ?log_level () =
     match transport with
@@ -1172,7 +1478,8 @@ module Ox_fast_mcp = struct
     | Transport.Http | Transport.Sse | Transport.Streamable_http ->
       let host = Option.value host ~default:"127.0.0.1" in
       let port = Option.value port ~default:8000 in
-      run_http_async ?log_level t ~transport ~host ~port
+      let%bind _server = run_http_async ?log_level t ~transport ~host ~port in
+      Deferred.never ()  (* HTTP server runs indefinitely *)
 end
 
 (** {1 Helper Functions} *)

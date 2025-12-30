@@ -11,7 +11,8 @@
   cohttp-lwt-unix
   logs
   lwt
-  mcp)
- (modules models)
+  mcp
+  mcp_shared)
+ (modules models session stdio)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))

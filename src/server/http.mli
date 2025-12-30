@@ -243,3 +243,23 @@ val create_streamable_http_app :
   unit ->
   App.t
 (** Create a Streamable HTTP application *)
+
+(** {1 HTTP Server Runtime} *)
+
+(** HTTP server configuration *)
+module Server_config : sig
+  type t = {
+    host : string;
+    port : int;
+    backlog : int;
+  }
+
+  val default : t
+end
+
+val start_http_server :
+  config:Server_config.t ->
+  app:App.t ->
+  unit ->
+  (Async.Socket.Address.Inet.t, int) Cohttp_async.Server.t Deferred.t
+(** Start HTTP server with Cohttp_async *)

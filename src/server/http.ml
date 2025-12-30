@@ -543,3 +543,122 @@ let create_streamable_http_app ~(server : Yojson.Safe.t)
   App_state.set_path app.state streamable_http_path;
 
   app
+
+(** {1 HTTP Server Runtime - Cohttp_async Integration} *)
+
+(** HTTP server configuration *)
+module Server_config = struct
+  type t = {
+    host : string;
+    port : int;
+    backlog : int;
+  }
+
+  let default = { host = "0.0.0.0"; port = 8000; backlog = 10 }
+end
+
+(** Start HTTP server with Cohttp_async *)
+let start_http_server ~(config : Server_config.t) ~(app : App.t) () =
+  let open Deferred.Let_syntax in
+  
+  (* Convert http.ml Request to Cohttp request handler *)
+  let handle_request (req : Cohttp.Request.t) (body : Cohttp_async.Body.t) =
+    let uri = Cohttp.Request.uri req in
+    let meth =
+      match Cohttp.Request.meth req with
+      | `GET -> Http_method.GET
+      | `POST -> Http_method.POST
+      | `PUT -> Http_method.PUT
+      | `DELETE -> Http_method.DELETE
+      | `PATCH -> Http_method.PATCH
+      | `HEAD -> Http_method.HEAD
+      | `OPTIONS -> Http_method.OPTIONS
+      | _ -> Http_method.GET
+    in
+    
+    let%bind body_string = Cohttp_async.Body.to_string body in
+    let headers = Cohttp.Request.headers req |> Cohttp.Header.to_list in
+    
+    (* Convert Uri.query format to Http.Request format *)
+    let query_params =
+      Uri.query uri
+      |> List.concat_map ~f:(fun (key, values) ->
+             List.map values ~f:(fun value -> (key, value)))
+    in
+    
+    let http_request : Request.t = {
+      method_ = meth;
+      path = Uri.path uri;
+      query_params;
+      headers;
+      body = Some body_string;
+      scope = None;
+    } in
+    
+    (* Find matching route *)
+    let route_opt =
+      List.find app.routes ~f:(fun route ->
+          String.equal route.Route.path http_request.path
+          && List.mem route.Route.methods http_request.method_ ~equal:Http_method.equal)
+    in
+    
+    match route_opt with
+    | Some route ->
+      let%bind http_response =
+        Monitor.try_with (fun () ->
+            let handler _req = route.Route.handler http_request in
+            let final_handler =
+              List.fold_right app.middleware ~init:handler ~f:(fun middleware acc ->
+                  middleware acc)
+            in
+            final_handler http_request)
+      in
+      
+      (match http_response with
+       | Ok response ->
+         let headers =
+           Cohttp.Header.of_list
+             (("content-type", "application/json") :: response.Response.headers)
+         in
+         let status = Cohttp.Code.status_of_code response.Response.status in
+         let body_str = Option.value response.Response.body ~default:"" in
+         return (Cohttp.Response.make ~status ~headers (), Cohttp_async.Body.of_string body_str)
+       | Error exn ->
+         let error_msg = sprintf "Internal server error: %s" (Exn.to_string exn) in
+         let headers = Cohttp.Header.of_list [ ("content-type", "text/plain") ] in
+         return
+           ( Cohttp.Response.make ~status:`Internal_server_error ~headers (),
+             Cohttp_async.Body.of_string error_msg ))
+    | None ->
+      let headers = Cohttp.Header.of_list [ ("content-type", "text/plain") ] in
+      return
+        ( Cohttp.Response.make ~status:`Not_found ~headers (),
+          Cohttp_async.Body.of_string "Not Found" )
+  in
+  
+  let%bind () =
+    Log.Global.info "Starting HTTP server on %s:%d" config.host config.port;
+    Deferred.unit
+  in
+  
+  (* Run lifespan startup *)
+  let%bind () =
+    match app.lifespan with
+    | Some lifespan -> lifespan ()
+    | None -> Deferred.unit
+  in
+  
+  (* Start Cohttp_async server *)
+  let server =
+    Cohttp_async.Server.create
+      ~on_handler_error:`Raise
+      (Tcp.Where_to_listen.of_port config.port)
+      (fun ~body _sock req -> handle_request req body)
+  in
+  
+  let%bind () =
+    Log.Global.info "HTTP server started successfully";
+    Deferred.unit
+  in
+  
+  server

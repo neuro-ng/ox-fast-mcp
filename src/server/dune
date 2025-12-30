@@ -9,11 +9,23 @@
   logs
   cohttp
   cohttp-lwt-unix
+  cohttp-async
+  lwt
+  lwt.unix
   ox_fast_mcp
   utilities
   server_auth
   ox-fast-mcp.mcp.server.auth
+  mcp_server
   uri)
- (modules context dependencies elicitation http proxy server)
+ (modules
+  context
+  dependencies
+  elicitation
+  http
+  input_validation
+  proxy
+  server
+  session_bridge)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))

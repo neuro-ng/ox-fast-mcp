@@ -19,9 +19,8 @@ open Lwt.Syntax
 open Mcp.Types
 
 type stdio_server = {
-  read_stream :
-    (Mcp.Shared.Message.session_message, [> `Error of exn ]) result Lwt_stream.t;
-  write_stream : Mcp.Shared.Message.session_message -> unit Lwt.t;
+  read_stream : Mcp_shared.Message.session_message Lwt_stream.t;
+  write_stream : Mcp_shared.Message.session_message -> unit Lwt.t;
 }
 
 let create_stdio_server ?stdin ?stdout () =
@@ -37,12 +36,12 @@ let create_stdio_server ?stdin ?stdout () =
       try
         let json = Yojson.Safe.from_string line in
         let message = jsonrpc_message_of_yojson json in
-        let session_message = Mcp.Shared.Message.create message in
-        read_push (Some (Ok session_message));
+        let session_message = Mcp_shared.Message.{ message; metadata = None } in
+        read_push (Some session_message);
         Lwt.return_unit
       with exn ->
-        read_push (Some (Error (`Error exn)));
-        Lwt.return_unit
+        (* Skip malformed messages - just log and continue *)
+        Lwt_io.eprintf "Error parsing message: %s\n" (Exn.to_string exn)
     in
     stdin_reader ()
   in
@@ -52,10 +51,8 @@ let create_stdio_server ?stdin ?stdout () =
     match msg_opt with
     | None -> Lwt.return_unit
     | Some session_message ->
-      let json =
-        session_message.message |> jsonrpc_message_to_yojson
-        |> Yojson.Safe.to_string
-      in
+      let message = session_message.Mcp_shared.Message.message in
+      let json = message |> jsonrpc_message_to_yojson |> Yojson.Safe.to_string in
       let* () = Lwt_io.write_line stdout json in
       let* () = Lwt_io.flush stdout in
       stdout_writer ()

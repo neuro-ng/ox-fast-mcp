@@ -200,6 +200,27 @@ module Ox_fast_mcp : sig
   (** Validate a template URI. Returns Ok() if valid, or Error with a helpful
       message. *)
 
+  (** {2 Name Normalization} *)
+
+  val normalize_tool_name : string -> string
+  (** Normalize a tool name to valid format. Converts to lowercase, replaces
+      spaces and invalid chars with underscores, ensures starts with letter or
+      underscore. *)
+
+  (** {2 Boolean Validation Helpers} *)
+
+  val is_valid_tool_name : string -> bool
+  (** Check if a tool name is valid *)
+
+  val is_valid_uri : string -> bool
+  (** Check if a URI is valid *)
+
+  val is_valid_prompt_name : string -> bool
+  (** Check if a prompt name is valid *)
+
+  val is_valid_template_uri : string -> bool
+  (** Check if a template URI is valid *)
+
   val create :
     ?name:string ->
     ?version:string ->
@@ -322,7 +343,47 @@ module Ox_fast_mcp : sig
   (** Add multiple prompts at once *)
 
   val add_templates : t -> Resource_template.t list -> unit
-  (** Add multiple templates at once *)
+  (** Add multiple templates at once **)
+
+  (** {2 Server Inspection & Discovery} *)
+
+  val describe_server : t -> Yojson.Safe.t
+  (** Get comprehensive server description including all components and configuration *)
+
+  val find_tools_by_tag : t -> tag:string -> Tool.t list
+  (** Find all tools with a specific tag *)
+
+  val find_resources_by_scheme : t -> scheme:string -> Resource.t list
+  (** Find resources by URI scheme (e.g., "file", "http") *)
+
+  val find_prompts_by_tag : t -> tag:string -> Prompt.t list
+  (** Find prompts with a specific tag *)
+
+  val suggest_similar_names : string -> string list -> string list
+  (** Suggest similar component names using edit distance. Returns up to 5 suggestions. *)
+
+  val validate_server : t -> (unit, string list) Result.t
+  (** Validate server configuration. Returns Ok() if valid, or Error with list of issues. *)
+
+  (** {2 Statistics & Debug Utilities} *)
+
+  val list_all_component_names : t -> Yojson.Safe.t
+  (** Get all component names organized by type *)
+
+  val component_count_by_tag : t -> (string * int) list
+  (** Count components grouped by tag, sorted by count descending *)
+
+  val get_tool_stats : t -> (string * int) list
+  (** Get tool call statistics, sorted by call count descending *)
+
+  val get_resource_stats : t -> (string * int) list  
+  (** Get resource access statistics, sorted by access count descending *)
+
+  val reset_stats : t -> unit
+  (** Reset all statistics counters *)
+
+  val health_check : t -> (Yojson.Safe.t, string) Result.t
+  (** Comprehensive health check returning server status and validation results *)
 
   val call_tool :
     t -> name:string -> arguments:Yojson.Safe.t -> Yojson.Safe.t Deferred.t
