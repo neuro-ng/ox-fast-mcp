@@ -2,10 +2,9 @@
 
     Tests for:
     - Tool name normalization
-    - Batch operation helpers    
+    - Batch operation helpers
     - Boolean validation helpers
-    - Enhanced ergonomics
-*)
+    - Enhanced ergonomics *)
 
 open Core
 open Async
@@ -62,13 +61,19 @@ let%expect_test "normalize_tool_name_empty_string" =
 let%expect_test "add_tools_multiple" =
   let server = Server.Ox_fast_mcp.create ~name:"test" () in
   let tool1 =
-    Server.Tool.create ~name:"tool1" ~handler:(fun _ -> return (`String "ok")) ()
+    Server.Tool.create ~name:"tool1"
+      ~handler:(fun _ -> return (`String "ok"))
+      ()
   in
   let tool2 =
-    Server.Tool.create ~name:"tool2" ~handler:(fun _ -> return (`String "ok")) ()
+    Server.Tool.create ~name:"tool2"
+      ~handler:(fun _ -> return (`String "ok"))
+      ()
   in
   let tool3 =
-    Server.Tool.create ~name:"tool3" ~handler:(fun _ -> return (`String "ok")) ()
+    Server.Tool.create ~name:"tool3"
+      ~handler:(fun _ -> return (`String "ok"))
+      ()
   in
   Server.Ox_fast_mcp.add_tools server [ tool1; tool2; tool3 ];
   let tools = Server.Ox_fast_mcp.get_tools server in
@@ -80,11 +85,13 @@ let%expect_test "add_resources_multiple" =
   let server = Server.Ox_fast_mcp.create ~name:"test" () in
   let resource1 =
     Server.Resource.create ~uri:"file:///test1" ~name:"r1"
-      ~reader:(fun () -> return "content1") ()
+      ~reader:(fun () -> return "content1")
+      ()
   in
   let resource2 =
     Server.Resource.create ~uri:"file:///test2" ~name:"r2"
-      ~reader:(fun () -> return "content2") ()
+      ~reader:(fun () -> return "content2")
+      ()
   in
   Server.Ox_fast_mcp.add_resources server [ resource1; resource2 ];
   let resources = Server.Ox_fast_mcp.get_resources server in
@@ -96,11 +103,13 @@ let%expect_test "add_prompts_multiple" =
   let server = Server.Ox_fast_mcp.create ~name:"test" () in
   let prompt1 =
     Server.Prompt.create ~name:"prompt1"
-      ~render:(fun _ -> return (`String "rendered")) ()
+      ~render:(fun _ -> return (`String "rendered"))
+      ()
   in
   let prompt2 =
     Server.Prompt.create ~name:"prompt2"
-      ~render:(fun _ -> return (`String "rendered")) ()
+      ~render:(fun _ -> return (`String "rendered"))
+      ()
   in
   Server.Ox_fast_mcp.add_prompts server [ prompt1; prompt2 ];
   let prompts = Server.Ox_fast_mcp.get_prompts server in
@@ -115,7 +124,8 @@ let%expect_test "is_valid_tool_name_valid_names" =
   List.iter valid_names ~f:(fun name ->
       let is_valid = Server.Ox_fast_mcp.is_valid_tool_name name in
       printf "%s: %b\n" name is_valid);
-  [%expect {|
+  [%expect
+    {|
     my_tool: true
     tool123: true
     _private_tool: true
@@ -127,7 +137,8 @@ let%expect_test "is_valid_tool_name_invalid_names" =
   List.iter invalid_names ~f:(fun name ->
       let is_valid = Server.Ox_fast_mcp.is_valid_tool_name name in
       printf "%s: %b\n" name is_valid);
-  [%expect {|
+  [%expect
+    {|
     my tool: false
     : false
     tool-name: true
@@ -135,11 +146,18 @@ let%expect_test "is_valid_tool_name_invalid_names" =
   return ()
 
 let%expect_test "is_valid_uri_valid_uris" =
-  let valid_uris = [ "file:///path/to/file"; "http://example.com"; "https://example.com/resource" ] in
+  let valid_uris =
+    [
+      "file:///path/to/file";
+      "http://example.com";
+      "https://example.com/resource";
+    ]
+  in
   List.iter valid_uris ~f:(fun uri ->
       let is_valid = Server.Ox_fast_mcp.is_valid_uri uri in
       printf "%s: %b\n" uri is_valid);
-  [%expect {|
+  [%expect
+    {|
     file:///path/to/file: true
     http://example.com: true
     https://example.com/resource: true |}];
@@ -182,7 +200,8 @@ let%expect_test "is_valid_template_uri_valid" =
   List.iter valid_uris ~f:(fun uri ->
       let is_valid = Server.Ox_fast_mcp.is_valid_template_uri uri in
       printf "%s: %b\n" uri is_valid);
-  [%expect {|
+  [%expect
+    {|
     file:///{path}/file: true
     http://example.com/{id}: true |}];
   return ()
@@ -192,7 +211,8 @@ let%expect_test "is_valid_template_uri_invalid" =
   List.iter invalid_uris ~f:(fun uri ->
       let is_valid = Server.Ox_fast_mcp.is_valid_template_uri uri in
       printf "%s: %b\n" uri is_valid);
-  [%expect {|
+  [%expect
+    {|
     : false
     file:///no_param: false
     no_scheme/{param}: false |}];
@@ -208,7 +228,8 @@ let%expect_test "normalize_then_validate" =
   printf "Original: %s\n" invalid_name;
   printf "Normalized: %s\n" normalized;
   printf "Is valid: %b\n" is_valid;
-  [%expect {|
+  [%expect
+    {|
     Original: My Tool!
     Normalized: my_tool_
     Is valid: true |}];
@@ -219,9 +240,9 @@ let%expect_test "batch_add_then_list" =
   let server = Server.Ox_fast_mcp.create ~name:"test" () in
   let tools =
     List.init 5 ~f:(fun i ->
-        Server.Tool.create
-          ~name:(sprintf "tool%d" i)
-          ~handler:(fun _ -> return (`Int i)) ())
+        Server.Tool.create ~name:(sprintf "tool%d" i)
+          ~handler:(fun _ -> return (`Int i))
+          ())
   in
   Server.Ox_fast_mcp.add_tools server tools;
   let tool_list = Server.Ox_fast_mcp.list_tools_mcp server in

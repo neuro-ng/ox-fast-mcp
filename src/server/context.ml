@@ -113,6 +113,12 @@ type t = {
   method_name : string option;
   params : Yojson.Safe.t option;
   session : Session_bridge.Async_session.t option;
+  (* Server delegation callbacks *)
+  list_resources_fn : (unit -> Yojson.Safe.t list Deferred.t) option;
+  list_prompts_fn : (unit -> Yojson.Safe.t list Deferred.t) option;
+  read_resource_fn : (uri:string -> string Deferred.t) option;
+  get_prompt_fn :
+    (name:string -> arguments:Yojson.Safe.t -> Yojson.Safe.t Deferred.t) option;
 }
 
 (** {1 Context Creation} *)
@@ -122,7 +128,9 @@ let default_logger = Logs.Src.create "oxfastmcp.context"
 let create ?(request_id : string option) ?(client_id : string option)
     ?(session_id : string option) ?(method_name : string option)
     ?(params : Yojson.Safe.t option) ?(logger = default_logger)
-    ?(session : Session_bridge.Async_session.t option) () : t =
+    ?(session : Session_bridge.Async_session.t option)
+    ?(list_resources_fn = None) ?(list_prompts_fn = None)
+    ?(read_resource_fn = None) ?(get_prompt_fn = None) () : t =
   {
     request_id;
     client_id;
@@ -137,13 +145,20 @@ let create ?(request_id : string option) ?(client_id : string option)
     method_name;
     params;
     session;
+    list_resources_fn;
+    list_prompts_fn;
+    read_resource_fn;
+    get_prompt_fn;
   }
 
 let create_with_session ?(request_id : string option)
     ?(client_id : string option) ?(session_id : string option)
     ?(method_name : string option) ?(params : Yojson.Safe.t option)
     ~(session_data : (string, Yojson.Safe.t) Hashtbl.t)
-    ?(logger = default_logger) ?(session : Session_bridge.Async_session.t option) () : t =
+    ?(logger = default_logger)
+    ?(session : Session_bridge.Async_session.t option)
+    ?(list_resources_fn = None) ?(list_prompts_fn = None)
+    ?(read_resource_fn = None) ?(get_prompt_fn = None) () : t =
   {
     request_id;
     client_id;
@@ -158,6 +173,10 @@ let create_with_session ?(request_id : string option)
     method_name;
     params;
     session;
+    list_resources_fn;
+    list_prompts_fn;
+    read_resource_fn;
+    get_prompt_fn;
   }
 
 (** {1 State Management} *)
@@ -223,8 +242,7 @@ let send_resources_list_changed (ctx : t) : unit Deferred.t =
 let send_tools_list_changed (ctx : t) : unit Deferred.t =
   match ctx.session with
   | None -> return ()
-  | Some session ->
-    Session_bridge.Async_session.send_tool_list_changed session
+  | Some session -> Session_bridge.Async_session.send_tool_list_changed session
 
 (** Send notification that prompts list has changed *)
 let send_prompts_list_changed (ctx : t) : unit Deferred.t =
@@ -246,9 +264,25 @@ let sample (ctx : t) ~(messages : Mcp.Types.sampling_message list)
       "Cannot sample: no active session. Sampling requires an active MCP \
        session."
   | Some session ->
-    Session_bridge.Async_session.create_message session ~messages ~max_tokens
-      ?system_prompt ?include_context ?temperature ?stop_sequences ?metadata
-      ?model_preferences ()
+    (* Check if client supports sampling *)
+    let has_sampling =
+      Session_bridge.Async_session.check_client_capability session
+        {
+          sampling = Some (`Assoc []);
+          elicitation = None;
+          roots = None;
+          experimental = None;
+        }
+    in
+    if not has_sampling then
+      failwith
+        "Cannot sample: client does not support sampling capability. The \
+         connected client must advertise sampling support during \
+         initialization."
+    else
+      Session_bridge.Async_session.create_message session ~messages ~max_tokens
+        ?system_prompt ?include_context ?temperature ?stop_sequences ?metadata
+        ?model_preferences ()
 
 (** Send an elicitation request to the client to prompt user input *)
 let elicit (ctx : t) ~(message : string)
@@ -260,7 +294,23 @@ let elicit (ctx : t) ~(message : string)
       "Cannot elicit: no active session. Elicitation requires an active MCP \
        session."
   | Some session ->
-    Session_bridge.Async_session.elicit session ~message ~requested_schema ()
+    (* Check if client supports elicitation *)
+    let has_elicitation =
+      Session_bridge.Async_session.check_client_capability session
+        {
+          sampling = None;
+          elicitation = Some (`Assoc []);
+          roots = None;
+          experimental = None;
+        }
+    in
+    if not has_elicitation then
+      failwith
+        "Cannot elicit: client does not support elicitation capability. The \
+         connected client must advertise elicitation support during \
+         initialization."
+    else
+      Session_bridge.Async_session.elicit session ~message ~requested_schema ()
 
 (** {1 Session Data Access} *)
 
@@ -338,6 +388,52 @@ end
 let report_progress (ctx : t) ~(progress : float) ?total ?message () :
     Progress.t =
   Progress.create ~progress ?total ?message ?request_id:ctx.request_id ()
+
+(** {1 Resource and Prompt Delegation} *)
+
+(** List all resources from the server *)
+let list_resources (ctx : t) : Yojson.Safe.t list Deferred.t =
+  match ctx.list_resources_fn with
+  | None ->
+    failwith
+      "Cannot list resources: no server reference. Context must be created \
+       with server delegation."
+  | Some fn -> fn ()
+
+(** List all prompts from the server *)
+let list_prompts (ctx : t) : Yojson.Safe.t list Deferred.t =
+  match ctx.list_prompts_fn with
+  | None ->
+    failwith
+      "Cannot list prompts: no server reference. Context must be created with \
+       server delegation."
+  | Some fn -> fn ()
+
+(** Read a resource from the server *)
+let read_resource (ctx : t) ~(uri : string) : string Deferred.t =
+  match ctx.read_resource_fn with
+  | None ->
+    failwith
+      "Cannot read resource: no server reference. Context must be created with \
+       server delegation."
+  | Some fn -> fn ~uri
+
+(** Get a prompt from the server *)
+let get_prompt (ctx : t) ~(name : string) ~(arguments : Yojson.Safe.t) :
+    Yojson.Safe.t Deferred.t =
+  match ctx.get_prompt_fn with
+  | None ->
+    failwith
+      "Cannot get prompt: no server reference. Context must be created with \
+       server delegation."
+  | Some fn -> fn ~name ~arguments
+
+(** {1 HTTP Request Access} *)
+
+(** Get the current HTTP request if running in HTTP transport mode. Returns None
+    when running via STDIO or if no HTTP context is active. *)
+let get_http_request (_ctx : t) : Http.Request.t option =
+  Http.get_current_request ()
 
 (** {1 Type Aliases} *)
 

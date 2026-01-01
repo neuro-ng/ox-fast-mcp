@@ -328,39 +328,33 @@ module Ox_fast_mcp = struct
 
   (** {2 Name Normalization} *)
 
-  (** Normalize a tool name to valid format.
-      Converts to lowercase, replaces spaces and invalid chars with underscores,
-      ensures starts with letter or underscore. *)
+  (** Normalize a tool name to valid format. Converts to lowercase, replaces
+      spaces and invalid chars with underscores, ensures starts with letter or
+      underscore. *)
   let normalize_tool_name name =
     let normalized =
-      name
-      |> String.lowercase
+      name |> String.lowercase
       |> String.map ~f:(fun c ->
              if Char.is_alphanum c || Char.equal c '_' then c else '_')
     in
     (* Ensure it starts with letter or underscore *)
     if String.is_empty normalized then "_"
-    else if Char.is_digit normalized.[0] then
-      "_" ^ normalized
+    else if Char.is_digit normalized.[0] then "_" ^ normalized
     else normalized
 
   (** {2 Public Validation Helpers} *)
 
   (** Check if a tool name is valid *)
-  let is_valid_tool_name name =
-    Result.is_ok (validate_tool_name name)
+  let is_valid_tool_name name = Result.is_ok (validate_tool_name name)
 
   (** Check if a URI is valid *)
-  let is_valid_uri uri =
-    Result.is_ok (validate_resource_uri uri)
+  let is_valid_uri uri = Result.is_ok (validate_resource_uri uri)
 
   (** Check if a prompt name is valid *)
-  let is_valid_prompt_name name =
-    Result.is_ok (validate_prompt_name name)
+  let is_valid_prompt_name name = Result.is_ok (validate_prompt_name name)
 
   (** Check if a template URI is valid *)
-  let is_valid_template_uri uri =
-    Result.is_ok (validate_template_uri uri)
+  let is_valid_template_uri uri = Result.is_ok (validate_template_uri uri)
 
   (** {2 Similar Name Suggestions} *)
 
@@ -388,12 +382,12 @@ module Ox_fast_mcp = struct
       matrix.(len1).(len2)
     in
     available
-    |> List.map ~f:(fun name -> name, distance target name)
+    |> List.map ~f:(fun name -> (name, distance target name))
     |> List.sort ~compare:(fun (_, d1) (_, d2) -> Int.compare d1 d2)
     |> List.take_while ~f:(fun (_, dist) -> dist <= 3)
     |> List.map ~f:fst
     |> List.take_while ~f:(fun _ -> true)
-    |> (fun l -> List.take l 5)
+    |> fun l -> List.take l 5
 
   let create ?name ?version ?instructions ?website_url ?(icons = [])
       ?(resource_prefix_format = Resource_prefix_format.Protocol) ?include_tags
@@ -642,10 +636,10 @@ module Ox_fast_mcp = struct
   let get_resource t ~key =
     match Hashtbl.find (get_resources t) key with
     | Some resource -> return resource
-    | None ->
+    | None -> (
       let available = get_resources t |> Hashtbl.keys |> List.of_list in
       let suggestions = suggest_similar_names key available in
-      (match suggestions with
+      match suggestions with
       | [] -> raise_s [%message "Unknown resource" (key : string)]
       | sugg ->
         let suggestion_str = String.concat ~sep:", " sugg in
@@ -722,10 +716,10 @@ module Ox_fast_mcp = struct
   let get_template t ~key =
     match Hashtbl.find (get_templates t) key with
     | Some template -> return template
-    | None ->
+    | None -> (
       let available = get_templates t |> Hashtbl.keys |> List.of_list in
       let suggestions = suggest_similar_names key available in
-      (match suggestions with
+      match suggestions with
       | [] -> raise_s [%message "Unknown resource template" (key : string)]
       | sugg ->
         let suggestion_str = String.concat ~sep:", " sugg in
@@ -792,10 +786,10 @@ module Ox_fast_mcp = struct
   let get_prompt_component t ~key =
     match Hashtbl.find (get_prompts t) key with
     | Some prompt -> return prompt
-    | None ->
+    | None -> (
       let available = get_prompts t |> Hashtbl.keys |> List.of_list in
       let suggestions = suggest_similar_names key available in
-      (match suggestions with
+      match suggestions with
       | [] -> raise_s [%message "Unknown prompt" (key : string)]
       | sugg ->
         let suggestion_str = String.concat ~sep:", " sugg in
@@ -904,17 +898,20 @@ module Ox_fast_mcp = struct
     if String.is_empty t.name then
       errors := "Server name cannot be empty" :: !errors;
     (* Check for duplicate tool names *)
-    let tool_names = get_tools t |> Hashtbl.keys |> Hash_set.of_list (module String) in
+    let tool_names =
+      get_tools t |> Hashtbl.keys |> Hash_set.of_list (module String)
+    in
     if Hash_set.length tool_names < Hashtbl.length (get_tools t) then
       errors := "Duplicate tool names detected" :: !errors;
     (* Check for invalid URIs *)
-    get_resources t |> Hashtbl.iter ~f:(fun resource ->
-        match validate_resource_uri resource.Resource.uri with
-        | Error msg -> errors := sprintf "Invalid resource URI: %s" msg :: !errors
-        | Ok () -> ());
+    get_resources t
+    |> Hashtbl.iter ~f:(fun resource ->
+           match validate_resource_uri resource.Resource.uri with
+           | Error msg ->
+             errors := sprintf "Invalid resource URI: %s" msg :: !errors
+           | Ok () -> ());
     (* Return result *)
-    if List.is_empty !errors then Ok ()
-    else Error (List.rev !errors)
+    if List.is_empty !errors then Ok () else Error (List.rev !errors)
 
   (** {2 Statistics & Debug Utilities} *)
 
@@ -922,29 +919,47 @@ module Ox_fast_mcp = struct
   let list_all_component_names t =
     `Assoc
       [
-        ("tools", `List (Hashtbl.keys (get_tools t) |> List.of_list |> List.map ~f:(fun s -> `String s)));
-        ("resources", `List (Hashtbl.keys (get_resources t) |> List.of_list |> List.map ~f:(fun s -> `String s)));
-        ("prompts", `List (Hashtbl.keys (get_prompts t) |> List.of_list |> List.map ~f:(fun s -> `String s)));
-        ("templates", `List (Hashtbl.keys (get_templates t) |> List.of_list |> List.map ~f:(fun s -> `String s)));
+        ( "tools",
+          `List
+            (Hashtbl.keys (get_tools t)
+            |> List.of_list
+            |> List.map ~f:(fun s -> `String s)) );
+        ( "resources",
+          `List
+            (Hashtbl.keys (get_resources t)
+            |> List.of_list
+            |> List.map ~f:(fun s -> `String s)) );
+        ( "prompts",
+          `List
+            (Hashtbl.keys (get_prompts t)
+            |> List.of_list
+            |> List.map ~f:(fun s -> `String s)) );
+        ( "templates",
+          `List
+            (Hashtbl.keys (get_templates t)
+            |> List.of_list
+            |> List.map ~f:(fun s -> `String s)) );
       ]
 
   (** Count components grouped by tag *)
   let component_count_by_tag t =
     let tag_counts = Hashtbl.create (module String) in
-    let increment_tag tag  =
+    let increment_tag tag =
       Hashtbl.update tag_counts tag ~f:(function
         | None -> 1
         | Some count -> count + 1)
     in
     (* Count tool tags *)
-    get_tools t |> Hashtbl.iter ~f:(fun tool ->
-        Set.iter tool.Tool.tags ~f:increment_tag);
+    get_tools t
+    |> Hashtbl.iter ~f:(fun tool -> Set.iter tool.Tool.tags ~f:increment_tag);
     (* Count resource tags *)
-    get_resources t |> Hashtbl.iter ~f:(fun resource ->
-        Set.iter resource.Resource.tags ~f:increment_tag);
+    get_resources t
+    |> Hashtbl.iter ~f:(fun resource ->
+           Set.iter resource.Resource.tags ~f:increment_tag);
     (* Count prompt tags *)
-    get_prompts t |> Hashtbl.iter ~f:(fun prompt ->
-        Set.iter prompt.Prompt.tags ~f:increment_tag);
+    get_prompts t
+    |> Hashtbl.iter ~f:(fun prompt ->
+           Set.iter prompt.Prompt.tags ~f:increment_tag);
     (* Convert to sorted list *)
     Hashtbl.to_alist tag_counts
     |> List.sort ~compare:(fun (_, c1) (_, c2) -> Int.compare c2 c1)
@@ -970,21 +985,27 @@ module Ox_fast_mcp = struct
       let validation = validate_server t in
       let tool_count = Hashtbl.length (get_tools t) in
       let resource_count = Hashtbl.length (get_resources t) in
-      let status = match validation with
+      let status =
+        match validation with
         | Ok () -> "healthy"
         | Error _ -> "degraded"
       in
-      Ok (`Assoc [
-        ("status", `String status);
-        ("server_name", `String t.name);
-        ("tool_count", `Int tool_count);
-        ("resource_count", `Int resource_count);
-        ("validation", match validation with
-          | Ok () -> `String "passed"
-          | Error errs -> `Assoc [("errors", `List (List.map errs ~f:(fun e -> `String e)))]);
-      ])
-    with exn ->
-      Error (Exn.to_string exn)
+      Ok
+        (`Assoc
+          [
+            ("status", `String status);
+            ("server_name", `String t.name);
+            ("tool_count", `Int tool_count);
+            ("resource_count", `Int resource_count);
+            ( "validation",
+              match validation with
+              | Ok () -> `String "passed"
+              | Error errs ->
+                `Assoc
+                  [ ("errors", `List (List.map errs ~f:(fun e -> `String e))) ]
+            );
+          ])
+    with exn -> Error (Exn.to_string exn)
 
   let rec call_tool t ~name ~arguments =
     match Hashtbl.find t.tools name with
@@ -1016,7 +1037,8 @@ module Ox_fast_mcp = struct
             with
             | Ok args -> args
             | Error _errors ->
-              (* In lenient mode, fall back to original arguments if coercion fails *)
+              (* In lenient mode, fall back to original arguments if coercion
+                 fails *)
               arguments
         in
         tool.handler validated_args
@@ -1024,11 +1046,11 @@ module Ox_fast_mcp = struct
       (* Not found locally, try mounted servers *)
       let rec try_mounted servers =
         match servers with
-        | [] ->
+        | [] -> (
           (* Not found anywhere *)
           let available = get_tools t |> Hashtbl.keys |> List.of_list in
           let suggestions = suggest_similar_names name available in
-          (match suggestions with
+          match suggestions with
           | [] ->
             raise_s
               [%message
@@ -1260,7 +1282,7 @@ module Ox_fast_mcp = struct
   (** {1 STDIO Transport} *)
 
   (** Handle a single MCP message and return response *)
-  let handle_stdio_message (handlers : Protocol.method_map)
+  let handle_stdio_message (t : t) (handlers : Protocol.method_map)
       (message : Yojson.Safe.t) : Yojson.Safe.t Deferred.t =
     (* Extract method and params from JSON-RPC message *)
     match message with
@@ -1274,9 +1296,15 @@ module Ox_fast_mcp = struct
         (* Look up handler for this method *)
         match Hashtbl.find handlers method_name with
         | Some handler ->
-          (* Create context for this request *)
+          (* Create context for this request with delegation callbacks *)
           let ctx =
-            Context.create ?method_name:(Some method_name) ?params:params_opt ()
+            Context.create ?method_name:(Some method_name) ?params:params_opt
+              ~list_resources_fn:
+                (Some (fun () -> return (list_resources_mcp t)))
+              ~list_prompts_fn:(Some (fun () -> return (list_prompts_mcp t)))
+              ~read_resource_fn:(Some (read_resource t))
+              ~get_prompt_fn:(Some (get_prompt t))
+              ()
           in
           (* Call handler and wrap response in JSON-RPC format *)
           let%bind result = handler ctx in
@@ -1421,7 +1449,7 @@ module Ox_fast_mcp = struct
             process_loop ()
           | Some (`String _method_name), _id_opt ->
             (* Handle regular message *)
-            let%bind response = handle_stdio_message handlers message in
+            let%bind response = handle_stdio_message t handlers message in
             let%bind () = write_stdio_message writer response in
             process_loop ()
           | _ ->
@@ -1439,36 +1467,35 @@ module Ox_fast_mcp = struct
   let run_http_async ?log_level t ~transport ~host ~port =
     let%bind () =
       (match log_level with
-       | Some level -> 
-         (* Capitalize for Async's Log.Level.of_string - expects "Info", "Debug", "Error" *)
-         Log.Global.set_level (Log.Level.of_string (String.capitalize level))
-       | None -> ());
-      Log.Global.info "Starting HTTP server on %s:%d with %s transport" host port
+      | Some level ->
+        (* Capitalize for Async's Log.Level.of_string - expects "Info", "Debug",
+           "Error" *)
+        Log.Global.set_level (Log.Level.of_string (String.capitalize level))
+      | None -> ());
+      Log.Global.info "Starting HTTP server on %s:%d with %s transport" host
+        port
         (Transport.to_string transport);
       Deferred.unit
     in
-    
+
     (* Create HTTP app based on transport *)
     let app =
       match transport with
       | Transport.Sse ->
         Http.create_sse_app
-          ~server:(`Assoc [("name", `String t.name)])
-          ~message_path:"/messages"
-          ~sse_path:"/sse"
-          ()
+          ~server:(`Assoc [ ("name", `String t.name) ])
+          ~message_path:"/messages" ~sse_path:"/sse" ()
       | Transport.Streamable_http ->
         Http.create_streamable_http_app
-          ~server:(`Assoc [("name", `String t.name)])
-          ~streamable_http_path:"/mcp/v1"
-          ()
+          ~server:(`Assoc [ ("name", `String t.name) ])
+          ~streamable_http_path:"/mcp/v1" ()
       | _ ->
         raise_s [%message "Invalid HTTP transport" (transport : Transport.t)]
     in
-    
+
     (* Configure server *)
     let config = Http.Server_config.{ host; port; backlog = 10 } in
-    
+
     (* Start HTTP server *)
     Http.start_http_server ~config ~app ()
 
@@ -1479,7 +1506,7 @@ module Ox_fast_mcp = struct
       let host = Option.value host ~default:"127.0.0.1" in
       let port = Option.value port ~default:8000 in
       let%bind _server = run_http_async ?log_level t ~transport ~host ~port in
-      Deferred.never ()  (* HTTP server runs indefinitely *)
+      Deferred.never () (* HTTP server runs indefinitely *)
 end
 
 (** {1 Helper Functions} *)

@@ -75,6 +75,12 @@ type t = {
   method_name : string option;  (** MCP method name *)
   params : Yojson.Safe.t option;  (** MCP method parameters *)
   session : Session_bridge.Async_session.t option;  (** Optional MCP session *)
+  (* Server delegation callbacks *)
+  list_resources_fn : (unit -> Yojson.Safe.t list Deferred.t) option;
+  list_prompts_fn : (unit -> Yojson.Safe.t list Deferred.t) option;
+  read_resource_fn : (uri:string -> string Deferred.t) option;
+  get_prompt_fn :
+    (name:string -> arguments:Yojson.Safe.t -> Yojson.Safe.t Deferred.t) option;
 }
 (** Execution context passed to handlers *)
 
@@ -88,6 +94,11 @@ val create :
   ?params:Yojson.Safe.t ->
   ?logger:Logs.src ->
   ?session:Session_bridge.Async_session.t ->
+  ?list_resources_fn:(unit -> Yojson.Safe.t list Deferred.t) option ->
+  ?list_prompts_fn:(unit -> Yojson.Safe.t list Deferred.t) option ->
+  ?read_resource_fn:(uri:string -> string Deferred.t) option ->
+  ?get_prompt_fn:
+    (name:string -> arguments:Yojson.Safe.t -> Yojson.Safe.t Deferred.t) option ->
   unit ->
   t
 (** Create a new execution context *)
@@ -101,6 +112,11 @@ val create_with_session :
   session_data:(string, Yojson.Safe.t) Hashtbl.t ->
   ?logger:Logs.src ->
   ?session:Session_bridge.Async_session.t ->
+  ?list_resources_fn:(unit -> Yojson.Safe.t list Deferred.t) option ->
+  ?list_prompts_fn:(unit -> Yojson.Safe.t list Deferred.t) option ->
+  ?read_resource_fn:(uri:string -> string Deferred.t) option ->
+  ?get_prompt_fn:
+    (name:string -> arguments:Yojson.Safe.t -> Yojson.Safe.t Deferred.t) option ->
   unit ->
   t
 (** Create context with existing session data *)
@@ -165,8 +181,9 @@ val sample :
   ?model_preferences:Mcp.Types.model_preferences ->
   unit ->
   Mcp.Types.client_request Deferred.t
-(** Send a sampling request to the client to generate LLM completions.
-    Raises Failure if no active session exists. *)
+(** Send a sampling request to the client to generate LLM completions. Raises
+    Failure if no active session exists or if the client doesn't support the
+    sampling capability. *)
 
 val elicit :
   t ->
@@ -174,8 +191,9 @@ val elicit :
   requested_schema:Mcp.Types.elicit_requested_schema ->
   unit ->
   Mcp.Types.client_request Deferred.t
-(** Send an elicitation request to the client to prompt user input.
-    Raises Failure if no active session exists. *)
+(** Send an elicitation request to the client to prompt user input. Raises
+    Failure if no active session exists or if the client doesn't support the
+    elicitation capability. *)
 
 (** {1 Session Data Access} *)
 
@@ -283,6 +301,34 @@ end
 val report_progress :
   t -> progress:float -> ?total:float -> ?message:string -> unit -> Progress.t
 (** Report progress for the current operation *)
+
+(** {1 Resource and Prompt Delegation} *)
+
+val list_resources : t -> Yojson.Safe.t list Deferred.t
+(** List all resources from the server. Raises Failure if no server delegation
+    is configured. *)
+
+val list_prompts : t -> Yojson.Safe.t list Deferred.t
+(** List all prompts from the server. Raises Failure if no server delegation is
+    configured. *)
+
+val read_resource : t -> uri:string -> string Deferred.t
+(** Read a resource from the server. Raises Failure if no server delegation is
+    configured. *)
+
+val get_prompt :
+  t -> name:string -> arguments:Yojson.Safe.t -> Yojson.Safe.t Deferred.t
+(** Get a prompt from the server. Raises Failure if no server delegation is
+    configured. *)
+
+(** {1 HTTP Request Access} *)
+
+val get_http_request : t -> Http.Request.t option
+(** Get the current HTTP request if running in HTTP transport mode. Returns None
+    when running via STDIO or if no HTTP context is active.
+
+    This is useful for middleware and handlers that need to access HTTP-specific
+    information like headers, query parameters, or the request path. *)
 
 (** {1 Type Aliases} *)
 

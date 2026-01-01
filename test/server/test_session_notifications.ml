@@ -8,8 +8,7 @@ open! Expect_test_helpers_core
 module Context = Server__Context
 open Context
 
-let create_test_context ?session () =
-  create ?session ()
+let create_test_context ?session () = create ?session ()
 
 let%expect_test "send_resources_list_changed with no session" =
   let%bind () =
@@ -49,18 +48,18 @@ let%expect_test "change tracking flags work correctly" =
   (* Initially no changes *)
   print_s [%sexp (has_changes ctx : bool)];
   [%expect {| false |}];
-  
+
   (* Queue a tool change *)
   queue_tool_list_changed ctx;
   print_s [%sexp (has_changes ctx : bool)];
   [%expect {| true |}];
-  
+
   (* Queue resource change *)
   queue_resource_list_changed ctx;
   let changed_lists = get_changed_lists ctx in
   print_s [%sexp (changed_lists : string list)];
   [%expect {| (tools resources) |}];
-  
+
   (* Reset changes *)
   reset_changes ctx;
   print_s [%sexp (has_changes ctx : bool)];
@@ -69,17 +68,17 @@ let%expect_test "change tracking flags work correctly" =
 
 let%expect_test "notification queue tracking" =
   let ctx = create_test_context () in
-  
+
   (* Queue notifications *)
   queue_tool_list_changed ctx;
   queue_resource_list_changed ctx;
   queue_prompt_list_changed ctx;
-  
+
   (* Check pending notifications *)
   let pending = get_pending_notifications ctx in
   print_s [%sexp (List.length pending : int)];
   [%expect {| 3 |}];
-  
+
   (* Reset clears queue *)
   reset_changes ctx;
   let pending_after = get_pending_notifications ctx in

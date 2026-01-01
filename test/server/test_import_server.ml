@@ -172,7 +172,8 @@ let%expect_test "import_with_resources" =
   add_resource sub_server file_resource;
 
   let http_resource =
-    Server.Resource.create ~uri:"http://api.example.com/data" ~name:"HTTP Resource"
+    Server.Resource.create ~uri:"http://api.example.com/data"
+      ~name:"HTTP Resource"
       ~reader:(fun () -> return "http data")
       ()
   in
@@ -186,22 +187,21 @@ let%expect_test "import_with_resources" =
   let has_file = Hashtbl.mem resources "file://imported/data.txt" in
   let has_http = Hashtbl.mem resources "http://imported/data" in
 
-  print_s
-    [%message "Imported resources" (has_file : bool) (has_http : bool)];
+  print_s [%message "Imported resources" (has_file : bool) (has_http : bool)];
 
   [%expect {| ("Imported resources" (has_file false) (has_http false)) |}];
   return ()
 
 let%expect_test "import_with_resource_templates" =
-  (* Test that importing properly handles resource templates with URI prefixing *)
+  (* Test that importing properly handles resource templates with URI
+     prefixing *)
   let open Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let sub_server = create ~name:"sub" () in
 
   (* Add template to sub_server *)
   let template =
-    Server.Resource_template.create
-      ~uri_template:"file:///{path}"
+    Server.Resource_template.create ~uri_template:"file:///{path}"
       ~name:"Dynamic File"
       ~create_resource:(fun ~params ->
         let path = List.Assoc.find_exn params ~equal:String.equal "path" in
@@ -257,10 +257,10 @@ let%expect_test "import_with_prompts" =
   let has_farewell = Hashtbl.mem prompts "polite_farewell" in
 
   print_s
-    [%message
-      "Imported prompts" (has_greeting : bool) (has_farewell : bool)];
+    [%message "Imported prompts" (has_greeting : bool) (has_farewell : bool)];
 
-  [%expect {|
+  [%expect
+    {|
     ("Imported prompts" (has_greeting true) (has_farewell true))
   |}];
   return ()
@@ -274,8 +274,7 @@ let%expect_test "import_multiple_resource_templates" =
 
   (* Add template to files_server *)
   let files_template =
-    Server.Resource_template.create
-      ~uri_template:"file:///{filepath}"
+    Server.Resource_template.create ~uri_template:"file:///{filepath}"
       ~name:"File Access"
       ~create_resource:(fun ~params ->
         let path = List.Assoc.find_exn params ~equal:String.equal "filepath" in
@@ -291,11 +290,12 @@ let%expect_test "import_multiple_resource_templates" =
 
   (* Add template to api_server *)
   let api_template =
-    Server.Resource_template.create
-      ~uri_template:"http://api/{endpoint}"
+    Server.Resource_template.create ~uri_template:"http://api/{endpoint}"
       ~name:"API Access"
       ~create_resource:(fun ~params ->
-        let endpoint = List.Assoc.find_exn params ~equal:String.equal "endpoint" in
+        let endpoint =
+          List.Assoc.find_exn params ~equal:String.equal "endpoint"
+        in
         return
           (Server.Resource.create
              ~uri:(sprintf "http://api/%s" endpoint)
@@ -315,8 +315,7 @@ let%expect_test "import_multiple_resource_templates" =
   let has_files = Hashtbl.mem templates "file://files/{filepath}" in
   let has_api = Hashtbl.mem templates "http://api/{endpoint}" in
 
-  print_s
-    [%message "Multiple templates" (has_files : bool) (has_api : bool)];
+  print_s [%message "Multiple templates" (has_files : bool) (has_api : bool)];
 
   [%expect {| ("Multiple templates" (has_files false) (has_api false)) |}];
   return ()
@@ -421,7 +420,8 @@ let%expect_test "call_imported_custom_named_tool" =
   let result_str = Yojson.Safe.to_string result in
   print_s [%message "Called imported tool" (result_str : string)];
 
-  [%expect {|
+  [%expect
+    {|
     ("Called imported tool" (result_str "\"Hello, World!\""))
   |}];
   return ()
@@ -434,8 +434,7 @@ let%expect_test "first_level_importing_with_custom_name" =
 
   (* Add tool with specific name *)
   let my_tool =
-    Server.Tool.create ~name:"my_function"
-      ~description:"Custom named function"
+    Server.Tool.create ~name:"my_function" ~description:"Custom named function"
       ~handler:(fun _args -> return (`String "custom result"))
       ()
   in
@@ -528,15 +527,16 @@ let%expect_test "call_nested_imported_tool" =
   return ()
 
 let%expect_test "import_with_proxy_tools" =
-  (* Test importing tools - proxy functionality may differ, testing basic import *)
+  (* Test importing tools - proxy functionality may differ, testing basic
+     import *)
   let open Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let proxy_server = create ~name:"proxy" () in
 
-  (* Add tool to proxy server - in full implementation this might be delegated *)
+  (* Add tool to proxy server - in full implementation this might be
+     delegated *)
   let delegated_tool =
-    Server.Tool.create ~name:"delegated"
-      ~description:"Delegated tool"
+    Server.Tool.create ~name:"delegated" ~description:"Delegated tool"
       ~handler:(fun _args -> return (`String "delegated result"))
       ()
   in
@@ -700,7 +700,8 @@ let%expect_test "import_conflict_resolution_tools" =
   return ()
 
 let%expect_test "import_conflict_resolution_resources" =
-  (* Test that later imported resources overwrite earlier ones when URIs conflict *)
+  (* Test that later imported resources overwrite earlier ones when URIs
+     conflict *)
   let open Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let first_server = create ~name:"first" () in
@@ -734,15 +735,15 @@ let%expect_test "import_conflict_resolution_resources" =
   let description = resource.Server.Resource.description in
 
   print_s
-    [%message
-      "Resource conflict" (count : int) (description : string option)];
+    [%message "Resource conflict" (count : int) (description : string option)];
 
   [%expect
     {| ("Resource conflict" (count 1) (description ("First server config"))) |}];
   return ()
 
 let%expect_test "import_conflict_resolution_templates" =
-  (* Test that later imported templates overwrite earlier ones when URI templates conflict *)
+  (* Test that later imported templates overwrite earlier ones when URI
+     templates conflict *)
   let open Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let first_server = create ~name:"first" () in
@@ -750,16 +751,12 @@ let%expect_test "import_conflict_resolution_templates" =
 
   (* Add same URI template to both servers *)
   let first_template =
-    Server.Resource_template.create
-      ~uri_template:"data:///{id}"
-      ~name:"First Data"
-      ~description:"First template"
+    Server.Resource_template.create ~uri_template:"data:///{id}"
+      ~name:"First Data" ~description:"First template"
       ~create_resource:(fun ~params ->
         let id = List.Assoc.find_exn params ~equal:String.equal "id" in
         return
-          (Server.Resource.create
-             ~uri:(sprintf "data:///%s" id)
-             ~name:id
+          (Server.Resource.create ~uri:(sprintf "data:///%s" id) ~name:id
              ~reader:(fun () -> return "first data")
              ()))
       ()
@@ -767,16 +764,12 @@ let%expect_test "import_conflict_resolution_templates" =
   add_template first_server first_template;
 
   let second_template =
-    Server.Resource_template.create
-      ~uri_template:"data:///{id}"
-      ~name:"Second Data"
-      ~description:"Second template"
+    Server.Resource_template.create ~uri_template:"data:///{id}"
+      ~name:"Second Data" ~description:"Second template"
       ~create_resource:(fun ~params ->
         let id = List.Assoc.find_exn params ~equal:String.equal "id" in
         return
-          (Server.Resource.create
-             ~uri:(sprintf "data:///%s" id)
-             ~name:id
+          (Server.Resource.create ~uri:(sprintf "data:///%s" id) ~name:id
              ~reader:(fun () -> return "second data")
              ()))
       ()
@@ -794,15 +787,15 @@ let%expect_test "import_conflict_resolution_templates" =
   let description = template.Server.Resource_template.description in
 
   print_s
-    [%message
-      "Template conflict" (count : int) (description : string option)];
+    [%message "Template conflict" (count : int) (description : string option)];
 
   [%expect
     {| ("Template conflict" (count 1) (description ("First template"))) |}];
   return ()
 
 let%expect_test "import_conflict_resolution_prompts" =
-  (* Test that later imported prompts overwrite earlier ones when names conflict *)
+  (* Test that later imported prompts overwrite earlier ones when names
+     conflict *)
   let open Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let first_server = create ~name:"first" () in
@@ -849,16 +842,14 @@ let%expect_test "import_conflict_resolution_with_prefix" =
 
   (* Add tools with names that will conflict after prefixing *)
   let tool1 =
-    Server.Tool.create ~name:"action"
-      ~description:"Server 1 action"
+    Server.Tool.create ~name:"action" ~description:"Server 1 action"
       ~handler:(fun _args -> return (`String "action1"))
       ()
   in
   add_tool server1 tool1;
 
   let tool2 =
-    Server.Tool.create ~name:"action"
-      ~description:"Server 2 action"
+    Server.Tool.create ~name:"action" ~description:"Server 2 action"
       ~handler:(fun _args -> return (`String "action2"))
       ()
   in
@@ -875,10 +866,7 @@ let%expect_test "import_conflict_resolution_with_prefix" =
   let description = tool.Server.Tool.description in
 
   print_s
-    [%message
-      "Prefix conflict"
-        (has_tool : bool)
-        (description : string option)];
+    [%message "Prefix conflict" (has_tool : bool) (description : string option)];
 
   [%expect
     {|
@@ -922,8 +910,7 @@ let%expect_test "import_server_resource_template_name_prefixing" =
 
   (* Add template with specific name *)
   let my_template =
-    Server.Resource_template.create
-      ~uri_template:"file:///{path}"
+    Server.Resource_template.create ~uri_template:"file:///{path}"
       ~name:"File Template"
       ~create_resource:(fun ~params ->
         let path = List.Assoc.find_exn params ~equal:String.equal "path" in
@@ -948,7 +935,8 @@ let%expect_test "import_server_resource_template_name_prefixing" =
 
   [%expect.unreachable];
   return ()
-[@@expect.uncaught_exn {|
+[@@expect.uncaught_exn
+  {|
   (* CR expect_test_collector: This test expectation appears to contain a backtrace.
      This is strongly discouraged as backtraces are fragile.
      Please change this test to not include a backtrace. *)
@@ -956,8 +944,8 @@ let%expect_test "import_server_resource_template_name_prefixing" =
     ("Unknown resource template" (key file://fs/{path})
       (did_you_mean file://fs//{path}))
     ("Called from Base__Error.raise_s in file \"src/error.ml\" (inlined), line 26, characters 52-76"
-      "Called from Server.Ox_fast_mcp.get_template in file \"src/server/server.ml\", lines 732-736, characters 8-159"
-      "Called from Test_server__Test_import_server.(fun) in file \"test/server/test_import_server.ml\", line 944, characters 22-70"
+      "Called from Server.Ox_fast_mcp.get_template in file \"src/server/server.ml\", lines 726-730, characters 8-159"
+      "Called from Test_server__Test_import_server.(fun) in file \"test/server/test_import_server.ml\", line 931, characters 22-70"
       "Caught by monitor block_on_async at file \"src/thread_safe.ml\", line 105, characters 17-17"))
   Raised at Base__Result.ok_exn in file "src/result.ml" (inlined), line 125, characters 17-26
   Called from Async_unix__Thread_safe.block_on_async_exn in file "src/thread_safe.ml", line 161, characters 29-63

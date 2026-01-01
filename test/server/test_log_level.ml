@@ -46,7 +46,8 @@ let%expect_test "run_sse_accepts_log_level" =
     Server.Ox_fast_mcp.run_async server ~transport:Server.Transport.Sse
       ~host:"127.0.0.1" ~port:8001 ~log_level:"info" ()
   in
-  (* Give it a moment to start - this test just verifies no exception is thrown *)
+  (* Give it a moment to start - this test just verifies no exception is
+     thrown *)
   let%bind () = after (Time_float.Span.of_ms 100.0) in
   (* If we got here without an exception, the test passed *)
   return ()

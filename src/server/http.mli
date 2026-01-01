@@ -248,11 +248,7 @@ val create_streamable_http_app :
 
 (** HTTP server configuration *)
 module Server_config : sig
-  type t = {
-    host : string;
-    port : int;
-    backlog : int;
-  }
+  type t = { host : string; port : int; backlog : int }
 
   val default : t
 end

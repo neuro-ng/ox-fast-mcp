@@ -348,7 +348,8 @@ module Ox_fast_mcp : sig
   (** {2 Server Inspection & Discovery} *)
 
   val describe_server : t -> Yojson.Safe.t
-  (** Get comprehensive server description including all components and configuration *)
+  (** Get comprehensive server description including all components and
+      configuration *)
 
   val find_tools_by_tag : t -> tag:string -> Tool.t list
   (** Find all tools with a specific tag *)
@@ -360,10 +361,12 @@ module Ox_fast_mcp : sig
   (** Find prompts with a specific tag *)
 
   val suggest_similar_names : string -> string list -> string list
-  (** Suggest similar component names using edit distance. Returns up to 5 suggestions. *)
+  (** Suggest similar component names using edit distance. Returns up to 5
+      suggestions. *)
 
   val validate_server : t -> (unit, string list) Result.t
-  (** Validate server configuration. Returns Ok() if valid, or Error with list of issues. *)
+  (** Validate server configuration. Returns Ok() if valid, or Error with list
+      of issues. *)
 
   (** {2 Statistics & Debug Utilities} *)
 
@@ -376,7 +379,7 @@ module Ox_fast_mcp : sig
   val get_tool_stats : t -> (string * int) list
   (** Get tool call statistics, sorted by call count descending *)
 
-  val get_resource_stats : t -> (string * int) list  
+  val get_resource_stats : t -> (string * int) list
   (** Get resource access statistics, sorted by access count descending *)
 
   val reset_stats : t -> unit
@@ -412,7 +415,7 @@ module Ox_fast_mcp : sig
   (** Setup protocol handler mapping for this server *)
 
   val handle_stdio_message :
-    Protocol.method_map -> Yojson.Safe.t -> Yojson.Safe.t Deferred.t
+    t -> Protocol.method_map -> Yojson.Safe.t -> Yojson.Safe.t Deferred.t
   (** Handle a single JSON-RPC message and return response *)
 
   (** {1 Transport} *)

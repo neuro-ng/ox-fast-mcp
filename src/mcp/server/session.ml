@@ -50,9 +50,10 @@ type t = {
     Mcp_shared.Session.Base_session.t;
   incoming_message_stream :
     [ `Request of
-        (client_request, server_result) Mcp_shared.Session.Request_responder.t
+      (client_request, server_result) Mcp_shared.Session.Request_responder.t
     | `Notification of client_notification
-    | `Error of exn ] Lwt_stream.t;
+    | `Error of exn ]
+    Lwt_stream.t;
   mutable message_handler :
     t ->
     [ `Request of
@@ -65,7 +66,7 @@ type t = {
 let create ~read_stream ~write_stream ~init_options ?(stateless = false) () =
   let stream, _push = Lwt_stream.create () in
   (* Create dummy values of proper types for type witnesses *)
-  let dummy_request : client_request = 
+  let dummy_request : client_request =
     `Ping { method_ = "ping"; params = None }
   in
   let dummy_notification : client_notification =
@@ -73,7 +74,8 @@ let create ~read_stream ~write_stream ~init_options ?(stateless = false) () =
   in
   let base_session =
     Mcp_shared.Session.Base_session.create ~read_stream ~write_stream
-      ~receive_request_type:dummy_request ~receive_notification_type:dummy_notification ()
+      ~receive_request_type:dummy_request
+      ~receive_notification_type:dummy_notification ()
   in
   {
     initialization_state = (if stateless then Initialized else Not_initialized);
@@ -97,11 +99,11 @@ let check_client_capability t (capability : client_capabilities) =
       | None -> false
       | Some client_roots ->
         (* Check if client supports list_changed if required *)
-        let cap_requires_list_changed = 
-          Option.value cap_roots.list_changed ~default:false 
+        let cap_requires_list_changed =
+          Option.value cap_roots.list_changed ~default:false
         in
-        let client_has_list_changed = 
-          Option.value client_roots.list_changed ~default:false 
+        let client_has_list_changed =
+          Option.value client_roots.list_changed ~default:false
         in
         not (cap_requires_list_changed && not client_has_list_changed)))
     (* Check sampling capability *)
@@ -126,50 +128,41 @@ let check_client_capability t (capability : client_capabilities) =
             | Some client_data -> Yojson.Safe.equal client_data data)))
 
 let send_log_message t ~level ~data ?logger ?related_request_id () =
-  let params = {
-    level;
-    logger;
-    data;
-    notification_params = { meta = None };
-  } in
-  let notification = `LoggingMessage {
-    method_ = "notifications/message";
-    params;
-  } in
+  let params = { level; logger; data; notification_params = { meta = None } } in
+  let notification =
+    `LoggingMessage { method_ = "notifications/message"; params }
+  in
   Mcp_shared.Session.Base_session.send_notification t.base_session notification
     ?related_request_id ()
 
 let send_resource_updated t ~uri =
   let uri_str = Uri.to_string uri in
-  let params = {
-    uri = uri_str;
-    notification_params = { meta = None };
-  } in
-  let notification = `ResourceUpdated {
-    method_ = "notifications/resources/updated";
-    params;
-  } in
+  let params = { uri = uri_str; notification_params = { meta = None } } in
+  let notification =
+    `ResourceUpdated { method_ = "notifications/resources/updated"; params }
+  in
   Mcp_shared.Session.Base_session.send_notification t.base_session notification
     ()
 
 let create_message t ~messages ~max_tokens ?system_prompt ?include_context
     ?temperature ?stop_sequences ?metadata ?model_preferences
     ?related_request_id () =
-  let params = {
-    messages;
-    max_tokens;
-    system_prompt;
-    include_context;
-    temperature;
-    stop_sequences;
-    metadata;
-    model_preferences;
-    request_params = { meta = None };
-  } in
-  let request : server_request = `CreateMessage {
-    method_ = "sampling/createMessage";
-    params;
-  } in
+  let params =
+    {
+      messages;
+      max_tokens;
+      system_prompt;
+      include_context;
+      temperature;
+      stop_sequences;
+      metadata;
+      model_preferences;
+      request_params = { meta = None };
+    }
+  in
+  let request : server_request =
+    `CreateMessage { method_ = "sampling/createMessage"; params }
+  in
   let metadata =
     Option.map related_request_id ~f:(fun id ->
         Mcp_shared.Message.Server
@@ -179,22 +172,18 @@ let create_message t ~messages ~max_tokens ?system_prompt ?include_context
     ()
 
 let list_roots t =
-  let request : server_request = `ListRoots {
-    method_ = "roots/list";
-    params = None;
-  } in
+  let request : server_request =
+    `ListRoots { method_ = "roots/list"; params = None }
+  in
   Mcp_shared.Session.Base_session.send_request t.base_session request ()
 
 let elicit t ~message ~requested_schema ?related_request_id () =
-  let params = {
-    message;
-    requested_schema;
-    request_params = { meta = None };
-  } in
-  let request : server_request = `Elicit {
-    method_ = "prompts/elicit";
-    params;
-  } in
+  let params =
+    { message; requested_schema; request_params = { meta = None } }
+  in
+  let request : server_request =
+    `Elicit { method_ = "prompts/elicit"; params }
+  in
   let metadata =
     Option.map related_request_id ~f:(fun id ->
         Mcp_shared.Message.Server
@@ -204,49 +193,45 @@ let elicit t ~message ~requested_schema ?related_request_id () =
     ()
 
 let send_ping t =
-  let request : server_request = `Ping {
-    method_ = "ping";
-    params = None;
-  } in
+  let request : server_request = `Ping { method_ = "ping"; params = None } in
   Mcp_shared.Session.Base_session.send_request t.base_session request ()
 
 let send_progress_notification t ~progress_token ~progress ?total ?message
     ?related_request_id () =
-  let params = {
-    progress_token;
-    progress;
-    total;
-    message;
-    notification_params = { meta = None };
-  } in
-  let notification = `Progress {
-    method_ = "notifications/progress";
-    params;
-  } in
+  let params =
+    {
+      progress_token;
+      progress;
+      total;
+      message;
+      notification_params = { meta = None };
+    }
+  in
+  let notification = `Progress { method_ = "notifications/progress"; params } in
   Mcp_shared.Session.Base_session.send_notification t.base_session notification
     ?related_request_id ()
 
 let send_resource_list_changed t =
-  let notification = `ResourceListChanged {
-    method_ = "notifications/resources/list_changed";
-    params = None;
-  } in
+  let notification =
+    `ResourceListChanged
+      { method_ = "notifications/resources/list_changed"; params = None }
+  in
   Mcp_shared.Session.Base_session.send_notification t.base_session notification
     ()
 
 let send_tool_list_changed t =
-  let notification = `ToolListChanged {
-    method_ = "notifications/tools/list_changed";
-    params = None;
-  } in
+  let notification =
+    `ToolListChanged
+      { method_ = "notifications/tools/list_changed"; params = None }
+  in
   Mcp_shared.Session.Base_session.send_notification t.base_session notification
     ()
 
 let send_prompt_list_changed t =
-  let notification = `PromptListChanged {
-    method_ = "notifications/prompts/list_changed";
-    params = None;
-  } in
+  let notification =
+    `PromptListChanged
+      { method_ = "notifications/prompts/list_changed"; params = None }
+  in
   Mcp_shared.Session.Base_session.send_notification t.base_session notification
     ()
 
@@ -259,29 +244,31 @@ let handle_request t responder =
     t.initialization_state <- Initializing;
     t.client_params <- Some init_params;
     let requested_version = init_params.protocol_version in
-    let response = `Initialize {
-      protocol_version =
-        (if
-           List.mem Mcp_shared.Version.supported_protocol_versions
-             requested_version ~equal:String.equal
-         then requested_version
-         else latest_protocol_version);
-      capabilities = t.init_options.capabilities;
-      server_info = {
-        version = t.init_options.server_version;
-        website_url = None;
-        icons = None;
-        base_metadata = {
-          name = t.init_options.server_name;
-          title = None;
-        };
-      };
-      instructions = t.init_options.instructions;
-      result = { meta = None };
-    } in
+    let response =
+      `Initialize
+        {
+          protocol_version =
+            (if
+               List.mem Mcp_shared.Version.supported_protocol_versions
+                 requested_version ~equal:String.equal
+             then requested_version
+             else latest_protocol_version);
+          capabilities = t.init_options.capabilities;
+          server_info =
+            {
+              version = t.init_options.server_version;
+              website_url = None;
+              icons = None;
+              base_metadata =
+                { name = t.init_options.server_name; title = None };
+            };
+          instructions = t.init_options.instructions;
+          result = { meta = None };
+        }
+    in
     Mcp_shared.Session.Request_responder.respond responder response
-  | _ ->
-   (match t.initialization_state with
+  | _ -> (
+    match t.initialization_state with
     | Initialized -> t.message_handler t (`Request responder)
     | _ -> Lwt.fail_with "Received request before initialization was complete")
 
@@ -291,10 +278,11 @@ let handle_notification t notification =
   | `Initialized _ ->
     t.initialization_state <- Initialized;
     t.message_handler t (`Notification notification)
-  | _ ->
-    (match t.initialization_state with
-     | Initialized -> t.message_handler t (`Notification notification)
-     | _ -> Lwt.fail_with "Received notification before initialization was complete")
+  | _ -> (
+    match t.initialization_state with
+    | Initialized -> t.message_handler t (`Notification notification)
+    | _ ->
+      Lwt.fail_with "Received notification before initialization was complete")
 
 (** Handle an incoming message *)
 let handle_message t msg =

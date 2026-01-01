@@ -14,17 +14,18 @@ type t = {
     Mcp_shared.Session.Base_session.t;
   incoming_message_stream :
     [ `Request of
-        ( Mcp.Types.client_request,
-          Mcp.Types.server_result )
-        Mcp_shared.Session.Request_responder.t
+      ( Mcp.Types.client_request,
+        Mcp.Types.server_result )
+      Mcp_shared.Session.Request_responder.t
     | `Notification of Mcp.Types.client_notification
-    | `Error of exn ] Lwt_stream.t;
+    | `Error of exn ]
+    Lwt_stream.t;
   mutable message_handler :
     t ->
     [ `Request of
-        ( Mcp.Types.client_request,
-          Mcp.Types.server_result )
-        Mcp_shared.Session.Request_responder.t
+      ( Mcp.Types.client_request,
+        Mcp.Types.server_result )
+      Mcp_shared.Session.Request_responder.t
     | `Notification of Mcp.Types.client_notification
     | `Error of exn ] ->
     unit Lwt.t;
@@ -113,5 +114,6 @@ val incoming_messages :
       Mcp.Types.server_result )
     Mcp_shared.Session.Request_responder.t
   | `Notification of Mcp.Types.client_notification
-  | `Error of exn ] Lwt_stream.t
+  | `Error of exn ]
+  Lwt_stream.t
 (** Get the incoming messages stream *)

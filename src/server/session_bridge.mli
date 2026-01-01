@@ -1,16 +1,15 @@
 (** Session Bridge Module Interface
 
-    Provides Lwt/Async conversion utilities and session management stubs.
-*)
+    Provides Lwt/Async conversion utilities and session management stubs. *)
 
 open! Core
 open! Async
 
-(** Convert Lwt promise to Async Deferred **)
 val lwt_to_async : 'a Lwt.t -> 'a Deferred.t
+(** Convert Lwt promise to Async Deferred **)
 
-(** Convert Async Deferred to Lwt promise *)
 val async_to_lwt : 'a Deferred.t -> 'a Lwt.t
+(** Convert Async Deferred to Lwt promise *)
 
 (** Async session wrapper - stub implementation *)
 module Async_session : sig

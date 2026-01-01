@@ -20,7 +20,10 @@
   test_enhanced_errors
   test_server_utilities
   test_session_notifications
-  test_context_sampling)
+  test_context_sampling
+  test_context_delegation
+  test_context_http
+  test_context_capabilities)
  (libraries core async yojson expect_test_helpers_core server ox_fast_mcp)
  (inline_tests)
  (preprocess

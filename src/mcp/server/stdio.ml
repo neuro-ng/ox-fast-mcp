@@ -52,7 +52,9 @@ let create_stdio_server ?stdin ?stdout () =
     | None -> Lwt.return_unit
     | Some session_message ->
       let message = session_message.Mcp_shared.Message.message in
-      let json = message |> jsonrpc_message_to_yojson |> Yojson.Safe.to_string in
+      let json =
+        message |> jsonrpc_message_to_yojson |> Yojson.Safe.to_string
+      in
       let* () = Lwt_io.write_line stdout json in
       let* () = Lwt_io.flush stdout in
       stdout_writer ()
