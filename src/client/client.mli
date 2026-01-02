@@ -3,6 +3,39 @@ open Async
 
 (** MCP client that delegates connection management to a Transport instance *)
 
+module Types = Mcp.Types
+(** Module type aliases for MCP types **)
+
+(** Roots configuration *)
+module Roots : sig
+  type t
+end
+
+(** Sampling handler *)
+module Sampling : sig
+  type handler
+end
+
+(** Logging handler *)
+module Logging : sig
+  type handler
+end
+
+(** Message handler *)
+module Messages : sig
+  type handler
+end
+
+(** Progress handler *)
+module Progress : sig
+  type handler
+end
+
+(** Content block *)
+module Content_block : sig
+  type t = Mcp.Types.content
+end
+
 exception Tool_error of string
 (** Exception raised when a tool call fails *)
 
@@ -21,8 +54,8 @@ val create :
   ?log_handler:Logging.handler ->
   ?message_handler:Messages.handler ->
   ?progress_handler:Progress.handler ->
-  ?timeout:Time.Span.t ->
-  ?init_timeout:Time.Span.t ->
+  ?timeout:Time_ns.Span.t ->
+  ?init_timeout:Time_ns.Span.t ->
   ?client_info:Types.implementation ->
   ?auth:string ->
   'transport ->
@@ -140,7 +173,7 @@ val call_tool_mcp :
   'transport t ->
   name:string ->
   ?arguments:(string * Yojson.Safe.t) list ->
-  ?timeout:Time.Span.t ->
+  ?timeout:Time_ns.Span.t ->
   ?progress_handler:Progress.handler ->
   unit ->
   Types.call_tool_result Deferred.t

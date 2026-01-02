@@ -1,0 +1,14 @@
+(library
+ (name test_bearer)
+ (modules test_bearer)
+ (libraries
+  base
+  core
+  expect_test_helpers_core
+  cohttp
+  cohttp-async
+  ox-fast-mcp.client_auth
+  ox-fast-mcp.utilities)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_expect)))

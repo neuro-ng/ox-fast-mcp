@@ -1,12 +1,14 @@
 open Core
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type oauth_token = {
   access_token : string;
   token_type : string;
-  expires_in : int option;
-  scope : string option;
-  refresh_token : string option;
+  expires_in : int option; [@yojson.option]
+  scope : string option; [@yojson.option]
+  refresh_token : string option; [@yojson.option]
 }
+[@@deriving yojson]
 (** OAuth token as defined in RFC 6749 Section 5.1 *)
 
 exception Invalid_scope_error of string
@@ -20,67 +22,72 @@ type oauth_client_metadata = {
   token_endpoint_auth_method : [ `None | `Client_secret_post ];
   grant_types : [ `Authorization_code | `Refresh_token ] list;
   response_types : [ `Code ] list;
-  scope : string option;
-  client_name : string option;
-  client_uri : string option;
-  logo_uri : string option;
-  contacts : string list option;
-  tos_uri : string option;
-  policy_uri : string option;
-  jwks_uri : string option;
-  jwks : Yojson.Safe.t option;
-  software_id : string option;
-  software_version : string option;
+  scope : string option; [@yojson.option]
+  client_name : string option; [@yojson.option]
+  client_uri : string option; [@yojson.option]
+  logo_uri : string option; [@yojson.option]
+  contacts : string list option; [@yojson.option]
+  tos_uri : string option; [@yojson.option]
+  policy_uri : string option; [@yojson.option]
+  jwks_uri : string option; [@yojson.option]
+  jwks : Mcp.Types.json option; [@yojson.option]
+  software_id : string option; [@yojson.option]
+  software_version : string option; [@yojson.option]
 }
+[@@deriving yojson]
 (** OAuth client metadata as defined in RFC 7591 Section 2 *)
 
 type oauth_client_information = {
   client_id : string;
-  client_secret : string option;
-  client_id_issued_at : int option;
-  client_secret_expires_at : int option;
+  client_secret : string option; [@yojson.option]
+  client_id_issued_at : int option; [@yojson.option]
+  client_secret_expires_at : int option; [@yojson.option]
 }
-[@@deriving fields]
+[@@deriving fields, yojson]
 (** OAuth client information (metadata plus client credentials) *)
 
 type oauth_client_information_full = {
   metadata : oauth_client_metadata;
   info : oauth_client_information;
 }
+[@@deriving yojson]
 (** Full OAuth client information combining metadata and credentials *)
 
 type oauth_metadata = {
   issuer : string;
   authorization_endpoint : string;
   token_endpoint : string;
-  registration_endpoint : string option;
-  scopes_supported : string list option;
+  registration_endpoint : string option; [@yojson.option]
+  scopes_supported : string list option; [@yojson.option]
   response_types_supported : string list;
-  response_modes_supported : [ `Query | `Fragment ] list option;
-  grant_types_supported : string list option;
-  token_endpoint_auth_methods_supported : string list option;
-  token_endpoint_auth_signing_alg_values_supported : unit option;
-  service_documentation : string option;
-  ui_locales_supported : string list option;
-  op_policy_uri : string option;
-  op_tos_uri : string option;
-  revocation_endpoint : string option;
-  revocation_endpoint_auth_methods_supported : string list option;
-  revocation_endpoint_auth_signing_alg_values_supported : unit option;
-  introspection_endpoint : string option;
-  introspection_endpoint_auth_methods_supported : string list option;
-  introspection_endpoint_auth_signing_alg_values_supported : unit option;
-  code_challenge_methods_supported : string list option;
+  response_modes_supported : [ `Query | `Fragment ] list option; [@yojson.option]
+  grant_types_supported : string list option; [@yojson.option]
+  token_endpoint_auth_methods_supported : string list option; [@yojson.option]
+  token_endpoint_auth_signing_alg_values_supported : unit option; [@yojson.option]
+  service_documentation : string option; [@yojson.option]
+  ui_locales_supported : string list option; [@yojson.option]
+  op_policy_uri : string option; [@yojson.option]
+  op_tos_uri : string option; [@yojson.option]
+  revocation_endpoint : string option; [@yojson.option]
+  revocation_endpoint_auth_methods_supported : string list option; [@yojson.option]
+  revocation_endpoint_auth_signing_alg_values_supported : unit option; [@yojson.option]
+  introspection_endpoint : string option; [@yojson.option]
+  introspection_endpoint_auth_methods_supported : string list option; [@yojson.option]
+  introspection_endpoint_auth_signing_alg_values_supported : unit option; [@yojson.option]
+  code_challenge_methods_supported : string list option; [@yojson.option]
+  client_id_metadata_document_supported : bool option; [@yojson.option]
 }
+[@@deriving yojson]
 (** OAuth authorization server metadata as defined in RFC 8414 Section 2 *)
 
 type protected_resource_metadata = {
   resource : string;
   authorization_servers : string list;
-  scopes_supported : string list option;
+  scopes_supported : string list option; [@yojson.option]
   bearer_methods_supported : string list;
-  resource_documentation : string option;
+  resource_documentation : string option; [@yojson.option]
 }
+[@@deriving yojson]
 (** Protected resource metadata as defined in RFC 9728 Section 2 *)
 
 let validate_scope metadata requested_scope =

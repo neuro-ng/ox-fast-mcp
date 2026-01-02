@@ -5,6 +5,7 @@ type oauth_token = {
   scope : string option;
   refresh_token : string option;
 }
+[@@deriving yojson]
 (** OAuth token as defined in RFC 6749 Section 5.1 *)
 
 exception Invalid_scope_error of string
@@ -26,10 +27,11 @@ type oauth_client_metadata = {
   tos_uri : string option;
   policy_uri : string option;
   jwks_uri : string option;
-  jwks : Yojson.Safe.t option;
+  jwks : Mcp.Types.json option;
   software_id : string option;
   software_version : string option;
 }
+[@@deriving yojson]
 (** OAuth client metadata as defined in RFC 7591 Section 2 *)
 
 type oauth_client_information = {
@@ -38,13 +40,14 @@ type oauth_client_information = {
   client_id_issued_at : int option;
   client_secret_expires_at : int option;
 }
-[@@deriving fields]
+[@@deriving fields, yojson]
 (** OAuth client information (metadata plus client credentials) *)
 
 type oauth_client_information_full = {
   metadata : oauth_client_metadata;
   info : oauth_client_information;
 }
+[@@deriving yojson]
 (** Full OAuth client information combining metadata and credentials *)
 
 type oauth_metadata = {
@@ -69,7 +72,9 @@ type oauth_metadata = {
   introspection_endpoint_auth_methods_supported : string list option;
   introspection_endpoint_auth_signing_alg_values_supported : unit option;
   code_challenge_methods_supported : string list option;
+  client_id_metadata_document_supported : bool option;
 }
+[@@deriving yojson]
 (** OAuth authorization server metadata as defined in RFC 8414 Section 2 *)
 
 type protected_resource_metadata = {
@@ -79,6 +84,7 @@ type protected_resource_metadata = {
   bearer_methods_supported : string list;
   resource_documentation : string option;
 }
+[@@deriving yojson]
 (** Protected resource metadata as defined in RFC 9728 Section 2 *)
 
 val validate_scope :

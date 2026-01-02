@@ -17,6 +17,17 @@
   ppx_yojson_conv
   yojson
   uri)
+ (modules
+  cache
+  components
+  fmcp_types
+  json_schema
+  log
+  logging
+  manager
+  mcp_config
+  network_utils
+  secret_string)
  (preprocess
   (pps ppx_jane ppx_compare ppx_sexp_conv ppx_sexp_message ppx_yojson_conv))
  (instrumentation
