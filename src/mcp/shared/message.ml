@@ -1,12 +1,13 @@
 open Core
+open Async
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type resumption_token = string [@@deriving yojson]
-type resumption_token_update_callback = resumption_token -> unit Lwt.t
+type resumption_token_update_callback = resumption_token -> unit Deferred.t
 
 let resumption_token_update_callback_of_yojson (_ : Yojson.Safe.t) :
     resumption_token_update_callback =
- fun _ -> Lwt.return_unit
+ fun _ -> return ()
 
 let resumption_token_update_callback_to_yojson
     (_ : resumption_token_update_callback) : Yojson.Safe.t =

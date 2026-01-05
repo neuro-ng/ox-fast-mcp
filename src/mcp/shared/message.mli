@@ -3,12 +3,12 @@
     features like resumability. *)
 
 open! Core
-open! Lwt.Syntax
+open! Async
 
 type resumption_token = string
 (** Type alias for resumption token *)
 
-type resumption_token_update_callback = resumption_token -> unit Lwt.t
+type resumption_token_update_callback = resumption_token -> unit Deferred.t
 (** Callback type for resumption token updates *)
 
 type client_message_metadata = {

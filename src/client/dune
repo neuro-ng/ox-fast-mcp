@@ -1,18 +1,11 @@
-; Client library - INCOMPLETE - Stubbed for future implementation
-; See /src/client/client_build_status.todo for details on what's needed
-;
-; Missing implementations:
-; - Type definitions in Mcp.Types (client_session, initialize_result, etc.)
-; - Module implementations (Roots, Sampling, Logging, Transports, Settings, etc.)
-; - Transport connection management
-; - Various callback creation functions
-;
-; To re-enable: Uncomment the library stanza below and implement missing dependencies
-;
-; (library
-;  (name client_lib)
-;  (public_name ox-fast-mcp.client_lib)
-;  (libraries base core async yojson uri cohttp-lwt-unix logs lwt ox-fast-mcp)
-;  (modules client)
-;  (preprocess
-;   (pps ppx_jane)))
+; Client library - PARTIAL IMPLEMENTATION
+; Transports module added with base types and constructors
+; See transports.todo for implementation status (30% complete)
+
+(library
+ (name client_lib)
+ (public_name ox-fast-mcp.client_lib)
+ (libraries base core async yojson uri cohttp-lwt-unix logs lwt ox-fast-mcp)
+ (modules transports)
+ (preprocess
+  (pps ppx_jane)))

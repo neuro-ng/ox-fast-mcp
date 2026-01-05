@@ -43,6 +43,7 @@
   mirage-crypto
   mirage-crypto-pk
   jose
+  re
   (alcotest :with-test)
   (ounit2 :with-test)
   (expect_test_helpers_core :with-test)

@@ -1,25 +1,17 @@
-; MCP Client Session library - INCOMPLETE - Stubbed for future implementation
-; This module provides client session management for MCP protocol
-;
-; Blocked by:
-; - Unbound module Ox_fast_mcp (needs proper library structure)
-; - Missing client session types and implementations
-;
-; To re-enable: Fix library dependencies and implement session management
-;
-; (library
-;  (name mcp_client)
-;  (public_name ox-fast-mcp.client)
-;  (libraries
-;   base
-;   core
-;   async
-;   yojson
-;   uri
-;   cohttp-lwt-unix
-;   logs
-;   lwt)
-;  (modules
-;   session)
-;  (preprocess
-;   (pps ppx_jane)))
+(library
+ (name mcp_client)
+ (public_name ox-fast-mcp.mcp.client)
+ (libraries
+  core
+  async
+  yojson
+  ppx_yojson_conv_lib
+  uri
+  logs
+  ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.shared)
+ (modules
+  ; session
+  )
+ (preprocess
+  (pps ppx_yojson_conv ppx_jane)))

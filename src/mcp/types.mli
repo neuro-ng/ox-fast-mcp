@@ -62,7 +62,7 @@ type paginated_request_params = {
       [@to_yojson Request_params.to_yojson]
       [@of_yojson Request_params.of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 module Notification_params : sig
   module Meta : sig
@@ -96,14 +96,14 @@ type 'params notification = {
 type result = {
   meta : Yojson.Safe.t option; [@key "_meta"] [@default None] [@yojson.option]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type paginated_result = {
   next_cursor : cursor option;
       [@key "nextCursor"] [@default None] [@yojson.option]
   result : result; [@to_yojson result_to_yojson] [@of_yojson result_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 (* JSON-RPC Types *)
 
@@ -170,7 +170,7 @@ val jsonrpc_message_of_yojson : Yojson.Safe.t -> jsonrpc_message
 val jsonrpc_message_to_yojson : jsonrpc_message -> Yojson.Safe.t
 val yojson_of_jsonrpc_message : jsonrpc_message -> Yojson.Safe.t
 
-type empty_result = result [@@deriving compare, sexp]
+type empty_result = result [@@deriving yojson, compare, sexp]
 
 (* Metadata and Capabilities *)
 
@@ -178,7 +178,7 @@ type base_metadata = {
   name : string;
   title : string option; [@default None] [@yojson.option]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 (* Icon type for server, tools, resources, and prompts *)
 type icon = {
@@ -196,16 +196,16 @@ type implementation = {
   base_metadata : base_metadata;
       [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type roots_capability = {
   list_changed : bool option;
       [@key "listChanged"] [@default None] [@yojson.option]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
-type sampling_capability = Yojson.Safe.t [@@deriving compare, sexp]
-type elicitation_capability = Yojson.Safe.t [@@deriving compare, sexp]
+type sampling_capability = Yojson.Safe.t [@@deriving yojson, compare, sexp]
+type elicitation_capability = Yojson.Safe.t [@@deriving yojson, compare, sexp]
 
 type client_capabilities = {
   experimental : (string, Yojson.Safe.t) List.Assoc.t option;
@@ -214,7 +214,7 @@ type client_capabilities = {
   elicitation : elicitation_capability option; [@default None] [@yojson.option]
   roots : roots_capability option; [@default None] [@yojson.option]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type prompts_capability = {
   list_changed : bool option;
@@ -269,10 +269,10 @@ type initialize_request_params = {
       [@to_yojson Request_params.to_yojson]
       [@of_yojson Request_params.of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type initialize_request = initialize_request_params request
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type initialize_result = {
   protocol_version : string; [@key "protocolVersion"]
@@ -281,13 +281,13 @@ type initialize_result = {
   instructions : string option; [@default None] [@yojson.option]
   result : result; [@to_yojson result_to_yojson] [@of_yojson result_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type initialized_notification = Notification_params.t option notification
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 (* Ping *)
-type ping_request = Request_params.t option request [@@deriving compare, sexp]
+type ping_request = Request_params.t option request [@@deriving yojson, compare, sexp]
 
 (* Progress *)
 type progress_notification_params = {
@@ -299,20 +299,20 @@ type progress_notification_params = {
       [@to_yojson Notification_params.to_yojson]
       [@of_yojson Notification_params.of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type progress_notification = progress_notification_params notification
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 (* Resources *)
 type list_resources_request = paginated_request_params paginated_request
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type annotations = {
   audience : role list option; [@default None] [@yojson.option]
   priority : float option; [@default None] [@yojson.option]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type resource = {
   uri : string; (* Using string for URI for now, can be refined with Uri.t *)
@@ -340,7 +340,7 @@ type resource_template = {
   base_metadata : base_metadata;
       [@to_yojson base_metadata_to_yojson] [@of_yojson base_metadata_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type list_resources_result = {
   resources : resource list;
@@ -348,11 +348,11 @@ type list_resources_result = {
       [@to_yojson paginated_result_to_yojson]
       [@of_yojson paginated_result_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type list_resource_templates_request =
   paginated_request_params paginated_request
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type list_resource_templates_result = {
   resource_templates : resource_template list; [@key "resourceTemplates"]
@@ -360,7 +360,7 @@ type list_resource_templates_result = {
       [@to_yojson paginated_result_to_yojson]
       [@of_yojson paginated_result_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type read_resource_request_params = {
   uri : string;
@@ -368,17 +368,17 @@ type read_resource_request_params = {
       [@to_yojson Request_params.to_yojson]
       [@of_yojson Request_params.of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type read_resource_request = read_resource_request_params request
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type resource_contents = {
   uri : string;
   mime_type : string option; [@key "mimeType"] [@default None] [@yojson.option]
   meta : Yojson.Safe.t option; [@key "_meta"] [@default None] [@yojson.option]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type text_resource_contents = {
   text : string;
@@ -386,7 +386,7 @@ type text_resource_contents = {
       [@to_yojson resource_contents_to_yojson]
       [@of_yojson resource_contents_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type blob_resource_contents = {
   blob : string;
@@ -394,14 +394,14 @@ type blob_resource_contents = {
       [@to_yojson resource_contents_to_yojson]
       [@of_yojson resource_contents_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type read_resource_result = {
   contents :
     [ `Text of text_resource_contents | `Blob of blob_resource_contents ] list;
   result : result; [@to_yojson result_to_yojson] [@of_yojson result_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type resource_list_changed_notification =
   Notification_params.t option notification
@@ -468,7 +468,7 @@ type list_prompts_result = {
       [@to_yojson paginated_result_to_yojson]
       [@of_yojson paginated_result_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type get_prompt_request_params = {
   name : string;
@@ -550,7 +550,7 @@ type get_prompt_result = {
   messages : prompt_message list;
   result : result; [@to_yojson result_to_yojson] [@of_yojson result_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type prompt_list_changed_notification =
   Notification_params.t option notification
@@ -592,7 +592,7 @@ type list_tools_result = {
       [@to_yojson paginated_result_to_yojson]
       [@of_yojson paginated_result_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type call_tool_request_params = {
   name : string;
@@ -613,7 +613,7 @@ type call_tool_result = {
   is_error : bool; [@key "isError"] [@default false]
   result : result; [@to_yojson result_to_yojson] [@of_yojson result_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type tool_list_changed_notification = Notification_params.t option notification
 [@@deriving compare, sexp]
@@ -628,7 +628,7 @@ type logging_level =
   | `Critical
   | `Alert
   | `Emergency ]
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type set_level_request_params = {
   level : logging_level;
@@ -755,7 +755,7 @@ type complete_result = {
   completion : completion;
   result : result; [@to_yojson result_to_yojson] [@of_yojson result_of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 (* Roots *)
 type list_roots_request = Request_params.t option request

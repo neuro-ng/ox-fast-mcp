@@ -1,7 +1,23 @@
 (library
  (name mcp_shared)
  (public_name ox-fast-mcp.mcp.shared)
- (libraries core lwt lwt.unix ppx_yojson_conv_lib yojson ox-fast-mcp.mcp)
- (modules context exceptions message session version auth)
+ (libraries
+  core
+  async
+  lwt
+  lwt.unix
+  ppx_yojson_conv_lib
+  yojson
+  logs
+  re
+  ox-fast-mcp.mcp)
+ (modules
+  context
+  exceptions
+  message
+  session
+  version
+  auth
+  tool_name_validation)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))

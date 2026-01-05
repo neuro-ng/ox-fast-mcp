@@ -10,8 +10,10 @@
   cohttp-async
   async
   yojson
+  digestif
+  base64
   ox-fast-mcp.mcp
   ox-fast-mcp.mcp.shared)
- (modules exceptions utils)
+ (modules exceptions utils oauth2 oauth2_middleware crypto_utils)
  (preprocess
   (pps ppx_jane)))

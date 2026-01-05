@@ -60,20 +60,26 @@ type oauth_metadata = {
   registration_endpoint : string option; [@yojson.option]
   scopes_supported : string list option; [@yojson.option]
   response_types_supported : string list;
-  response_modes_supported : [ `Query | `Fragment ] list option; [@yojson.option]
+  response_modes_supported : [ `Query | `Fragment ] list option;
+      [@yojson.option]
   grant_types_supported : string list option; [@yojson.option]
   token_endpoint_auth_methods_supported : string list option; [@yojson.option]
-  token_endpoint_auth_signing_alg_values_supported : unit option; [@yojson.option]
+  token_endpoint_auth_signing_alg_values_supported : unit option;
+      [@yojson.option]
   service_documentation : string option; [@yojson.option]
   ui_locales_supported : string list option; [@yojson.option]
   op_policy_uri : string option; [@yojson.option]
   op_tos_uri : string option; [@yojson.option]
   revocation_endpoint : string option; [@yojson.option]
-  revocation_endpoint_auth_methods_supported : string list option; [@yojson.option]
-  revocation_endpoint_auth_signing_alg_values_supported : unit option; [@yojson.option]
+  revocation_endpoint_auth_methods_supported : string list option;
+      [@yojson.option]
+  revocation_endpoint_auth_signing_alg_values_supported : unit option;
+      [@yojson.option]
   introspection_endpoint : string option; [@yojson.option]
-  introspection_endpoint_auth_methods_supported : string list option; [@yojson.option]
-  introspection_endpoint_auth_signing_alg_values_supported : unit option; [@yojson.option]
+  introspection_endpoint_auth_methods_supported : string list option;
+      [@yojson.option]
+  introspection_endpoint_auth_signing_alg_values_supported : unit option;
+      [@yojson.option]
   code_challenge_methods_supported : string list option; [@yojson.option]
   client_id_metadata_document_supported : bool option; [@yojson.option]
 }

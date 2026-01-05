@@ -1,15 +1,19 @@
-open Lwt.Syntax
-open Mcp_types
-open Mcp_shared
-open Types
-open Ox_fast_mcp.Mcp
+open Core
+open Async
+open Mcp.Types
+open Mcp_shared.Message
 
-let default_client_info = { name = "mcp"; version = "0.1.0" }
+let default_client_info = { 
+  version = "0.1.0";
+  website_url = None;
+  icons = None;
+  base_metadata = { name = "mcp"; title = None };
+}
 
 type t = {
-  read_stream : (session_message, exn) result Lwt_stream.t;
-  write_stream : session_message Lwt_stream.t;
-  read_timeout : float option;
+  read_stream : session_message Pipe.Reader.t;
+  write_stream : session_message Pipe.Writer.t;
+  read_timeout : Time_ns.Span.t option;
   sampling_callback : sampling_fn option;
   elicitation_callback : elicitation_fn option;
   list_roots_callback : list_roots_fn option;
@@ -20,44 +24,60 @@ type t = {
   mutable initialized : bool;
 }
 
-and progress_fn = float -> float option -> string option -> unit Lwt.t
+and request_context = {
+  req_id : string;
+  req_meta : Mcp_shared.Message.server_message_metadata option;
+  session : t;
+  lifespan_context : Yojson.Safe.t option;
+}
+
+and ('req, 'res) request_responder = {
+  request_id : string;
+  request_meta : Mcp_shared.Message.server_message_metadata option;
+  request : 'req;
+  respond : 'res -> unit Deferred.t;
+}
+
+and progress_fn = float -> float option -> string option -> unit Deferred.t
 
 and sampling_fn =
   request_context ->
   create_message_request_params ->
-  (create_message_result, error_data) result Lwt.t
+  (create_message_result, error_data) Result.t Deferred.t
 
 and elicitation_fn =
   request_context ->
   elicit_request_params ->
-  (elicit_result, error_data) result Lwt.t
+  (elicit_result, error_data) Result.t Deferred.t
 
 and list_roots_fn =
-  request_context -> (list_roots_result, error_data) result Lwt.t
+  request_context -> (list_roots_result, error_data) Result.t Deferred.t
 
-and logging_fn = logging_message_notification_params -> unit Lwt.t
+and logging_fn = logging_message_notification_params -> unit Deferred.t
 
 and message_handler =
   [ `Request of (server_request, client_result) request_responder
   | `Notification of server_notification
   | `Exception of exn ] ->
-  unit Lwt.t
+  unit Deferred.t
 
-let default_message_handler _ = Lwt.return_unit
+let default_message_handler _ = return ()
+
+let invalid_request_error = -32600
 
 let default_sampling_callback _ctx _params =
-  Lwt.return
-    (Error { code = invalid_request; message = "Sampling not supported" })
+  return
+    (Error { code = invalid_request_error; message = "Sampling not supported"; data = None })
 
 let default_elicitation_callback _ctx _params =
-  Lwt.return
-    (Error { code = invalid_request; message = "Elicitation not supported" })
+  return
+    (Error { code = invalid_request_error; message = "Elicitation not supported"; data = None })
 
 let default_list_roots_callback _ctx =
-  Lwt.return
-    (Error { code = invalid_request; message = "List roots not supported" })
+  return
+    (Error { code = invalid_request_error; message = "List roots not supported"; data = None })
 
-let default_logging_callback _params = Lwt.return_unit
+let default_logging_callback _params = return ()
 let logger = Logs.Src.create "client" ~doc:"Client session logger"
 
 module Log = (val Logs.src_log logger)
@@ -65,8 +85,8 @@ module Log = (val Logs.src_log logger)
 let create ?read_timeout ?sampling_callback ?elicitation_callback
     ?list_roots_callback ?logging_callback ?message_handler ?client_info () =
   Log.debug (fun m -> m "Creating new client session");
-  let read_stream, write_stream = Lwt_stream.create () in
-  Lwt.return
+  let read_stream, write_stream = Pipe.create () in
+  return
     {
       read_stream;
       write_stream;
@@ -79,7 +99,7 @@ let create ?read_timeout ?sampling_callback ?elicitation_callback
       message_handler =
         Option.value ~default:default_message_handler message_handler;
       client_info = Option.value ~default:default_client_info client_info;
-      tool_output_schemas = Hashtbl.create 32;
+      tool_output_schemas = Hashtbl.create (module String);
       initialized = false;
     }
 
@@ -99,113 +119,94 @@ let error_to_string = function
 
 let with_timeout timeout promise =
   match timeout with
-  | None -> promise
-  | Some t ->
-    let timeout_promise =
-      let* () = Lwt_unix.sleep t in
-      Lwt.return_error (`Timeout "Operation timed out")
-    in
-    Lwt.pick
-      [
-        (let* result = promise in
-         Lwt.return_ok result);
-        timeout_promise;
-      ]
+  | None -> promise >>| Result.return
+  | Some span ->
+    Clock_ns.with_timeout span promise >>| function
+    | `Result r -> Result.return r
+    | `Timeout -> Error (`Timeout "Operation timed out")
 
 let send_request t request expected_type =
-  let request_id = Uuidm.v4_gen (Random.get_state ()) () |> Uuidm.to_string in
-  Log.debug (fun m -> m "Sending request %s" request_id);
-  let request_meta =
-    {
-      timestamp = Unix.gettimeofday ();
-      source = Some "client";
-      target = Some "server";
-    }
-  in
-  let msg =
-    {
-      id = Some request_id;
-      params = Some request;
-      result = None;
-      error = None;
-      meta = Some request_meta;
-    }
-  in
-  Lwt_stream.add msg t.write_stream;
+  let request_id_str = Printf.sprintf "%f-%d" (Unix.gettimeofday ()) (Random.int 1000000) in
+  let request_id = `String request_id_str in
+  Log.debug (fun m -> m "Sending request %s" request_id_str);
+  
+  (* Serialize the request to JSON *)
+  let params_json = request in (* request is already the params, needs to be serialized *)
+  
+  let jsonrpc_req = {
+    Mcp.Types.jsonrpc = "2.0";
+    id = request_id;
+    method_ = ""; (* This will need to come from the request type *)
+    params = Some params_json;
+  } in
+  
+  let msg : Mcp_shared.Message.session_message = {
+    message = `Request jsonrpc_req;
+    metadata = None;
+  } in
+  
+  let%bind () = Pipe.write t.write_stream msg in
   let read_promise =
-    let* response = Lwt_stream.next t.read_stream in
+    let%bind response = Pipe.read t.read_stream in
     match response with
-    | Ok msg when msg.id = Some request_id -> (
-      match (msg.result, msg.error) with
-      | Some result, None ->
+    | `Ok msg -> (
+      match msg.message with
+      | `Response resp when Poly.equal resp.id request_id ->
         Log.debug (fun m ->
-            m "Received successful response for request %s" request_id);
-        Lwt.return_ok result
-      | None, Some error ->
-        Log.warn (fun m -> m "Request %s failed: %s" request_id error.message);
-        Lwt.return_error (`RequestFailed error.message)
-      | None, None ->
+            m "Received successful response for request %s" request_id_str);
+        return (Ok resp.result)
+      | `Error err when Poly.equal err.id request_id ->
+        Log.warn (fun m -> m "Request %s failed: %s" request_id_str err.error.message);
+        return (Error (`RequestFailed err.error.message))
+      | _ ->
         Log.warn (fun m ->
-            m "Invalid response for request %s: no result or error" request_id);
-        Lwt.return_error (`InvalidMessage "No result or error in response")
-      | Some _, Some _ ->
-        Log.warn (fun m ->
-            m "Invalid response for request %s: both result and error present"
-              request_id);
-        Lwt.return_error
-          (`InvalidMessage "Both result and error present in response"))
-    | Ok _ ->
-      Log.warn (fun m ->
-          m "Received response with mismatched ID for request %s" request_id);
-      Lwt.return_error (`InvalidMessage "Mismatched response ID")
-    | Error e ->
+            m "Received response with mismatched ID for request %s" request_id_str);
+        return (Error (`InvalidMessage "Mismatched response ID")))
+    | `Eof ->
       Log.err (fun m ->
-          m "Protocol error for request %s: %s" request_id
-            (Printexc.to_string e));
-      Lwt.return_error (`ProtocolError (Printexc.to_string e))
+          m "Connection closed for request %s" request_id_str);
+      return (Error (`ProtocolError "Connection closed"))
   in
-  let* result = with_timeout t.read_timeout read_promise in
+  let%bind result = with_timeout t.read_timeout read_promise in
   match result with
-  | Ok result -> Lwt.return result
+  | Ok (Ok result) -> return result
+  | Ok (Error err) ->
+    Log.err (fun m ->
+        m "Request %s failed: %s" request_id_str (error_to_string err));
+    raise (Failure (error_to_string err))
   | Error err ->
     Log.err (fun m ->
-        m "Request %s failed: %s" request_id (error_to_string err));
-    Lwt.fail_with (error_to_string err)
+        m "Request %s timed out: %s" request_id_str (error_to_string err));
+    raise (Failure (error_to_string err))
 
 let send_notification t notification =
-  let request_meta =
-    {
-      timestamp = Unix.gettimeofday ();
-      source = Some "client";
-      target = Some "server";
-    }
-  in
-  let msg =
-    {
-      id = None;
-      params = Some notification;
-      result = None;
-      error = None;
-      meta = Some request_meta;
-    }
-  in
-  Lwt_stream.add msg t.write_stream;
-  Lwt.return_unit
+  let jsonrpc_notif = {
+    Mcp.Types.jsonrpc = "2.0";
+    method_ = ""; (* Will need to extract from notification *)
+    params = Some notification;
+  } in
+  
+  let msg : Mcp_shared.Message.session_message = {
+    message = `Notification jsonrpc_notif;
+    metadata = None;
+  } in
+  Pipe.write_without_pushback t.write_stream msg;
+  return ()
 
 let initialize t =
   let sampling =
     match t.sampling_callback with
-    | Some _ -> Some { SamplingCapability.empty with enabled = true }
+    | Some _ -> Some (`Assoc [("enabled", `Bool true)])
     | None -> None
   in
   let elicitation =
     match t.elicitation_callback with
-    | Some _ -> Some { ElicitationCapability.empty with enabled = true }
+    | Some _ -> Some (`Assoc [("enabled", `Bool true)])
     | None -> None
   in
-  let roots =
+  let roots_cap : roots_capability option =
     match t.list_roots_callback with
-    | Some _ -> Some { RootsCapability.empty with list_changed = true }
+    | Some _ -> Some { list_changed = Some true }
     | None -> None
   in
   let request =
@@ -214,23 +215,29 @@ let initialize t =
       params =
         {
           protocol_version = latest_protocol_version;
-          capabilities = { sampling; elicitation; experimental = None; roots };
+          capabilities = { 
+            experimental = None;
+            sampling = sampling;
+            elicitation = elicitation;
+            roots = roots_cap;
+          };
           client_info = t.client_info;
+          request_params = { Request_params.meta = None };
         };
     }
   in
-  let* result = send_request t request initialize_result_of_yojson in
-  if not (List.mem result.protocol_version supported_protocol_versions) then
-    Lwt.fail_with
+  let%bind result = send_request t request initialize_result_of_yojson in
+  if not (List.mem result.protocol_version supported_protocol_versions ~equal:(=)) then
+    raise (Failure
       ("Unsupported protocol version from server: "
-      ^ string_of_int result.protocol_version)
+      ^ Int.to_string result.protocol_version))
   else
-    let* () =
+    let%bind () =
       send_notification t
         { method_ = "notifications/initialized"; params = None }
     in
     t.initialized <- true;
-    Lwt.return result
+    return result
 
 let send_ping t =
   let request = { method_ = "ping"; params = None } in
@@ -281,11 +288,11 @@ let unsubscribe_resource t uri =
 
 let validate_tool_result t name result =
   let rec validate_with_refresh first_try =
-    match Hashtbl.find_opt t.tool_output_schemas name with
+    match Hashtbl.find t.tool_output_schemas name with
     | None when first_try ->
       Log.debug (fun m ->
           m "No schema found for tool %s, refreshing schema cache" name);
-      let* _ = list_tools t () in
+      let%bind _ = list_tools t () in
       validate_with_refresh false
     | None ->
       Log.warn (fun m ->
@@ -293,20 +300,20 @@ let validate_tool_result t name result =
             "Tool %s not listed by server, cannot validate any structured \
              content"
             name);
-      Lwt.return_unit
+      return ()
     | Some None ->
       Log.debug (fun m ->
           m "Tool %s has no schema defined, skipping validation" name);
-      Lwt.return_unit
+      return ()
     | Some (Some schema) -> (
       match result.structured_content with
       | None ->
         Log.err (fun m ->
             m "Tool %s has output schema but returned no structured content"
               name);
-        Lwt.fail_with
+        raise (Failure
           (Printf.sprintf
-             "Tool %s has output schema but returned no structured content" name)
+             "Tool %s has output schema but returned no structured content" name))
       | Some content -> (
         try
           Log.debug (fun m ->
@@ -325,7 +332,7 @@ let validate_tool_result t name result =
           let rec validate_schema schema value =
             match schema with
             | `Assoc props -> (
-              (match List.assoc_opt "type" props with
+              (match List.Assoc.find ~equal:String.equal props "type" with
               | Some (`String typ) ->
                 if not (validate_type typ value) then (
                   let msg = Printf.sprintf "Expected type %s" typ in
@@ -333,19 +340,19 @@ let validate_tool_result t name result =
                       m "Validation error for tool %s: %s" name msg);
                   raise (Invalid_argument msg))
               | _ -> ());
-              (match (List.assoc_opt "properties" props, value) with
+              (match (List.Assoc.find ~equal:String.equal props "properties", value) with
               | Some (`Assoc properties), `Assoc obj ->
                 List.iter
                   (fun (key, prop_schema) ->
-                    match List.assoc_opt key obj with
+                    match List.Assoc.find ~equal:String.equal obj key with
                     | Some v -> validate_schema prop_schema v
                     | None -> (
-                      match List.assoc_opt "required" props with
+                      match List.Assoc.find ~equal:String.equal props "required" with
                       | Some (`List required) ->
                         if
                           List.exists
                             (function
-                              | `String k -> k = key
+                              | `String k -> String.equal k key
                               | _ -> false)
                             required
                         then (
@@ -358,7 +365,7 @@ let validate_tool_result t name result =
                       | _ -> ()))
                   properties
               | _ -> ());
-              match (List.assoc_opt "items" props, value) with
+              match (List.Assoc.find ~equal:String.equal props "items", value) with
               | Some item_schema, `List items ->
                 List.iter (fun item -> validate_schema item_schema item) items
               | _ -> ())
@@ -366,20 +373,20 @@ let validate_tool_result t name result =
           in
           validate_schema schema content;
           Log.debug (fun m -> m "Validation successful for tool %s" name);
-          Lwt.return_unit
+          return ()
         with
         | Invalid_argument msg ->
           Log.err (fun m -> m "Validation error for tool %s: %s" name msg);
-          Lwt.fail_with
+          raise (Failure
             (Printf.sprintf "Invalid structured content returned by tool %s: %s"
-               name msg)
+               name msg))
         | e ->
           Log.err (fun m ->
               m "Schema validation error for tool %s: %s" name
                 (Printexc.to_string e));
-          Lwt.fail_with
+          raise (Failure
             (Printf.sprintf "Invalid schema for tool %s: %s" name
-               (Printexc.to_string e))))
+               (Printexc.to_string e)))))
   in
   validate_with_refresh true
 
@@ -391,38 +398,40 @@ let call_tool t name ?arguments ?read_timeout ?progress_callback () =
       match notification with
       | { method_ = "notifications/progress"; params = Some params } ->
         callback params.progress params.total params.message
-      | _ -> Lwt.return_unit)
-    | None -> Lwt.return_unit
+      | _ -> return ())
+    | None -> return ()
   in
   let rec wait_for_response () =
     let read_promise =
-      let* msg = Lwt_stream.next t.read_stream in
+      let%bind msg = Pipe.read t.read_stream in
       match msg with
-      | Ok
+      | `Ok
           { id = None; params = Some notification; result = None; error = None }
         ->
-        let* () = handle_progress notification in
+        let%bind () = handle_progress notification in
         wait_for_response ()
-      | Ok { id = Some _; result = Some result; error = None } ->
-        Lwt.return_ok result
-      | Ok { error = Some error } ->
-        Lwt.return_error (`RequestFailed error.message)
-      | Error e -> Lwt.return_error (`ProtocolError (Printexc.to_string e))
-      | _ -> Lwt.return_error (`InvalidMessage "Invalid message format")
+      | `Ok { id = Some _; result = Some result; error = None } ->
+        return (Ok result)
+      | `Ok { error = Some error } ->
+        return (Error (`RequestFailed error.message))
+      | `Eof -> return (Error (`ProtocolError "Connection closed"))
+      | _ -> return (Error (`InvalidMessage "Invalid message format"))
     in
-    let* result =
-      with_timeout (Option.map float_of_int read_timeout) read_promise
+    let timeout_span = Option.map read_timeout ~f:(fun ms -> Time.Span.of_ms (Float.of_int ms)) in
+    let%bind result =
+      with_timeout timeout_span read_promise
     in
     match result with
-    | Ok result -> Lwt.return result
-    | Error err -> Lwt.fail_with (error_to_string err)
+    | Ok (Ok result) -> return result
+    | Ok (Error err) -> raise (Failure (error_to_string err))
+    | Error err -> raise (Failure (error_to_string err))
   in
-  let* result = wait_for_response () in
+  let%bind result = wait_for_response () in
   let result = result_to_call_tool_result result in
   if not result.is_error then
-    let* () = validate_tool_result t name result in
-    Lwt.return result
-  else Lwt.return result
+    let%bind () = validate_tool_result t name result in
+    return result
+  else return result
 
 let list_prompts t ?cursor () =
   let request =
@@ -472,12 +481,12 @@ let list_tools t ?cursor () =
       params = Option.map (fun c -> { cursor = Some c }) cursor;
     }
   in
-  let* result = send_request t request list_tools_result_of_yojson in
+  let%bind result = send_request t request list_tools_result_of_yojson in
   List.iter
     (fun tool ->
-      Hashtbl.replace t.tool_output_schemas tool.name tool.output_schema)
+      Hashtbl.set t.tool_output_schemas ~key:tool.name ~data:tool.output_schema)
     result.tools;
-  Lwt.return result
+  return result
 
 let send_roots_list_changed t =
   let notification =
@@ -485,11 +494,13 @@ let send_roots_list_changed t =
   in
   send_notification t notification
 
+
+
 let _received_request t responder =
   let ctx =
     {
-      request_id = responder.request_id;
-      meta = responder.request_meta;
+      req_id = responder.request_id;
+      req_meta = responder.request_meta;
       session = t;
       lifespan_context = None;
     }
@@ -498,7 +509,7 @@ let _received_request t responder =
   | CreateMessageRequest { params } -> (
     match t.sampling_callback with
     | Some callback ->
-      let* response = callback ctx params in
+      let%bind response = callback ctx params in
       let client_response =
         match response with
         | Ok result -> ClientResult { root = result }
@@ -508,11 +519,11 @@ let _received_request t responder =
     | None ->
       responder.respond
         (ErrorData
-           { code = invalid_request; message = "Sampling not supported" }))
+           { code = invalid_request; message = "Sampling not supported"; data = None }))
   | ElicitRequest { params } -> (
     match t.elicitation_callback with
     | Some callback ->
-      let* response = callback ctx params in
+      let%bind response = callback ctx params in
       let client_response =
         match response with
         | Ok result -> ClientResult { root = result }
@@ -522,11 +533,11 @@ let _received_request t responder =
     | None ->
       responder.respond
         (ErrorData
-           { code = invalid_request; message = "Elicitation not supported" }))
+           { code = invalid_request; message = "Elicitation not supported"; data = None }))
   | ListRootsRequest -> (
     match t.list_roots_callback with
     | Some callback ->
-      let* response = callback ctx in
+      let%bind response = callback ctx in
       let client_response =
         match response with
         | Ok result -> ClientResult { root = result }
@@ -536,14 +547,14 @@ let _received_request t responder =
     | None ->
       responder.respond
         (ErrorData
-           { code = invalid_request; message = "List roots not supported" }))
+           { code = invalid_request; message = "List roots not supported"; data = None }))
   | PingRequest -> responder.respond (ClientResult { root = EmptyResult })
 
 let _received_notification t notification =
   Log.debug (fun m -> m "Received notification: %s" notification.method_);
   match notification.root with
   | LoggingMessageNotification { params } ->
-    let* () = t.logging_callback params in
+    let%bind () = t.logging_callback params in
     (match notification.meta with
     | Some meta ->
       Log.debug (fun m ->
@@ -552,15 +563,15 @@ let _received_notification t notification =
             (Option.value ~default:"unknown" meta.target)
             meta.timestamp)
     | None -> Log.debug (fun m -> m "No meta information in notification"));
-    Lwt.return_unit
+    return ()
   | _ ->
     Log.debug (fun m -> m "Ignoring unknown notification type");
-    Lwt.return_unit
+    return ()
 
 let rec _handle_incoming t =
-  let* msg = Lwt_stream.next t.read_stream in
+  let%bind msg = Pipe.read t.read_stream in
   match msg with
-  | Ok
+  | `Ok
       { id = Some id; params = Some request; result = None; error = None; meta }
     ->
     let responder =
@@ -570,29 +581,21 @@ let rec _handle_incoming t =
         request;
         respond =
           (fun response ->
-            let response_meta =
-              {
-                timestamp = Unix.gettimeofday ();
-                source = Some "client";
-                target = Some "server";
-              }
-            in
-            Lwt_stream.add
+            Pipe.write_without_pushback t.write_stream
               {
                 id = Some id;
                 params = None;
                 result = Some response;
                 error = None;
-                meta = Some response_meta;
-              }
-              t.write_stream;
-            Lwt.return_unit);
+                meta = None;
+              };
+            return ());
       }
     in
-    let* () = t.message_handler (`Request responder) in
-    let* () = _received_request t responder in
+    let%bind () = t.message_handler (`Request responder) in
+    let%bind () = _received_request t responder in
     _handle_incoming t
-  | Ok
+  | `Ok
       {
         id = None;
         params = Some notification;
@@ -601,18 +604,18 @@ let rec _handle_incoming t =
         meta;
       } ->
     let notification = { notification with meta } in
-    let* () = t.message_handler (`Notification notification) in
-    let* () = _received_notification t notification in
+    let%bind () = t.message_handler (`Notification notification) in
+    let%bind () = _received_notification t notification in
     _handle_incoming t
-  | Error exn ->
-    let* () = t.message_handler (`Exception exn) in
-    Lwt.fail exn
+  | `Eof ->
+    let%bind () = t.message_handler (`Exception (Failure "Connection closed")) in
+    raise (Failure "Connection closed")
   | _ ->
-    let* () =
+    let%bind () =
       t.message_handler (`Exception (Failure "Invalid message format"))
     in
     _handle_incoming t
 
 let start t =
-  if not t.initialized then Lwt.fail_with "Session not initialized"
+  if not t.initialized then raise (Failure "Session not initialized")
   else _handle_incoming t

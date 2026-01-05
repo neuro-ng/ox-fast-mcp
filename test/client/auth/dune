@@ -1,13 +1,16 @@
 (library
  (name test_bearer)
- (modules test_bearer)
+ (modules test_bearer test_oauth)
  (libraries
   base
   core
+  async
+  logs
   expect_test_helpers_core
   cohttp
   cohttp-async
   ox-fast-mcp.client_auth
+  ox-fast-mcp.mcp.shared
   ox-fast-mcp.utilities)
  (inline_tests)
  (preprocess
