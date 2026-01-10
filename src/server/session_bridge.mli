@@ -1,19 +1,17 @@
-(** Session Bridge Module Interface
+(** Session Bridge Module - Now just a direct pass-through
 
-    Provides Lwt/Async conversion utilities and session management stubs. *)
+    Since ServerSession has been migrated to Async, this module now simply
+    re-exports the session functions without any Lwt/Async bridging. *)
 
 open! Core
 open! Async
 
-val lwt_to_async : 'a Lwt.t -> 'a Deferred.t
-(** Convert Lwt promise to Async Deferred **)
+(** Async wrapper for ServerSession
 
-val async_to_lwt : 'a Deferred.t -> 'a Lwt.t
-(** Convert Async Deferred to Lwt promise *)
-
-(** Async session wrapper - stub implementation *)
+    Now that ServerSession is Async-native, this is just a direct pass-through. *)
 module Async_session : sig
-  type t
+  type t = Mcp_server.Session.t
+  (** Session type *)
 
   val send_log_message :
     t ->
@@ -22,7 +20,8 @@ module Async_session : sig
     ?logger:string ->
     ?related_request_id:Mcp.Types.request_id ->
     unit ->
-    unit Deferred.t
+    unit Async.Deferred.t
+  (** Send log message *)
 
   val send_progress_notification :
     t ->
@@ -32,12 +31,20 @@ module Async_session : sig
     ?message:string ->
     ?related_request_id:Mcp.Types.request_id ->
     unit ->
-    unit Deferred.t
+    unit Async.Deferred.t
+  (** Send progress notification *)
 
-  val send_resource_list_changed : t -> unit Deferred.t
-  val send_tool_list_changed : t -> unit Deferred.t
-  val send_prompt_list_changed : t -> unit Deferred.t
-  val send_resource_updated : t -> uri:Uri.t -> unit Deferred.t
+  val send_resource_list_changed : t -> unit Async.Deferred.t
+  (** Send resource list changed *)
+
+  val send_tool_list_changed : t -> unit Async.Deferred.t
+  (** Send tool list changed *)
+
+  val send_prompt_list_changed : t -> unit Async.Deferred.t
+  (** Send prompt list changed *)
+
+  val send_resource_updated : t -> uri:Uri.t -> unit Async.Deferred.t
+  (** Send resource updated notification *)
 
   val create_message :
     t ->
@@ -51,17 +58,35 @@ module Async_session : sig
     ?model_preferences:Mcp.Types.model_preferences ->
     ?related_request_id:Mcp.Types.request_id ->
     unit ->
-    Mcp.Types.client_request Deferred.t
+    Mcp.Types.client_request Async.Deferred.t
+  (** Create message / sampling *)
 
   val elicit :
     t ->
     message:string ->
-    requested_schema:Yojson.Safe.t ->
+    requested_schema:Mcp.Types.elicit_requested_schema ->
     ?related_request_id:Mcp.Types.request_id ->
     unit ->
-    Mcp.Types.client_request Deferred.t
+    Mcp.Types.client_request Async.Deferred.t
+  (** Elicit *)
 
-  val list_roots : t -> Mcp.Types.client_request Deferred.t
-  val send_ping : t -> Mcp.Types.client_request Deferred.t
+  val list_roots : t -> Mcp.Types.client_request Async.Deferred.t
+  (** List roots *)
+
+  val send_ping : t -> Mcp.Types.client_request Async.Deferred.t
+  (** Send ping *)
+
   val check_client_capability : t -> Mcp.Types.client_capabilities -> bool
+  (** Check client capability *)
+
+  val incoming_messages :
+    t ->
+    [ `Request of
+      ( Mcp.Types.client_request,
+        Mcp.Types.server_result )
+      Mcp_shared.Session.Request_responder.t
+    | `Notification of Mcp.Types.client_notification
+    | `Error of exn ]
+    Async.Pipe.Reader.t
+  (** Get incoming message stream *)
 end

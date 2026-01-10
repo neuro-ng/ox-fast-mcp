@@ -1,0 +1,26 @@
+(library
+ (name test_debug)
+ (modules test_debug)
+ (inline_tests)
+ (libraries
+  core
+  async
+  expect_test_helpers_core
+  ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.client
+  ox-fast-mcp.mcp.shared)
+ (preprocess
+  (pps ppx_jane ppx_expect)))
+
+(library
+ (name test_session_group)
+ (modules test_session_group)
+ (inline_tests)
+ (libraries
+  core
+  async
+  expect_test_helpers_core
+  ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.client)
+ (preprocess
+  (pps ppx_jane ppx_expect)))

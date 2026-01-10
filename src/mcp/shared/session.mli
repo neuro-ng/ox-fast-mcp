@@ -1,7 +1,8 @@
 open Core
+open Async
 module Types = Mcp.Types
 
-type progress_fn = float -> float option -> string option -> unit Lwt.t
+type progress_fn = float -> float option -> string option -> unit Deferred.t
 (** Progress notification callback type *)
 
 (** Request responder module *)
@@ -20,14 +21,14 @@ module Request_responder : sig
     ?request_meta:Types.meta ->
     request:'req ->
     ?message_metadata:Message.message_metadata ->
-    on_complete:(('req, 'res) t -> unit Lwt.t) ->
+    on_complete:(('req, 'res) t -> unit Deferred.t) ->
     ('req, 'res) t
 
   val with_responder :
-    ('req, 'res) t -> (('req, 'res) t -> 'a Lwt.t) -> 'a Lwt.t
+    ('req, 'res) t -> (('req, 'res) t -> 'a Deferred.t) -> 'a Deferred.t
 
-  val respond : ('req, 'res) t -> 'res -> unit Lwt.t
-  val cancel : ('req, 'res) t -> unit Lwt.t
+  val respond : ('req, 'res) t -> 'res -> unit Deferred.t
+  val cancel : ('req, 'res) t -> unit Deferred.t
   val in_flight : ('req, 'res) t -> bool
   val is_cancelled : ('req, 'res) t -> bool
 end
@@ -35,8 +36,8 @@ end
 (** Base session module *)
 module Base_session : sig
   type ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t = {
-    read_stream : Message.session_message Lwt_stream.t;
-    write_stream : Message.session_message -> unit Lwt.t;
+    read_stream : Message.session_message Pipe.Reader.t;
+    write_stream : Message.session_message -> unit Deferred.t;
     mutable request_id : int;
     receive_request_type : 'recv_req; (* Type info for request validation *)
     receive_notification_type : 'recv_notif;
@@ -51,8 +52,8 @@ module Base_session : sig
   }
 
   val create :
-    read_stream:Message.session_message Lwt_stream.t ->
-    write_stream:(Message.session_message -> unit Lwt.t) ->
+    read_stream:Message.session_message Pipe.Reader.t ->
+    write_stream:(Message.session_message -> unit Deferred.t) ->
     receive_request_type:'recv_req ->
     receive_notification_type:'recv_notif ->
     ?read_timeout:float ->
@@ -61,8 +62,9 @@ module Base_session : sig
 
   val with_session :
     ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t ->
-    (('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t -> 'a Lwt.t) ->
-    'a Lwt.t
+    (('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t ->
+    'a Deferred.t) ->
+    'a Deferred.t
 
   val send_request :
     ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t ->
@@ -71,14 +73,14 @@ module Base_session : sig
     ?metadata:Message.message_metadata ->
     ?progress_callback:progress_fn ->
     unit ->
-    'recv_req Lwt.t
+    'recv_req Deferred.t
 
   val send_notification :
     ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t ->
     'send_notif ->
     ?related_request_id:Types.request_id ->
     unit ->
-    unit Lwt.t
+    unit Deferred.t
 
   val send_progress_notification :
     ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t ->
@@ -87,23 +89,23 @@ module Base_session : sig
     ?total:float ->
     ?message:string ->
     unit ->
-    unit Lwt.t
+    unit Deferred.t
 
   val received_request :
     ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t ->
     ('recv_req, 'send_res) Request_responder.t ->
-    unit Lwt.t
+    unit Deferred.t
   (** Protected methods that can be overridden by inheritors *)
 
   val received_notification :
     ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t ->
     'recv_notif ->
-    unit Lwt.t
+    unit Deferred.t
 
   val handle_incoming :
     ('send_req, 'send_notif, 'send_res, 'recv_req, 'recv_notif) t ->
     [> `Request of ('recv_req, 'send_res) Request_responder.t
     | `Notification of 'recv_notif
     | `Error of exn ] ->
-    unit Lwt.t
+    unit Deferred.t
 end

@@ -60,7 +60,7 @@ type storage_wrapper =
 
 type oauth_context = {
   server_url : string;
-  client_metadata : Mcp_shared.Auth.oauth_client_metadata;
+  mutable client_metadata : Mcp_shared.Auth.oauth_client_metadata;
   storage : storage_wrapper;
   redirect_handler : (string -> unit Deferred.t) option;
   callback_handler : (unit -> (string * string option) Deferred.t) option;
@@ -499,19 +499,100 @@ let refresh_access_token context =
         return (Error (sprintf "Token refresh failed: %s" (Exn.to_string exn))))
     )
 
-(** NOTE: Full OAuth flow implementation stubbed - requires async generator
-    pattern See oauth2.todo for details on missing functionality:
-    - Async auth flow with yield pattern
-    - Protected resource discovery loop
-    - OAuth metadata discovery loop
-    - Client registration flow
-    - Authorization code exchange
-    - Token refresh on 401
-    - Insufficient scope handling on 403
+(** Handle 401 Unauthorized response - Full OAuth flow coordination *)
+let handle_unauthorized_response t response =
+  let context = t.context in
 
-    These require significant async coordination that differs from Python's
-    AsyncGenerator pattern. A full implementation would need custom middleware
-    for Cohttp/HTTP client integration. *)
+  (* 1. Extract resource metadata URL from WWW-Authenticate *)
+  let www_auth_url_opt =
+    Utils.extract_resource_metadata_from_www_auth response
+  in
 
-let stub_async_auth_flow _t _request =
-  failwith "OAuth2 async auth flow not fully implemented - see oauth2.todo"
+  (* 2. Discover protected resource metadata *)
+  let%bind prm_opt =
+    discover_protected_resource_metadata www_auth_url_opt context.server_url
+  in
+
+  match prm_opt with
+  | None -> return (Error "Failed to discover protected resource metadata")
+  | Some prm -> (
+    context.protected_resource_metadata <- Some prm;
+
+    (* 3. Discover OAuth authorization server metadata *)
+    match prm.authorization_servers with
+    | [] -> return (Error "No authorization servers found")
+    | auth_server :: _ -> (
+      let%bind oasm_opt =
+        discover_oauth_authorization_server_metadata (Some auth_server)
+          context.server_url
+      in
+
+      match oasm_opt with
+      | None -> return (Error "Failed to discover OAuth metadata")
+      | Some oasm -> (
+        context.oauth_metadata <- Some oasm;
+
+        (* 4. Register client or use CIMD *)
+        let%bind client_info_opt = register_client context in
+        match client_info_opt with
+        | None -> return (Error "Failed to register client")
+        | Some client_info -> (
+          context.client_info <- Some client_info;
+
+          (* 5. Perform authorization code grant *)
+          let%bind auth_result = perform_authorization_code_grant context in
+
+          match auth_result with
+          | Error err -> return (Error err)
+          | Ok (auth_code, code_verifier) -> (
+            (* 6. Exchange authorization code for tokens *)
+            let%bind token_result =
+              exchange_authorization_code context auth_code code_verifier
+            in
+
+            match token_result with
+            | Error err -> return (Error err)
+            | Ok tokens ->
+              (* Store tokens *)
+              context.current_tokens <- Some tokens;
+              update_token_expiry context tokens;
+              let (Storage (module_storage, storage_impl)) = context.storage in
+              let module Storage =
+                (val module_storage : Token_storage with type t = _)
+              in
+              let%bind () = Storage.set_tokens storage_impl tokens in
+              return (Ok ()))))))
+
+(** Handle 403 Forbidden with insufficient_scope *)
+let handle_insufficient_scope_response t response =
+  let context = t.context in
+
+  (* Extract required scope from WWW-Authenticate *)
+  match Utils.extract_scope_from_www_auth response with
+  | None -> return (Error "No scope in 403 response")
+  | Some new_scope -> (
+    (* Update client metadata with new scope *)
+    context.client_metadata <-
+      { context.client_metadata with scope = Some new_scope };
+
+    (* Re-authorize with new scope *)
+    let%bind auth_result = perform_authorization_code_grant context in
+
+    match auth_result with
+    | Error err -> return (Error err)
+    | Ok (auth_code, code_verifier) -> (
+      let%bind token_result =
+        exchange_authorization_code context auth_code code_verifier
+      in
+
+      match token_result with
+      | Error err -> return (Error err)
+      | Ok tokens ->
+        context.current_tokens <- Some tokens;
+        update_token_expiry context tokens;
+        let (Storage (module_storage, storage_impl)) = context.storage in
+        let module Storage =
+          (val module_storage : Token_storage with type t = _)
+        in
+        let%bind () = Storage.set_tokens storage_impl tokens in
+        return (Ok ())))

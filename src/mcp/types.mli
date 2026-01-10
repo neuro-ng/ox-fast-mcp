@@ -287,7 +287,8 @@ type initialized_notification = Notification_params.t option notification
 [@@deriving yojson, compare, sexp]
 
 (* Ping *)
-type ping_request = Request_params.t option request [@@deriving yojson, compare, sexp]
+type ping_request = Request_params.t option request
+[@@deriving yojson, compare, sexp]
 
 (* Progress *)
 type progress_notification_params = {

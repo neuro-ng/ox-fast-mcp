@@ -2,3 +2,17 @@
  (name test_client)
  (modules test_client)
  (libraries base stdio))
+
+(library
+ (name test_session)
+ (modules test_session)
+ (inline_tests)
+ (libraries
+  core
+  async
+  expect_test_helpers_core
+  ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.client
+  ox-fast-mcp.mcp.shared)
+ (preprocess
+  (pps ppx_jane ppx_expect)))

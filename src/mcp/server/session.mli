@@ -19,7 +19,7 @@ type t = {
       Mcp_shared.Session.Request_responder.t
     | `Notification of Mcp.Types.client_notification
     | `Error of exn ]
-    Lwt_stream.t;
+    Async.Pipe.Reader.t;
   mutable message_handler :
     t ->
     [ `Request of
@@ -28,13 +28,13 @@ type t = {
       Mcp_shared.Session.Request_responder.t
     | `Notification of Mcp.Types.client_notification
     | `Error of exn ] ->
-    unit Lwt.t;
+    unit Async.Deferred.t;
 }
 (** Server session type *)
 
 val create :
-  read_stream:Mcp_shared.Message.session_message Lwt_stream.t ->
-  write_stream:(Mcp_shared.Message.session_message -> unit Lwt.t) ->
+  read_stream:Mcp_shared.Message.session_message Async.Pipe.Reader.t ->
+  write_stream:(Mcp_shared.Message.session_message -> unit Async.Deferred.t) ->
   init_options:Models.initialization_options ->
   ?stateless:bool ->
   unit ->
@@ -51,10 +51,10 @@ val send_log_message :
   ?logger:string ->
   ?related_request_id:Mcp.Types.request_id ->
   unit ->
-  unit Lwt.t
+  unit Async.Deferred.t
 (** Send a log message notification *)
 
-val send_resource_updated : t -> uri:Uri.t -> unit Lwt.t
+val send_resource_updated : t -> uri:Uri.t -> unit Async.Deferred.t
 (** Send a resource updated notification *)
 
 val create_message :
@@ -69,10 +69,10 @@ val create_message :
   ?model_preferences:Mcp.Types.model_preferences ->
   ?related_request_id:Mcp.Types.request_id ->
   unit ->
-  Mcp.Types.client_request Lwt.t
+  Mcp.Types.client_request Async.Deferred.t
 (** Send a create message request *)
 
-val list_roots : t -> Mcp.Types.client_request Lwt.t
+val list_roots : t -> Mcp.Types.client_request Async.Deferred.t
 (** Send a list roots request *)
 
 val elicit :
@@ -81,10 +81,10 @@ val elicit :
   requested_schema:Mcp.Types.elicit_requested_schema ->
   ?related_request_id:Mcp.Types.request_id ->
   unit ->
-  Mcp.Types.client_request Lwt.t
+  Mcp.Types.client_request Async.Deferred.t
 (** Send an elicit request *)
 
-val send_ping : t -> Mcp.Types.client_request Lwt.t
+val send_ping : t -> Mcp.Types.client_request Async.Deferred.t
 (** Send a ping request *)
 
 val send_progress_notification :
@@ -95,16 +95,16 @@ val send_progress_notification :
   ?message:string ->
   ?related_request_id:Mcp.Types.request_id ->
   unit ->
-  unit Lwt.t
+  unit Async.Deferred.t
 (** Send a progress notification *)
 
-val send_resource_list_changed : t -> unit Lwt.t
+val send_resource_list_changed : t -> unit Async.Deferred.t
 (** Send a resource list changed notification *)
 
-val send_tool_list_changed : t -> unit Lwt.t
+val send_tool_list_changed : t -> unit Async.Deferred.t
 (** Send a tool list changed notification *)
 
-val send_prompt_list_changed : t -> unit Lwt.t
+val send_prompt_list_changed : t -> unit Async.Deferred.t
 (** Send a prompt list changed notification *)
 
 val incoming_messages :
@@ -115,5 +115,5 @@ val incoming_messages :
     Mcp_shared.Session.Request_responder.t
   | `Notification of Mcp.Types.client_notification
   | `Error of exn ]
-  Lwt_stream.t
+  Async.Pipe.Reader.t
 (** Get the incoming messages stream *)

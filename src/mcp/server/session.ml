@@ -32,7 +32,7 @@
     and should not be instantiated directly by users of the MCP framework. *)
 
 open Core
-open Lwt.Syntax
+open Async
 open Mcp.Types
 
 type initialization_state = Not_initialized | Initializing | Initialized
@@ -53,18 +53,18 @@ type t = {
       (client_request, server_result) Mcp_shared.Session.Request_responder.t
     | `Notification of client_notification
     | `Error of exn ]
-    Lwt_stream.t;
+    Pipe.Reader.t;
   mutable message_handler :
     t ->
     [ `Request of
       (client_request, server_result) Mcp_shared.Session.Request_responder.t
     | `Notification of client_notification
     | `Error of exn ] ->
-    unit Lwt.t;
+    unit Deferred.t;
 }
 
 let create ~read_stream ~write_stream ~init_options ?(stateless = false) () =
-  let stream, _push = Lwt_stream.create () in
+  let stream_reader, _stream_writer = Pipe.create () in
   (* Create dummy values of proper types for type witnesses *)
   let dummy_request : client_request =
     `Ping { method_ = "ping"; params = None }
@@ -82,8 +82,8 @@ let create ~read_stream ~write_stream ~init_options ?(stateless = false) () =
     client_params = None;
     init_options;
     base_session;
-    incoming_message_stream = stream;
-    message_handler = (fun _ _ -> Lwt.return_unit);
+    incoming_message_stream = stream_reader;
+    message_handler = (fun _ _ -> return ());
   }
 
 let check_client_capability t (capability : client_capabilities) =
@@ -270,7 +270,8 @@ let handle_request t responder =
   | _ -> (
     match t.initialization_state with
     | Initialized -> t.message_handler t (`Request responder)
-    | _ -> Lwt.fail_with "Received request before initialization was complete")
+    | _ -> raise (Failure "Received request before initialization was complete")
+    )
 
 (** Handle an incoming notification *)
 let handle_notification t notification =
@@ -282,7 +283,8 @@ let handle_notification t notification =
     match t.initialization_state with
     | Initialized -> t.message_handler t (`Notification notification)
     | _ ->
-      Lwt.fail_with "Received notification before initialization was complete")
+      raise (Failure "Received notification before initialization was complete")
+    )
 
 (** Handle an incoming message *)
 let handle_message t msg =
@@ -290,20 +292,17 @@ let handle_message t msg =
   | `Request responder -> handle_request t responder
   | `Notification notif -> handle_notification t notif
   | `Error exn ->
-    let* () =
-      Logs_lwt.err (fun m ->
-          m "Error in message handler: %s" (Exn.to_string exn))
-    in
+    Logs.err (fun m -> m "Error in message handler: %s" (Exn.to_string exn));
     t.message_handler t (`Error exn)
 
 (** Start the message handling loop *)
 let start_message_loop t =
   let rec loop () =
-    let* msg_opt = Lwt_stream.get t.incoming_message_stream in
-    match msg_opt with
-    | None -> Lwt.return_unit
-    | Some msg ->
-      let* () = handle_message t msg in
+    let%bind msg = Pipe.read t.incoming_message_stream in
+    match msg with
+    | `Eof -> return ()
+    | `Ok msg ->
+      let%bind () = handle_message t msg in
       loop ()
   in
   loop ()
@@ -315,6 +314,6 @@ let[@warning "-32"] set_message_handler t handler = t.message_handler <- handler
 let[@warning "-32"] initialize t =
   match t.initialization_state with
   | Not_initialized ->
-    let* () = start_message_loop t in
-    Lwt.return_unit
-  | _ -> Lwt.return_unit
+    let%bind () = start_message_loop t in
+    return ()
+  | _ -> return ()

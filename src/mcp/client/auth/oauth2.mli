@@ -34,7 +34,7 @@ type storage_wrapper =
 
 type oauth_context = private {
   server_url : string;
-  client_metadata : Mcp_shared.Auth.oauth_client_metadata;
+  mutable client_metadata : Mcp_shared.Auth.oauth_client_metadata;
   storage : storage_wrapper;
   redirect_handler : (string -> unit Deferred.t) option;
   callback_handler : (unit -> (string * string option) Deferred.t) option;
@@ -121,5 +121,28 @@ val refresh_access_token :
   oauth_context -> (Mcp_shared.Auth.oauth_token, string) Result.t Deferred.t
 (** Refresh access token using refresh token *)
 
-val stub_async_auth_flow : t -> 'request -> 'response
-(** NOTE: Full async auth flow is stubbed - see oauth2.todo *)
+val handle_unauthorized_response :
+  t -> Cohttp.Response.t -> (unit, string) Result.t Deferred.t
+(** Handle 401 Unauthorized response with full OAuth flow coordination.
+
+    Performs:
+    1. Protected resource metadata discovery
+    2. OAuth authorization server metadata discovery
+    3. Client registration or CIMD
+    4. Authorization code grant with PKCE
+    5. Token exchange
+    6. Token storage
+
+    @param t OAuth client
+    @param response 401 response with WWW-Authenticate header
+    @return Ok () if flow completed successfully, Error msg otherwise *)
+
+val handle_insufficient_scope_response :
+  t -> Cohttp.Response.t -> (unit, string) Result.t Deferred.t
+(** Handle 403 Forbidden with insufficient_scope.
+
+    Per forms re-authorization with updated scope from WWW-Authenticate header.
+
+    @param t OAuth client
+    @param response 403 response with WWW-Authenticate scope
+    @return Ok () if re-authorization succeeded, Error msg otherwise *)
