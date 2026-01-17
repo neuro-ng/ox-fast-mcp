@@ -523,7 +523,8 @@ type tool_result_content = {
   type_ : [ `Tool_result ]; [@key "type"]
   tool_use_id : string; [@key "toolUseId"]
   content : Yojson.Safe.t;
-  structured_content : Yojson.Safe.t option; [@key "structuredContent"] [@default None] [@yojson.option]
+  structured_content : Yojson.Safe.t option;
+      [@key "structuredContent"] [@default None] [@yojson.option]
   is_error : bool option; [@key "isError"] [@default None] [@yojson.option]
   meta : Yojson.Safe.t option; [@key "_meta"] [@default None] [@yojson.option]
 }
@@ -863,21 +864,25 @@ type elicit_complete_notification_params = {
 }
 [@@deriving compare, sexp]
 
-type elicit_complete_notification = elicit_complete_notification_params notification
+type elicit_complete_notification =
+  elicit_complete_notification_params notification
 [@@deriving compare, sexp]
 
 (* Tasks *)
-type task_status = [ `Working | `Input_required | `Completed | `Failed | `Cancelled ]
+type task_status =
+  [ `Working | `Input_required | `Completed | `Failed | `Cancelled ]
 [@@deriving compare, sexp]
 
 type task = {
   task_id : string; [@key "taskId"]
   status : task_status;
-  status_message : string option; [@key "statusMessage"] [@default None] [@yojson.option]
+  status_message : string option;
+      [@key "statusMessage"] [@default None] [@yojson.option]
   created_at : string; [@key "createdAt"]
   last_updated_at : string; [@key "lastUpdatedAt"]
   ttl : int option; [@default None] [@yojson.option]
-  poll_interval : int option; [@key "pollInterval"] [@default None] [@yojson.option]
+  poll_interval : int option;
+      [@key "pollInterval"] [@default None] [@yojson.option]
 }
 [@@deriving compare, sexp]
 
@@ -895,16 +900,19 @@ type get_task_request_params = {
 }
 [@@deriving compare, sexp]
 
-type get_task_request = get_task_request_params request [@@deriving compare, sexp]
+type get_task_request = get_task_request_params request
+[@@deriving compare, sexp]
 
 type get_task_result = {
   task_id : string; [@key "taskId"]
   status : task_status;
-  status_message : string option; [@key "statusMessage"] [@default None] [@yojson.option]
+  status_message : string option;
+      [@key "statusMessage"] [@default None] [@yojson.option]
   created_at : string; [@key "createdAt"]
   last_updated_at : string; [@key "lastUpdatedAt"]
   ttl : int option; [@default None] [@yojson.option]
-  poll_interval : int option; [@key "pollInterval"] [@default None] [@yojson.option]
+  poll_interval : int option;
+      [@key "pollInterval"] [@default None] [@yojson.option]
   result : result; [@to_yojson result_to_yojson] [@of_yojson result_of_yojson]
 }
 [@@deriving compare, sexp]
@@ -917,7 +925,8 @@ type cancel_task_request_params = {
 }
 [@@deriving compare, sexp]
 
-type cancel_task_request = cancel_task_request_params request [@@deriving compare, sexp]
+type cancel_task_request = cancel_task_request_params request
+[@@deriving compare, sexp]
 
 type cancel_task_result = get_task_result [@@deriving compare, sexp]
 
@@ -935,11 +944,13 @@ type list_tasks_result = {
 type task_status_notification_params = {
   task_id : string; [@key "taskId"]
   status : task_status;
-  status_message : string option; [@key "statusMessage"] [@default None] [@yojson.option]
+  status_message : string option;
+      [@key "statusMessage"] [@default None] [@yojson.option]
   created_at : string; [@key "createdAt"]
   last_updated_at : string; [@key "lastUpdatedAt"]
   ttl : int option; [@default None] [@yojson.option]
-  poll_interval : int option; [@key "pollInterval"] [@default None] [@yojson.option]
+  poll_interval : int option;
+      [@key "pollInterval"] [@default None] [@yojson.option]
   notification_params : Notification_params.t;
       [@to_yojson Notification_params.to_yojson]
       [@of_yojson Notification_params.of_yojson]

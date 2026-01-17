@@ -3,9 +3,9 @@ open Async
 module Types = Mcp.Types
 
 (** SSE Protocol Parser for cohttp-async
-    
-    Implements RFC 8388 Server-Sent Events protocol parsing.
-    Designed to work with cohttp-async streaming HTTP responses. *)
+
+    Implements RFC 8388 Server-Sent Events protocol parsing. Designed to work
+    with cohttp-async streaming HTTP responses. *)
 
 (** {1 SSE Event Type} *)
 
@@ -22,22 +22,20 @@ module Event = struct
   let create ?(event_type = "message") ?(id = None) ?(retry = None) data =
     { event_type; data; id; retry }
 
-  (** Parse event data as JSON-RPC message 
-      
+  (** Parse event data as JSON-RPC message
+
       JSON-RPC 2.0 messages are distinguished by their fields:
       - Response: has 'result' field
-      - Error: has 'error' field  
+      - Error: has 'error' field
       - Request: has 'id' and 'method' fields
       - Notification: has 'method' but no 'id' field
-      
-      We handle manual parsing of request_id since ppx_yojson_conv doesn't 
-      correctly handle polymorphic variants for raw JSON integers/strings.
-  *)
+
+      We handle manual parsing of request_id since ppx_yojson_conv doesn't
+      correctly handle polymorphic variants for raw JSON integers/strings. *)
   let parse_jsonrpc t =
     try
       let json = Yojson.Safe.from_string t.data in
       let open Yojson.Safe.Util in
-      
       (* Helper to parse request_id manually *)
       let parse_request_id_field name =
         match member name json with
@@ -45,68 +43,65 @@ module Event = struct
         | `String s -> `String s
         | _ -> failwith (sprintf "Invalid request_id in field '%s'" name)
       in
-      
+
       (* Helper to check if field exists *)
-      let has_field name = 
+      let has_field name =
         match member name json with
         | `Null -> false
         | _ -> true
       in
-      
+
       (* Determine message type based on fields present *)
-      if has_field "result" then begin
+      if has_field "result" then
         (* This is a response *)
         let jsonrpc = member "jsonrpc" json |> to_string in
         let id = parse_request_id_field "id" in
         let result = member "result" json in
         Ok (`Response { Types.jsonrpc; id; result })
-      end
-      else if has_field "error" then begin
+      else if has_field "error" then
         (* This is an error response *)
         let jsonrpc = member "jsonrpc" json |> to_string in
         let id = parse_request_id_field "id" in
         let error = Types.error_data_of_yojson (member "error" json) in
         Ok (`Error { Types.jsonrpc; id; error })
-      end
-      else if has_field "method" then begin
+      else if has_field "method" then
         (* Has method field - either request or notification *)
         let method_ = member "method" json |> to_string in
         let jsonrpc = member "jsonrpc" json |> to_string in
-        let params = 
+        let params =
           match member "params" json with
           | `Null -> None
           | p -> Some p
         in
-        
-        if has_field "id" then begin
+
+        if has_field "id" then
           (* Request: has both id and method *)
           let id = parse_request_id_field "id" in
           Ok (`Request { Types.jsonrpc; id; method_; params })
-        end
-        else begin
+        else
           (* Notification: has method but no id *)
           Ok (`Notification { Types.jsonrpc; method_; params })
-        end
-      end
       else
-        Or_error.error_string "Invalid JSON-RPC message: missing required fields"
+        Or_error.error_string
+          "Invalid JSON-RPC message: missing required fields"
     with
     | Yojson.Json_error msg ->
       Or_error.error_string (sprintf "JSON parse error: %s" msg)
-    | exn -> 
-      Or_error.error_string (sprintf "Failed to parse JSON-RPC: %s" (Exn.to_string exn))
+    | exn ->
+      Or_error.error_string
+        (sprintf "Failed to parse JSON-RPC: %s" (Exn.to_string exn))
 end
 
 (** {1 SSE Parser} *)
 
 module Parser = struct
-  (** Parser state accumulating fields until a complete event *)
   type state = {
     mutable event_type : string;
     mutable data_lines : string list;
     mutable id : string option;
     mutable retry : int option;
   }
+  (** Parser state accumulating fields until a complete event *)
 
   type t = { mutable state : state }
 
@@ -114,12 +109,7 @@ module Parser = struct
   let create () =
     {
       state =
-        {
-          event_type = "message";
-          data_lines = [];
-          id = None;
-          retry = None;
-        };
+        { event_type = "message"; data_lines = []; id = None; retry = None };
     }
 
   (** Reset parser state for next event *)
@@ -145,27 +135,25 @@ module Parser = struct
       if not (String.is_empty stripped) then state.id <- Some stripped
     | "retry" -> (
       try state.retry <- Some (Int.of_string (String.strip field_value))
-      with _ ->
-        Logs.warn (fun m ->
-            m "Invalid retry value: %s" field_value))
+      with _ -> Logs.warn (fun m -> m "Invalid retry value: %s" field_value))
     | _ ->
       (* Ignore unknown fields per SSE spec *)
       Logs.debug (fun m -> m "Ignoring unknown SSE field: %s" field_name)
 
   (** Feed a single line to the parser, returns completed events
-      
-      Returns a list because a blank line completes an event, so we might
-      have 0 or 1 events per line. *)
+
+      Returns a list because a blank line completes an event, so we might have 0
+      or 1 events per line. *)
   let feed_line t line =
     (* Blank line signals end of event *)
-    if String.is_empty (String.strip line) then
-      if List.is_empty t.state.data_lines then (
+    if String.is_empty (String.strip line) then (
+      if List.is_empty t.state.data_lines then
         (* Blank line with no accumulated data - ignore *)
-        [])
+        []
       else
         let event = build_event t.state in
         reset_state t;
-        [ event ]
+        [ event ])
     else if String.is_prefix line ~prefix:":" then
       (* Comment line - ignore per SSE spec *)
       []
@@ -182,14 +170,15 @@ module Parser = struct
         process_field t.state field_name field_value;
         []
       | None ->
-        (* Field has format "name" with no colon - treat as "name:" with empty value *)
+        (* Field has format "name" with no colon - treat as "name:" with empty
+           value *)
         process_field t.state line "";
         []
 
   (** Parse a streaming HTTP body into SSE events
-      
-      Takes a cohttp-async Body.t and returns a Pipe of parsed events.
-      This is the main entry point for SSE parsing. *)
+
+      Takes a cohttp-async Body.t and returns a Pipe of parsed events. This is
+      the main entry point for SSE parsing. *)
   let parse_stream (body : Cohttp_async.Body.t) : Event.t Pipe.Reader.t =
     let event_reader, event_writer = Pipe.create () in
     let parser = create () in
@@ -228,7 +217,8 @@ module Parser = struct
                  Buffer.add_string line_buffer incomplete;
 
                (* Process complete lines *)
-               Deferred.List.iter complete_lines ~how:`Sequential ~f:(fun line ->
+               Deferred.List.iter complete_lines ~how:`Sequential
+                 ~f:(fun line ->
                    let events = feed_line parser line in
                    Deferred.List.iter events ~how:`Sequential ~f:(fun event ->
                        Pipe.write event_writer event)))));

@@ -179,7 +179,12 @@ let list_roots t =
 
 let elicit t ~message ~requested_schema ?related_request_id () =
   let form_params : elicit_request_form_params =
-    { mode = `Form; message; requested_schema; request_params = { meta = None } }
+    {
+      mode = `Form;
+      message;
+      requested_schema;
+      request_params = { meta = None };
+    }
   in
   let params : elicit_request_params = `Form form_params in
   let request : server_request =

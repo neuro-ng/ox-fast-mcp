@@ -5,8 +5,10 @@
 open Async
 
 type sampling_handler =
-  string list -> (* messages *)
-  Yojson.Safe.t -> (* params *)
+  string list ->
+  (* messages *)
+  Yojson.Safe.t ->
+  (* params *)
   (Yojson.Safe.t, string) result Deferred.t
 (** Simplified sampling handler - takes messages and params, returns JSON result *)
 

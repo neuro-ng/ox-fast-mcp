@@ -25,8 +25,8 @@ let create_callback_from_roots (roots : roots_list list) :
   let converted_roots = convert_roots_list roots in
   fun () -> return converted_roots
 
-let create_callback_from_fn (fn : roots_handler) :
-    unit -> root list Deferred.t =
+let create_callback_from_fn (fn : roots_handler) : unit -> root list Deferred.t
+    =
   fn
 
 let create_callback

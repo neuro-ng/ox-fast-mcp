@@ -92,7 +92,9 @@ let sse_reader ~connection_url ~read_writer ~endpoint_ivar ~headers () =
 
   (* Establish HTTP GET connection for SSE stream *)
   Monitor.try_with (fun () ->
-      let%bind resp, body = Cohttp_async.Client.get ~headers:cohttp_headers uri in
+      let%bind resp, body =
+        Cohttp_async.Client.get ~headers:cohttp_headers uri
+      in
       let status = Cohttp.Response.status resp in
 
       (* Check response status *)
@@ -112,7 +114,8 @@ let sse_reader ~connection_url ~read_writer ~endpoint_ivar ~headers () =
         (* Process SSE events *)
         Pipe.iter event_stream ~f:(fun event ->
             Logs.debug (fun m ->
-                m "Received SSE event: type=%s" event.Sse_protocol.Event.event_type);
+                m "Received SSE event: type=%s"
+                  event.Sse_protocol.Event.event_type);
 
             (* Handle different event types *)
             match event.event_type with
@@ -198,12 +201,17 @@ let post_writer ~endpoint_url ~write_reader ~headers ~timeout () =
 
       match%bind Clock.with_timeout timeout post_deferred with
       | `Timeout ->
-        Logs.err (fun m -> m "POST request timeout after %s" (Time_float.Span.to_string timeout));
+        Logs.err (fun m ->
+            m "POST request timeout after %s"
+              (Time_float.Span.to_string timeout));
         loop ()
       | `Result (Ok (resp, _body)) ->
-        let status_code = Cohttp.Response.status resp |> Cohttp.Code.code_of_status in
+        let status_code =
+          Cohttp.Response.status resp |> Cohttp.Code.code_of_status
+        in
         if status_code >= 200 && status_code < 300 then (
-          Logs.debug (fun m -> m "Client message sent successfully (status %d)" status_code);
+          Logs.debug (fun m ->
+              m "Client message sent successfully (status %d)" status_code);
           loop ())
         else (
           Logs.err (fun m -> m "POST request failed with status %d" status_code);

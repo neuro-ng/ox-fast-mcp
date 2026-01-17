@@ -3,9 +3,9 @@ open Async
 module Types = Mcp.Types
 
 (** SSE Protocol Parser for cohttp-async
-    
-    Implements RFC 8388 Server-Sent Events protocol parsing.
-    Designed to work with cohttp-async streaming HTTP responses. *)
+
+    Implements RFC 8388 Server-Sent Events protocol parsing. Designed to work
+    with cohttp-async streaming HTTP responses. *)
 
 (** {1 SSE Event Type} *)
 
@@ -18,16 +18,12 @@ module Event : sig
   }
   [@@deriving sexp_of]
 
-  (** Create a default event *)
   val create :
-    ?event_type:string ->
-    ?id:string option ->
-    ?retry:int option ->
-    string ->
-    t
+    ?event_type:string -> ?id:string option -> ?retry:int option -> string -> t
+  (** Create a default event *)
 
-  (** Parse event data as JSON-RPC message *)
   val parse_jsonrpc : t -> Types.jsonrpc_message Or_error.t
+  (** Parse event data as JSON-RPC message *)
 end
 
 (** {1 SSE Parser} *)
@@ -35,12 +31,12 @@ end
 module Parser : sig
   type t
 
-  (** Create a new SSE parser *)
   val create : unit -> t
+  (** Create a new SSE parser *)
 
-  (** Feed a single line to the parser, returns completed events *)
   val feed_line : t -> string -> Event.t list
+  (** Feed a single line to the parser, returns completed events *)
 
-  (** Parse a streaming HTTP body into SSE events *)
   val parse_stream : Cohttp_async.Body.t -> Event.t Pipe.Reader.t
+  (** Parse a streaming HTTP body into SSE events *)
 end

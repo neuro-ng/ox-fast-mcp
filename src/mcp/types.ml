@@ -837,11 +837,13 @@ type elicit_complete_notification_params = {
 }
 [@@deriving yojson, compare, sexp]
 
-type elicit_complete_notification = elicit_complete_notification_params notification
+type elicit_complete_notification =
+  elicit_complete_notification_params notification
 [@@deriving yojson, compare, sexp]
 
 (* Tasks *)
-type task_status = [ `Working | `Input_required | `Completed | `Failed | `Cancelled ]
+type task_status =
+  [ `Working | `Input_required | `Completed | `Failed | `Cancelled ]
 [@@deriving yojson, compare, sexp]
 
 type task = {
