@@ -178,11 +178,12 @@ let list_roots t =
   Mcp_shared.Session.Base_session.send_request t.base_session request ()
 
 let elicit t ~message ~requested_schema ?related_request_id () =
-  let params =
-    { message; requested_schema; request_params = { meta = None } }
+  let form_params : elicit_request_form_params =
+    { mode = `Form; message; requested_schema; request_params = { meta = None } }
   in
+  let params : elicit_request_params = `Form form_params in
   let request : server_request =
-    `Elicit { method_ = "prompts/elicit"; params }
+    `Elicit { method_ = "elicitation/create"; params }
   in
   let metadata =
     Option.map related_request_id ~f:(fun id ->

@@ -4,11 +4,14 @@
  (libraries
   core
   async
+  cohttp
+  cohttp-async
   ppx_yojson_conv_lib
   yojson
+  uri
   logs
   ox-fast-mcp.mcp
   ox-fast-mcp.mcp.shared)
- (modules stdio)
+ (modules stdio sse sse_protocol streamable_http websocket)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))

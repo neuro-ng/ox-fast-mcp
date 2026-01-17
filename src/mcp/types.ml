@@ -494,10 +494,37 @@ type audio_content = {
 }
 [@@deriving yojson, compare, sexp]
 
+type tool_use_content = {
+  type_ : [ `Tool_use ]; [@key "type"]
+  name : string;
+  id : string;
+  input : json;
+  meta : json option; [@key "_meta"] [@yojson.option]
+}
+[@@deriving yojson, compare, sexp]
+
+type tool_result_content = {
+  type_ : [ `Tool_result ]; [@key "type"]
+  tool_use_id : string; [@key "toolUseId"]
+  content : json; (* Simplified: content_block list causes circular dep *)
+  structured_content : json option; [@key "structuredContent"] [@yojson.option]
+  is_error : bool option; [@key "isError"] [@yojson.option]
+  meta : json option; [@key "_meta"] [@yojson.option]
+}
+[@@deriving yojson, compare, sexp]
+
+type sampling_message_content_block =
+  [ `Text of text_content
+  | `Image of image_content
+  | `Audio of audio_content
+  | `Tool_use of tool_use_content
+  | `Tool_result of tool_result_content ]
+[@@deriving yojson, compare, sexp]
+
 type sampling_message = {
   role : role;
-  content :
-    [ `Text of text_content | `Image of image_content | `Audio of audio_content ];
+  content : sampling_message_content_block;
+  meta : json option; [@key "_meta"] [@yojson.option]
 }
 [@@deriving yojson, compare, sexp]
 
@@ -767,13 +794,29 @@ type cancelled_notification = cancelled_notification_params notification
 (* Elicitation *)
 type elicit_requested_schema = json [@@deriving yojson, compare, sexp]
 
-type elicit_request_params = {
+type elicit_request_form_params = {
+  mode : [ `Form ]; [@default `Form]
   message : string;
   requested_schema : elicit_requested_schema; [@key "requestedSchema"]
   request_params : Request_params.t;
       [@to_yojson Request_params.to_yojson]
       [@of_yojson Request_params.of_yojson]
 }
+[@@deriving yojson, compare, sexp]
+
+type elicit_request_url_params = {
+  mode : [ `Url ]; [@default `Url]
+  message : string;
+  url : string;
+  elicitation_id : string; [@key "elicitationId"]
+  request_params : Request_params.t;
+      [@to_yojson Request_params.to_yojson]
+      [@of_yojson Request_params.of_yojson]
+}
+[@@deriving yojson, compare, sexp]
+
+type elicit_request_params =
+  [ `Form of elicit_request_form_params | `Url of elicit_request_url_params ]
 [@@deriving yojson, compare, sexp]
 
 type elicit_request = elicit_request_params request
@@ -784,6 +827,102 @@ type elicit_result = {
   content : json option; [@yojson.option]
   result : result; [@to_yojson result_to_yojson] [@of_yojson result_of_yojson]
 }
+[@@deriving yojson, compare, sexp]
+
+type elicit_complete_notification_params = {
+  elicitation_id : string; [@key "elicitationId"]
+  notification_params : Notification_params.t;
+      [@to_yojson Notification_params.to_yojson]
+      [@of_yojson Notification_params.of_yojson]
+}
+[@@deriving yojson, compare, sexp]
+
+type elicit_complete_notification = elicit_complete_notification_params notification
+[@@deriving yojson, compare, sexp]
+
+(* Tasks *)
+type task_status = [ `Working | `Input_required | `Completed | `Failed | `Cancelled ]
+[@@deriving yojson, compare, sexp]
+
+type task = {
+  task_id : string; [@key "taskId"]
+  status : task_status;
+  status_message : string option; [@key "statusMessage"] [@yojson.option]
+  created_at : string; [@key "createdAt"] (* ISO 8601 timestamp *)
+  last_updated_at : string; [@key "lastUpdatedAt"]
+  ttl : int option; [@yojson.option]
+  poll_interval : int option; [@key "pollInterval"] [@yojson.option]
+}
+[@@deriving yojson, compare, sexp]
+
+type create_task_result = {
+  task : task;
+  result : result; [@to_yojson result_to_yojson] [@of_yojson result_of_yojson]
+}
+[@@deriving yojson, compare, sexp]
+
+type get_task_request_params = {
+  task_id : string; [@key "taskId"]
+  request_params : Request_params.t;
+      [@to_yojson Request_params.to_yojson]
+      [@of_yojson Request_params.of_yojson]
+}
+[@@deriving yojson, compare, sexp]
+
+type get_task_request = get_task_request_params request
+[@@deriving yojson, compare, sexp]
+
+type get_task_result = {
+  task_id : string; [@key "taskId"]
+  status : task_status;
+  status_message : string option; [@key "statusMessage"] [@yojson.option]
+  created_at : string; [@key "createdAt"]
+  last_updated_at : string; [@key "lastUpdatedAt"]
+  ttl : int option; [@yojson.option]
+  poll_interval : int option; [@key "pollInterval"] [@yojson.option]
+  result : result; [@to_yojson result_to_yojson] [@of_yojson result_of_yojson]
+}
+[@@deriving yojson, compare, sexp]
+
+type cancel_task_request_params = {
+  task_id : string; [@key "taskId"]
+  request_params : Request_params.t;
+      [@to_yojson Request_params.to_yojson]
+      [@of_yojson Request_params.of_yojson]
+}
+[@@deriving yojson, compare, sexp]
+
+type cancel_task_request = cancel_task_request_params request
+[@@deriving yojson, compare, sexp]
+
+type cancel_task_result = get_task_result [@@deriving yojson, compare, sexp]
+
+type list_tasks_request = paginated_request_params paginated_request
+[@@deriving yojson, compare, sexp]
+
+type list_tasks_result = {
+  tasks : task list;
+  paginated_result : paginated_result;
+      [@to_yojson paginated_result_to_yojson]
+      [@of_yojson paginated_result_of_yojson]
+}
+[@@deriving yojson, compare, sexp]
+
+type task_status_notification_params = {
+  task_id : string; [@key "taskId"]
+  status : task_status;
+  status_message : string option; [@key "statusMessage"] [@yojson.option]
+  created_at : string; [@key "createdAt"]
+  last_updated_at : string; [@key "lastUpdatedAt"]
+  ttl : int option; [@yojson.option]
+  poll_interval : int option; [@key "pollInterval"] [@yojson.option]
+  notification_params : Notification_params.t;
+      [@to_yojson Notification_params.to_yojson]
+      [@of_yojson Notification_params.of_yojson]
+}
+[@@deriving yojson, compare, sexp]
+
+type task_status_notification = task_status_notification_params notification
 [@@deriving yojson, compare, sexp]
 
 (* Message Aggregations *)
@@ -800,7 +939,10 @@ type client_request =
   | `Subscribe of subscribe_request
   | `Unsubscribe of unsubscribe_request
   | `CallTool of call_tool_request
-  | `ListTools of list_tools_request ]
+  | `ListTools of list_tools_request
+  | `GetTask of get_task_request
+  | `CancelTask of cancel_task_request
+  | `ListTasks of list_tasks_request ]
 [@@deriving yojson, compare, sexp]
 
 type client_notification =
@@ -831,7 +973,8 @@ type server_notification =
   | `ResourceUpdated of resource_updated_notification
   | `ResourceListChanged of resource_list_changed_notification
   | `ToolListChanged of tool_list_changed_notification
-  | `PromptListChanged of prompt_list_changed_notification ]
+  | `PromptListChanged of prompt_list_changed_notification
+  | `TaskStatus of task_status_notification ]
 [@@deriving yojson, compare, sexp]
 
 type server_result =
@@ -844,5 +987,8 @@ type server_result =
   | `ListResourceTemplates of list_resource_templates_result
   | `ReadResource of read_resource_result
   | `CallTool of call_tool_result
-  | `ListTools of list_tools_result ]
+  | `ListTools of list_tools_result
+  | `GetTask of get_task_result
+  | `CancelTask of cancel_task_result
+  | `ListTasks of list_tasks_result ]
 [@@deriving yojson, compare, sexp]

@@ -1,11 +1,9 @@
 open Core
-open Mcp.Types
-open Mcp.Shared
-open Lwt.Syntax
+open Async
 
-type progress_handler = float -> float option -> string option -> unit Lwt.t
+type handler = float -> float option -> string option -> unit Deferred.t
 
-let default_progress_handler progress total message =
+let default_handler progress total message =
   let progress_str =
     match total with
     | Some total ->
@@ -24,5 +22,5 @@ let default_progress_handler progress total message =
     | None -> sprintf "Progress: %s" progress_str
   in
 
-  let* () = Logs_lwt.debug (fun m -> m "%s" log_msg) in
-  Lwt.return_unit
+  Logs.debug (fun m -> m "%s" log_msg);
+  return ()

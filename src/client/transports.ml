@@ -6,6 +6,13 @@
 
 open Core
 open Async
+module Mcp_client = Mcp_client
+module Mcp_client_transports = Mcp_client_transports
+module Session = Mcp_client.Session
+module Sse = Mcp_client_transports.Sse
+module Streamable_http = Mcp_client_transports.Streamable_http
+module Stdio = Mcp_client_transports.Stdio
+module Message = Mcp_shared.Message
 
 (** {1 Session Configuration} *)
 
@@ -46,24 +53,8 @@ let default_session_kwargs =
 (** {1 Transport Interface} *)
 
 (** Abstract client session type - placeholder until MCP SDK is available *)
-module type Client_session_intf = sig
-  type t
-
-  val create :
-    read_stream:unit -> write_stream:unit -> session_kwargs -> t Deferred.t
-
-  val close : t -> unit Deferred.t
-end
-
 (** Placeholder for client session *)
-module Client_session : Client_session_intf = struct
-  type t = { id : string }
-
-  let create ~read_stream:_ ~write_stream:_ _kwargs =
-    return { id = "placeholder" }
-
-  let close _t = return ()
-end
+module Client_session = Session
 
 (** {1 HTTP Transport Types} *)
 
@@ -247,14 +238,153 @@ let to_string = function
 
     NOTE: Full implementation requires MCP SDK client modules. This is a stub
     that will be completed when dependencies are available. *)
-let connect_session _transport session_kwargs =
-  Logs.warn (fun m ->
-      m "Transport.connect_session is stubbed - MCP SDK client modules required");
-  return
-    (Ok
-       (Async.Thread_safe.block_on_async_exn (fun () ->
-            Client_session.create ~read_stream:() ~write_stream:()
-              session_kwargs)))
+(** Connect to transport and create session *)
+let connect_session transport _session_kwargs =
+  let pipe_adapter_read raw_reader =
+    let r, w = Pipe.create () in
+    don't_wait_for
+      (Pipe.transfer raw_reader w ~f:(function
+        | `Message msg -> { Message.message = msg; metadata = None }
+        | `Error e ->
+            Logs.err (fun m -> m "Transport error: %s" (Error.to_string_hum e));
+            (* Create an error notification or close? For now we might just drop or throw? 
+               Actually we can't easily synthesize a session_message from Error.t here 
+               unless we wrap it in a pseudo notification or just close. *)
+            {
+              Message.message =
+                `Notification
+                  {
+                    Mcp.Types.jsonrpc = "2.0";
+                    method_ = "transport_error";
+                    params =
+                      Some
+                        (`Assoc
+                           [ ("error", `String (Error.to_string_hum e)) ]);
+                  };
+              metadata = None;
+            }));
+    r
+  in
+  let pipe_adapter_write () =
+    let r, w = Pipe.create () in
+    let raw_r, raw_w = Pipe.create () in
+    don't_wait_for
+      (Pipe.transfer r raw_w ~f:(fun session_msg -> session_msg.Message.message));
+    (raw_r, w)
+  in
+  match transport with
+  | Sse_transport config ->
+      let sse_config =
+        Sse.create_config ~url:config.url
+          ~headers:config.headers (* TODO: Handle auth headers *)
+          ?sse_read_timeout:
+            (Option.map config.sse_read_timeout ~f:Core.Time_ns.Span.to_span_float_round_nearest)
+          ()
+      in
+      let t = Sse.connect sse_config in
+      let read_stream = pipe_adapter_read (Sse.read_stream t) in
+      let raw_write_read, write_stream = pipe_adapter_write () in
+      don't_wait_for (Pipe.transfer raw_write_read (Sse.write_stream t) ~f:Fn.id);
+      return
+        (Ok
+           (Client_session.create_from_pipes ~read_stream ~write_stream
+              (* TODO: Map callbacks from session_kwargs *)
+              ()))
+  | Streamable_http_transport config ->
+      let http_config =
+        Streamable_http.create_config ~url:config.url
+          ~headers:config.headers (* TODO: Handle auth *)
+          ?sse_read_timeout:
+            (Option.map config.sse_read_timeout ~f:Core.Time_ns.Span.to_span_float_round_nearest)
+          ()
+      in
+      let t = Streamable_http.connect http_config in
+      let read_stream =
+        let stream = Streamable_http.read_stream t in
+        pipe_adapter_read
+          (Pipe.map stream ~f:(function
+            | `Message m -> `Message m
+            | `Error e ->
+                `Error (Error.of_string (Streamable_http.Error.to_string e))))
+      in
+      let raw_write_read, write_stream = pipe_adapter_write () in
+      don't_wait_for
+        (Pipe.transfer raw_write_read (Streamable_http.write_stream t) ~f:Fn.id);
+      return
+        (Ok
+           (Client_session.create_from_pipes ~read_stream ~write_stream
+              (* TODO: Map callbacks *)
+               ()))
+  | Stdio_transport config ->
+      let params =
+        {
+          Stdio.command = config.command;
+          args = config.args;
+          env = config.env;
+          cwd = config.cwd;
+          encoding = "utf-8";
+          encoding_error_handler = `Replace;
+        }
+      in
+      let%bind read_pipe, write_pipe =
+        Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
+      in
+      return
+        (Ok
+           (Client_session.create_from_pipes ~read_stream:read_pipe
+              ~write_stream:write_pipe ()))
+  | Python_stdio_transport config ->
+      let args =
+        config.script_path :: Option.value config.args ~default:[]
+      in
+      let params =
+        {
+          Stdio.command = config.python_cmd;
+          args;
+          env = config.env;
+          cwd = config.cwd;
+          encoding = "utf-8";
+          encoding_error_handler = `Replace;
+        }
+      in
+      let%bind read_pipe, write_pipe =
+        Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
+      in
+      return
+        (Ok
+           (Client_session.create_from_pipes ~read_stream:read_pipe
+              ~write_stream:write_pipe ()))
+  | Node_stdio_transport config ->
+      (* Node transport uses same config structure as Python, but python_cmd is "node" *)
+      let args =
+        config.script_path :: Option.value config.args ~default:[]
+      in
+      let params =
+        {
+          Stdio.command = config.python_cmd; (* "node" for Node transport *)
+          args;
+          env = config.env;
+          cwd = config.cwd;
+          encoding = "utf-8";
+          encoding_error_handler = `Replace;
+        }
+      in
+      let%bind read_pipe, write_pipe =
+        Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
+      in
+      return
+        (Ok
+           (Client_session.create_from_pipes ~read_stream:read_pipe
+              ~write_stream:write_pipe ()))
+  | _ ->
+      Logs.warn (fun m ->
+          m "Transport.connect_session is stubbed for non-HTTP transports");
+      (* Return a dummy session or error out. But Client_session is now Mcp_client.Session.t 
+         We need to create a dummy pipes session? *)
+      let r, _ = Pipe.create () in
+      let _, w = Pipe.create () in
+      return
+        (Ok (Client_session.create_from_pipes ~read_stream:r ~write_stream:w ()))
 
 (** Close transport *)
 let close _transport =

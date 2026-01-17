@@ -4,6 +4,8 @@
 
 open Core
 open Async
+module Mcp_client = Mcp_client
+module Session = Mcp_client.Session
 
 (** {1 Session Configuration} *)
 
@@ -28,16 +30,7 @@ val default_session_kwargs : session_kwargs
 
 (** {1 Client Session} *)
 
-module type Client_session_intf = sig
-  type t
-
-  val create :
-    read_stream:unit -> write_stream:unit -> session_kwargs -> t Deferred.t
-
-  val close : t -> unit Deferred.t
-end
-
-module Client_session : Client_session_intf
+module Client_session = Session
 
 (** {1 Transport Types} *)
 

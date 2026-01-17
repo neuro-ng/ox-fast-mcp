@@ -3,94 +3,140 @@
 open! Core
 open! Async
 
-(** NOTE: These tests are currently disabled due to module exposure issues. The
-    Http module is part of the server library but cannot be directly accessed
-    from tests due to OCaml's module system.
+module Http = Server__Http
+(** Access Http module using the Server__ prefix pattern used in other tests **)
 
-    The SSE transport implementation in http.ml is functional and builds
-    successfully. These tests serve as documentation of the intended
-    functionality and can be enabled once module exposure is resolved.
+(** {1 Test: SSE Transport}
+    **)
 
-    See walkthrough.md for details on the SSE implementation. **)
+let%expect_test "create SSE transport" =
+  let _sse = Http.Sse_transport.create ~message_path:"/messages" in
+  (* SSE transport created successfully *)
+  print_endline "SSE transport created";
+  [%expect {| SSE transport created |}];
+  return ()
 
-(* (* Access Http module directly - it's part of the server library *) module
-   Sse_transport = Sse_transport module Response = Response module Request =
-   Request module Http_method = Http_method
+let%expect_test "SSE connection establishment" =
+  let sse = Http.Sse_transport.create ~message_path:"/messages" in
+  let request =
+    Http.Request.create ~method_:Http.Http_method.GET ~path:"/sse" ()
+  in
 
-   (** {1 Test: SSE Transport} **)
+  let%bind conn_id, cleanup = Http.Sse_transport.connect_sse sse request in
 
-   let%expect_test "create SSE transport" = let sse = Sse_transport.create
-   ~message_path:"/messages" in (* SSE transport created successfully *)
-   print_endline "SSE transport created"; [%expect {| SSE transport created |}]
+  print_s [%sexp (conn_id >= 0 : bool)];
 
-   let%expect_test "SSE connection establishment" = let sse =
-   Sse_transport.create ~message_path:"/messages" in let request =
-   Request.create ~method_:Http_method.GET ~path:"/sse" () in
+  (* Cleanup connection *)
+  let%bind () = cleanup () in
 
-   let%bind conn_id, cleanup = Sse_transport.connect_sse sse request in
+  [%expect
+    {|
+    INFO SSE connection established: 0
+    true
+    INFO SSE connection closed: 0
+    |}];
+  return ()
 
-   print_s [%sexp (conn_id >= 0 : bool)];
+let%expect_test "SSE broadcast message" =
+  let sse = Http.Sse_transport.create ~message_path:"/messages" in
+  let message =
+    `Assoc [ ("type", `String "test"); ("data", `String "hello") ]
+  in
 
-   (* Cleanup connection *) let%bind () = cleanup () in
+  (* Broadcast to connections (currently none) *)
+  Http.Sse_transport.broadcast_message sse message;
 
-   [%expect {| true |}]; return ()
+  print_endline "Message broadcasted";
+  [%expect {| Message broadcasted |}];
+  return ()
 
-   let%expect_test "SSE broadcast message" = let sse = Sse_transport.create
-   ~message_path:"/messages" in let message = `Assoc [ ("type", `String "test");
-   ("data", `String "hello") ] in
+let%expect_test "handle POST message with valid JSON" =
+  let sse = Http.Sse_transport.create ~message_path:"/messages" in
+  let body = {|{"method":"tools/list","id":1}|} in
+  let request =
+    Http.Request.create ~method_:Http.Http_method.POST ~path:"/messages" ~body
+      ()
+  in
 
-   (* Broadcast to connections (currently none) *)
-   Sse_transport.broadcast_message sse message;
+  let%bind response = Http.Sse_transport.handle_post_message sse request in
 
-   print_endline "Message broadcasted"; [%expect {| Message broadcasted |}];
-   return ()
+  print_s [%sexp (response.status : int)];
+  [%expect {| 200 |}];
+  return ()
 
-   let%expect_test "handle POST message with valid JSON" = let sse =
-   Sse_transport.create ~message_path:"/messages" in let body =
-   {|{"method":"tools/list","id":1}|} in let request = Request.create
-   ~method_:Http_method.POST ~path:"/messages" ~body () in
+let%expect_test "handle POST message with invalid JSON" =
+  let sse = Http.Sse_transport.create ~message_path:"/messages" in
+  let body = "not valid json" in
+  let request =
+    Http.Request.create ~method_:Http.Http_method.POST ~path:"/messages" ~body
+      ()
+  in
 
-   let%bind response = Sse_transport.handle_post_message sse request in
+  let%bind response = Http.Sse_transport.handle_post_message sse request in
 
-   print_s [%sexp (response.status : int)]; [%expect {| 200 |}]; return ()
+  print_s [%sexp (response.status : int)];
+  [%expect
+    {|
+    ERROR Invalid JSON: ("Yojson__Common.Json_error(\"Line 1, bytes 0-14:\\nInvalid token 'not valid json'\")")
+    400
+    |}];
+  return ()
 
-   let%expect_test "handle POST message with invalid JSON" = let sse =
-   Sse_transport.create ~message_path:"/messages" in let body = "not valid json"
-   in let request = Request.create ~method_:Http_method.POST ~path:"/messages"
-   ~body () in
+let%expect_test "handle POST message without body" =
+  let sse = Http.Sse_transport.create ~message_path:"/messages" in
+  let request =
+    Http.Request.create ~method_:Http.Http_method.POST ~path:"/messages" ()
+  in
 
-   let%bind response = Sse_transport.handle_post_message sse request in
+  let%bind response = Http.Sse_transport.handle_post_message sse request in
 
-   print_s [%sexp (response.status : int)]; [%expect {| 400 |}]; return ()
+  print_s [%sexp (response.status : int)];
+  (match response.body with
+  | Some body -> print_endline body
+  | None -> print_endline "No body");
 
-   let%expect_test "handle POST message without body" = let sse =
-   Sse_transport.create ~message_path:"/messages" in let request =
-   Request.create ~method_:Http_method.POST ~path:"/messages" () in
+  [%expect {|
+    400
+    Missing message body
+    |}];
+  return ()
 
-   let%bind response = Sse_transport.handle_post_message sse request in
+(** {1 Test: HTTP Response Helpers}
+    **)
 
-   print_s [%sexp (response.status : int)]; match response.body with | Some body
-   -> print_endline body | None -> print_endline "No body";
+let%expect_test "Response.json creates proper JSON response" =
+  let json = `Assoc [ ("status", `String "ok"); ("count", `Int 42) ] in
+  let response = Http.Response.json json in
 
-   [%expect {| 400 Missing message body |}]; return ()
+  print_s [%sexp (response.status : int)];
+  (match response.body with
+  | Some body -> print_endline body
+  | None -> print_endline "No body");
 
-   (** {1 Test: HTTP Response Helpers} **)
+  [%expect {|
+    200
+    {"status":"ok","count":42}
+    |}];
+  return ()
 
-   let%expect_test "Response.json creates proper JSON response" = let json =
-   `Assoc [ ("status", `String "ok"); ("count", `Int 42) ] in let response =
-   Response.json json in
+let%expect_test "Response status codes" =
+  let r1 = Http.Response.ok () in
+  let r2 = Http.Response.created () in
+  let r3 = Http.Response.bad_request () in
+  let r4 = Http.Response.not_found () in
+  let r5 = Http.Response.internal_server_error () in
 
-   print_s [%sexp (response.status : int)]; (match response.body with | Some
-   body -> print_endline body | None -> print_endline "No body");
+  print_s [%sexp (r1.status : int)];
+  print_s [%sexp (r2.status : int)];
+  print_s [%sexp (r3.status : int)];
+  print_s [%sexp (r4.status : int)];
+  print_s [%sexp (r5.status : int)];
 
-   [%expect {| 200 {"status":"ok","count":42} |}]; return ()
-
-   let%expect_test "Response status codes" = let r1 = Response.ok () in let r2 =
-   Response.created () in let r3 = Response.bad_request () in let r4 =
-   Response.not_found () in let r5 = Response.internal_server_error () in
-
-   print_s [%sexp (r1.status : int)]; print_s [%sexp (r2.status : int)]; print_s
-   [%sexp (r3.status : int)]; print_s [%sexp (r4.status : int)]; print_s [%sexp
-   (r5.status : int)];
-
-   [%expect {| 200 201 400 404 500 |}]; return () *)
+  [%expect {|
+    200
+    201
+    400
+    404
+    500
+    |}];
+  return ()

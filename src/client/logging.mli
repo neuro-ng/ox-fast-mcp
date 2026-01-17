@@ -1,22 +1,14 @@
-open Mcp_types
-open Mcp_client.Types
+(** Client Logging Module - Simplified Async Version
 
-type log_message = logging_message_notification_params
-(** Type alias for log messages *)
+    Provides simple logging handlers for MCP client messages. *)
 
-type log_handler = log_message -> unit Lwt.t
-(** Type alias for log handlers *)
+open Async
 
-val format_log_message : log_message -> string
-(** Format a log message with proper structure *)
+type log_handler = Logs.level -> string -> unit Deferred.t
+(** Simplified log handler function type - takes level and formatted message *)
 
-val to_logs_level : string -> Logs.level
-(** Convert MCP log level to Logs level *)
+val default_handler : log_handler
+(** Default log handler that outputs to Logs *)
 
-val default_log_handler : log_handler
-(** Default log handler *)
-
-val create_log_callback : ?handler:log_handler -> unit -> logging_fn
-(** Create a log callback function from a handler. If no handler is provided,
-    uses the default_log_handler. Ensures the logger is properly initialized
-    with at least Debug level. *)
+val create_callback : ?handler:log_handler -> unit -> log_handler
+(** Create a log callback function from a handler *)

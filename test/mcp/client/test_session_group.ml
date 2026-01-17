@@ -177,23 +177,23 @@ module Mock_session_helpers = struct
              | `Request req ->
                let response_result =
                  match req.method_ with
-                  | "initialize" ->
-                    (* Create proper initialize response with nested base_metadata
-                       and result *)
-                    let result_json =
-                      `Assoc
-                        [
-                          ("protocolVersion", `String "2024-11-05");
-                          ("capabilities", `Assoc []);
-                          ( "serverInfo",
-                            `Assoc
-                              [
-                                ("version", `String "1.0.0");
-                                ( "base_metadata",
-                                  `Assoc [ ("name", `String server_name) ] );
-                              ] );
-                          ("result", `Assoc [ ("_meta", `Assoc []) ]);
-                        ]
+                 | "initialize" ->
+                   (* Create proper initialize response with nested
+                      base_metadata and result *)
+                   let result_json =
+                     `Assoc
+                       [
+                         ("protocolVersion", `String "2024-11-05");
+                         ("capabilities", `Assoc []);
+                         ( "serverInfo",
+                           `Assoc
+                             [
+                               ("version", `String "1.0.0");
+                               ( "base_metadata",
+                                 `Assoc [ ("name", `String server_name) ] );
+                             ] );
+                         ("result", `Assoc [ ("_meta", `Assoc []) ]);
+                       ]
                    in
                    Some
                      {

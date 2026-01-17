@@ -90,8 +90,8 @@ let%expect_test "test_client_session_initialize" =
   (* Start mock server in background and capture the deferred *)
   let server_task =
     Mock_server.run_initialize_handler ~server_read ~server_write
-       ~server_name:"mock-server" ~version:"0.1.0"
-       ~instructions:"The server instructions." ~protocol_version:"2024-11-05"
+      ~server_name:"mock-server" ~version:"0.1.0"
+      ~instructions:"The server instructions." ~protocol_version:"2024-11-05"
   in
 
   (* Initialize the session *)
@@ -120,7 +120,7 @@ let%expect_test "test_client_session_initialize" =
 (** Additional tests temporarily removed to avoid async scheduler accumulation
     issues (causing ~90s test execution time). These tests can be re-added as
     separate single-test files if comprehensive coverage is needed:
-    
+
     - test_client_session_custom_client_info
     - test_client_session_default_client_info
     - test_client_session_version_negotiation_success
@@ -129,5 +129,5 @@ let%expect_test "test_client_session_initialize" =
     - test_client_capabilities_with_custom_callbacks (TODO)
     - test_get_server_capabilities (TODO)
     - test_client_tool_call_with_meta (TODO)
-    
+
     See test/client/test_session.todo for details. *)

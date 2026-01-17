@@ -1,24 +1,13 @@
-open Core
-open Mcp.Types
-open Mcp.Shared
-open Lwt.Syntax
+(** Client Sampling Module - Simplified Async Version
+
+    Provides sampling callback management for MCP clients. *)
+
+open Async
 
 type sampling_handler =
-  sampling_message list ->
-  create_message_request_params ->
-  request_context ->
-  (create_message_result, error_data) result Lwt.t
+  string list -> (* messages *)
+  Yojson.Safe.t -> (* params *)
+  (Yojson.Safe.t, string) result Deferred.t
+(** Simplified sampling handler - takes messages and params, returns JSON result *)
 
-let create_sampling_callback (handler : sampling_handler) context params =
-  try%lwt
-    let* result = handler params.messages params context in
-    Lwt.return result
-  with exn ->
-    Lwt.return
-      (Error
-         {
-           code = internal_error;
-           message = Exn.to_string exn;
-           data = None;
-           meta = None;
-         })
+let create_callback (handler : sampling_handler) = handler

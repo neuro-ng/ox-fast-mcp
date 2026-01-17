@@ -217,3 +217,202 @@ let%expect_test "tools_capability yojson" =
   let roundtrip = tools_capability_of_yojson json in
   require ~here:[%here]
     (Option.equal Bool.equal cap.list_changed roundtrip.list_changed)
+
+(* ============================================= *)
+(* Tasks API Tests                               *)
+(* ============================================= *)
+
+let%expect_test "task_status sexp" =
+  let statuses = [ `Working; `Input_required; `Completed; `Failed; `Cancelled ] in
+  List.iter statuses ~f:(fun status ->
+      print_s [%sexp (status : task_status)]);
+  [%expect {|
+    Working
+    Input_required
+    Completed
+    Failed
+    Cancelled
+  |}]
+
+let%expect_test "task type construction" =
+  let task : task = {
+    task_id = "task-123";
+    status = `Working;
+    status_message = Some "Processing...";
+    created_at = "2026-01-16T12:00:00Z";
+    last_updated_at = "2026-01-16T12:01:00Z";
+    ttl = Some 3600;
+    poll_interval = Some 5;
+  } in
+  print_s [%sexp { task_id = (task.task_id : string); status = (task.status : task_status) }];
+  [%expect {| ((task_id task-123) (status Working)) |}]
+
+let%expect_test "get_task_request sexp" =
+  let params : get_task_request_params = {
+    task_id = "task-456";
+    request_params = { meta = None };
+  } in
+  let request : get_task_request = {
+    method_ = "tasks/get";
+    params;
+  } in
+  print_s [%sexp {
+    method_ = (request.method_ : string);
+    task_id = (request.params.task_id : string)
+  }];
+  [%expect {| ((method_ tasks/get) (task_id task-456)) |}]
+
+let%expect_test "cancel_task_request sexp" =
+  let params : cancel_task_request_params = {
+    task_id = "task-789";
+    request_params = { meta = None };
+  } in
+  let request : cancel_task_request = {
+    method_ = "tasks/cancel";
+    params;
+  } in
+  print_s [%sexp {
+    method_ = (request.method_ : string);
+    task_id = (request.params.task_id : string)
+  }];
+  [%expect {| ((method_ tasks/cancel) (task_id task-789)) |}]
+
+let%expect_test "task_status_notification sexp" =
+  let params : task_status_notification_params = {
+    task_id = "task-notify";
+    status = `Completed;
+    status_message = Some "Done";
+    created_at = "2026-01-16T12:00:00Z";
+    last_updated_at = "2026-01-16T12:05:00Z";
+    ttl = None;
+    poll_interval = None;
+    notification_params = { meta = None };
+  } in
+  print_s [%sexp {
+    task_id = (params.task_id : string);
+    status = (params.status : task_status)
+  }];
+  [%expect {| ((task_id task-notify) (status Completed)) |}]
+
+(* ============================================= *)
+(* Sampling Types Tests                          *)
+(* ============================================= *)
+
+let%expect_test "sampling_message construction" =
+  let text_content : text_content = {
+    type_ = `Text;
+    text = "Hello, world!";
+    annotations = None;
+    meta = None;
+  } in
+  let message : sampling_message = {
+    role = `User;
+    content = `Text text_content;
+    meta = None;
+  } in
+  (* Verify construction succeeds and role is correctly set *)
+  let role_str = match message.role with `User -> "User" | `Assistant -> "Assistant" in
+  print_endline role_str;
+  [%expect {| User |}]
+
+let%expect_test "tool_use_content sexp" =
+  let content : tool_use_content = {
+    type_ = `Tool_use;
+    name = "calculator";
+    id = "tool-call-1";
+    input = `Assoc [("expression", `String "2+2")];
+    meta = None;
+  } in
+  print_s [%sexp {
+    name = (content.name : string);
+    id = (content.id : string)
+  }];
+  [%expect {| ((name calculator) (id tool-call-1)) |}]
+
+let%expect_test "tool_result_content sexp" =
+  let content : tool_result_content = {
+    type_ = `Tool_result;
+    tool_use_id = "tool-call-1";
+    content = `String "4";
+    structured_content = Some (`Assoc [("result", `Int 4)]);
+    is_error = Some false;
+    meta = None;
+  } in
+  print_s [%sexp {
+    tool_use_id = (content.tool_use_id : string);
+    is_error = (content.is_error : bool option)
+  }];
+  [%expect {| ((tool_use_id tool-call-1) (is_error (false))) |}]
+
+let%expect_test "model_preferences sexp" =
+  let prefs : model_preferences = {
+    hints = Some [{ name = Some "claude-3" }];
+    cost_priority = Some 0.5;
+    speed_priority = Some 0.3;
+    intelligence_priority = Some 0.8;
+  } in
+  print_s [%sexp {
+    cost_priority = (prefs.cost_priority : float option);
+    intelligence_priority = (prefs.intelligence_priority : float option)
+  }];
+  [%expect {| ((cost_priority (0.5)) (intelligence_priority (0.8))) |}]
+
+let%expect_test "stop_reason sexp" =
+  let reasons : stop_reason list = [
+    `EndTurn;
+    `StopSequence;
+    `MaxTokens;
+    `String "custom"
+  ] in
+  List.iter reasons ~f:(fun reason ->
+      print_s [%sexp (reason : stop_reason)]);
+  [%expect {|
+    EndTurn
+    StopSequence
+    MaxTokens
+    (String custom)
+  |}]
+
+(* Note: Elicitation schema types are defined in types.ml but not exported 
+   in types.mli, so we skip testing those internal types here. *)
+
+(* ============================================= *)
+(* Client/Server Aggregation Tests               *)
+(* ============================================= *)
+
+let%expect_test "client_request includes task types" =
+  let get_task : client_request = `GetTask {
+    method_ = "tasks/get";
+    params = { task_id = "t1"; request_params = { meta = None } };
+  } in
+  let cancel_task : client_request = `CancelTask {
+    method_ = "tasks/cancel";
+    params = { task_id = "t2"; request_params = { meta = None } };
+  } in
+  print_s [%sexp ("GetTask variant exists" : string)];
+  print_s [%sexp ("CancelTask variant exists" : string)];
+  (* Just verify they compile - pattern match to ensure variants exist *)
+  (match get_task with `GetTask _ -> () | _ -> ());
+  (match cancel_task with `CancelTask _ -> () | _ -> ());
+  [%expect {|
+    "GetTask variant exists"
+    "CancelTask variant exists"
+  |}]
+
+let%expect_test "server_notification includes TaskStatus" =
+  let task_notif : server_notification = `TaskStatus {
+    method_ = "notifications/tasks/status";
+    params = {
+      task_id = "t1";
+      status = `Completed;
+      status_message = None;
+      created_at = "2026-01-16T12:00:00Z";
+      last_updated_at = "2026-01-16T12:00:00Z";
+      ttl = None;
+      poll_interval = None;
+      notification_params = { meta = None };
+    };
+  } in
+  print_s [%sexp ("TaskStatus variant exists" : string)];
+  (match task_notif with `TaskStatus _ -> () | _ -> ());
+  [%expect {| "TaskStatus variant exists" |}]

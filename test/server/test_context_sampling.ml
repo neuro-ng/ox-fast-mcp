@@ -15,7 +15,7 @@ let make_text_content text =
 
 (** Helper to create a sampling message *)
 let make_user_message text : Mcp.Types.sampling_message =
-  { role = `User; content = `Text (make_text_content text) }
+  { role = `User; content = `Text (make_text_content text); meta = None }
 
 (** {1 Sampling Tests} *)
 
