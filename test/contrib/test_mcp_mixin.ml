@@ -50,8 +50,7 @@ let%expect_test "make_prompt_info creates valid record" =
   print_s [%sexp (info.name : string)];
   print_s [%sexp (info.title : string option)];
   print_s [%sexp (info.tags : string list option)];
-  [%expect
-    {|
+  [%expect {|
     test_prompt
     ("Test Prompt")
     ((demo)) |}];
@@ -80,8 +79,7 @@ let%expect_test "resource_registration_info JSON round-trip" =
   print_endline (Yojson.Safe.pretty_to_string json);
   let decoded = Mcp_mixin.resource_registration_info_of_yojson json in
   print_s [%sexp (String.equal info.uri decoded.uri : bool)];
-  [%expect
-    {|
+  [%expect {|
     { "uri": "test://uri", "name": "json_resource" }
     true |}];
   return ()
@@ -92,25 +90,28 @@ let%expect_test "prompt_registration_info JSON round-trip" =
   print_endline (Yojson.Safe.pretty_to_string json);
   let decoded = Mcp_mixin.prompt_registration_info_of_yojson json in
   print_s [%sexp (String.equal info.name decoded.name : bool)];
-  [%expect
-    {|
+  [%expect {|
     { "name": "json_prompt" }
     true |}];
   return ()
 
 (* Test tool registration *)
 let%expect_test "register_tools adds tools to manager" =
-  let tool_handler _ctx _args = return [ Fmcp_types.create_text_content "result" ] in
+  let tool_handler _ctx _args =
+    return [ Fmcp_types.create_text_content "result" ]
+  in
   let tools : Mcp_mixin.registered_tool list =
     [
       {
         handler = tool_handler;
-        info = Mcp_mixin.make_tool_info ~name:"add" ~description:"Add numbers" ();
+        info =
+          Mcp_mixin.make_tool_info ~name:"add" ~description:"Add numbers" ();
       };
       {
         handler = tool_handler;
         info =
-          Mcp_mixin.make_tool_info ~name:"subtract" ~description:"Subtract numbers" ();
+          Mcp_mixin.make_tool_info ~name:"subtract"
+            ~description:"Subtract numbers" ();
       };
     ]
   in
@@ -120,20 +121,22 @@ let%expect_test "register_tools adds tools to manager" =
   let has_subtract = Option.is_some (Tool.get_tool manager "subtract") in
   print_s [%sexp (has_add : bool)];
   print_s [%sexp (has_subtract : bool)];
-  [%expect
-    {|
+  [%expect {|
     true
     true |}];
   return ()
 
 (* Test registration with prefix *)
 let%expect_test "register_tools with prefix" =
-  let tool_handler _ctx _args = return [ Fmcp_types.create_text_content "result" ] in
+  let tool_handler _ctx _args =
+    return [ Fmcp_types.create_text_content "result" ]
+  in
   let tools : Mcp_mixin.registered_tool list =
     [
       {
         handler = tool_handler;
-        info = Mcp_mixin.make_tool_info ~name:"calc" ~description:"Calculator" ();
+        info =
+          Mcp_mixin.make_tool_info ~name:"calc" ~description:"Calculator" ();
       };
     ]
   in
@@ -143,8 +146,7 @@ let%expect_test "register_tools with prefix" =
   let has_original = Option.is_some (Tool.get_tool manager "calc") in
   print_s [%sexp (has_prefixed : bool)];
   print_s [%sexp (has_original : bool)];
-  [%expect
-    {|
+  [%expect {|
     true
     false |}];
   return ()
@@ -160,8 +162,7 @@ let%expect_test "bulk caller types are re-exported" =
     { tool = "test"; arguments = `Assoc []; is_error = false; content = [] }
   in
   print_s [%sexp (result.is_error : bool)];
-  [%expect
-    {|
+  [%expect {|
     test
     false |}];
   return ()

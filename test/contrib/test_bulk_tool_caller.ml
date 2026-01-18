@@ -11,7 +11,8 @@ let mock_call_tool_success ~name ~arguments =
       `Text
         {
           Mcp.Types.type_ = `Text;
-          text = sprintf "Called %s with %s" name (Yojson.Safe.to_string arguments);
+          text =
+            sprintf "Called %s with %s" name (Yojson.Safe.to_string arguments);
           annotations = None;
           meta = None;
         };
@@ -49,14 +50,16 @@ let mock_call_tool_error ~name ~arguments:_ =
 (* Test type JSON serialization *)
 let%expect_test "call_tool_request JSON round-trip" =
   let request =
-    { Bulk_tool_caller.tool = "test_tool"; arguments = `Assoc [ ("x", `Int 42) ] }
+    {
+      Bulk_tool_caller.tool = "test_tool";
+      arguments = `Assoc [ ("x", `Int 42) ];
+    }
   in
   let json = Bulk_tool_caller.yojson_of_call_tool_request request in
   print_endline (Yojson.Safe.pretty_to_string json);
   let decoded = Bulk_tool_caller.call_tool_request_of_yojson json in
   print_s [%sexp (String.equal request.tool decoded.tool : bool)];
-  [%expect
-    {|
+  [%expect {|
     { "tool": "test_tool", "arguments": { "x": 42 } }
     true |}];
   return ()
@@ -104,8 +107,7 @@ let%expect_test "call_tools_bulk success" =
   List.iter results ~f:(fun r ->
       print_s [%sexp (r.Bulk_tool_caller.tool : string)];
       print_s [%sexp (r.Bulk_tool_caller.is_error : bool)]);
-  [%expect
-    {|
+  [%expect {|
     2
     tool1
     false
@@ -133,7 +135,8 @@ let%expect_test "call_tools_bulk error continue" =
   in
   print_s [%sexp (List.length results : int)];
   List.iter results ~f:(fun r ->
-      printf "%s: is_error=%b\n" r.Bulk_tool_caller.tool r.Bulk_tool_caller.is_error);
+      printf "%s: is_error=%b\n" r.Bulk_tool_caller.tool
+        r.Bulk_tool_caller.is_error);
   [%expect
     {|
     3
@@ -142,7 +145,8 @@ let%expect_test "call_tools_bulk error continue" =
     tool2: is_error=false |}];
   return ()
 
-(* Test bulk execution with error - continue_on_error:false (early termination) *)
+(* Test bulk execution with error - continue_on_error:false (early
+   termination) *)
 let%expect_test "call_tools_bulk error stop" =
   let caller = Bulk_tool_caller.create () in
   let tool_calls =
@@ -163,9 +167,9 @@ let%expect_test "call_tools_bulk error stop" =
   (* Should stop after error_tool *)
   print_s [%sexp (List.length results : int)];
   List.iter results ~f:(fun r ->
-      printf "%s: is_error=%b\n" r.Bulk_tool_caller.tool r.Bulk_tool_caller.is_error);
-  [%expect
-    {|
+      printf "%s: is_error=%b\n" r.Bulk_tool_caller.tool
+        r.Bulk_tool_caller.is_error);
+  [%expect {|
     2
     tool1: is_error=false
     error_tool: is_error=true |}];
@@ -188,8 +192,7 @@ let%expect_test "call_tool_bulk success" =
   print_s [%sexp (List.length results : int)];
   List.iter results ~f:(fun r ->
       print_s [%sexp (r.Bulk_tool_caller.tool : string)]);
-  [%expect
-    {|
+  [%expect {|
     3
     echo
     echo
