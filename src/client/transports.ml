@@ -16,15 +16,14 @@ module Message = Mcp_shared.Message
 
 (** {1 Session Configuration} *)
 
-type sampling_fn = unit -> unit Deferred.t
-(** Callback types for MCP client session *)
+(* Re-export callback types from Session for consistency *)
+type sampling_fn = Session.sampling_fn
+type elicitation_fn = Session.elicitation_fn
+type list_roots_fn = Session.list_roots_fn
+type logging_fn = Session.logging_fn
+type message_handler = Session.message_handler
 
-type list_roots_fn = unit -> unit Deferred.t
-type logging_fn = string -> unit Deferred.t
-type elicitation_fn = unit -> unit Deferred.t
-type message_handler_fn = unit -> unit Deferred.t
-
-type implementation = { name : string; version : string } [@@deriving fields]
+type implementation = Mcp.Types.implementation
 (** Implementation info for MCP client *)
 
 type session_kwargs = {
@@ -33,7 +32,7 @@ type session_kwargs = {
   list_roots_callback : list_roots_fn option;
   logging_callback : logging_fn option;
   elicitation_callback : elicitation_fn option;
-  message_handler : message_handler_fn option;
+  message_handler : message_handler option;
   client_info : implementation option;
 }
 [@@deriving fields]
@@ -52,9 +51,9 @@ let default_session_kwargs =
 
 (** {1 Transport Interface} *)
 
-(** Abstract client session type - placeholder until MCP SDK is available *)
-(** Placeholder for client session *)
 module Client_session = Session
+(** Client session module - delegates to Mcp_client.Session for actual session
+    management *)
 
 (** {1 HTTP Transport Types} *)
 
@@ -64,7 +63,13 @@ type auth_config =
   | OAuth
   | Bearer of string
   | Custom of (unit -> unit Deferred.t)
-(* Placeholder for httpx.Auth *)
+
+(** Convert auth_config to HTTP headers for transport *)
+let auth_config_to_headers = function
+  | No_auth -> []
+  | Bearer token -> [ ("Authorization", "Bearer " ^ token) ]
+  | OAuth -> [] (* OAuth uses separate flow with token refresh *)
+  | Custom _ -> [] (* Custom auth handled by callback, not headers *)
 
 type sse_config = {
   url : string;
@@ -234,35 +239,33 @@ let to_string = function
 
 (** {1 Transport Operations} *)
 
-(** Connect to transport and create session
-
-    NOTE: Full implementation requires MCP SDK client modules. This is a stub
-    that will be completed when dependencies are available. *)
-(** Connect to transport and create session *)
-let connect_session transport _session_kwargs =
+(** Connect to transport and return an initialized client session. Supports SSE,
+    StreamableHTTP, and Stdio transports. Other transports return stub sessions.
+    @param transport The transport configuration
+    @param session_kwargs Session callbacks and configuration (partially wired) *)
+let connect_session transport session_kwargs =
   let pipe_adapter_read raw_reader =
     let r, w = Pipe.create () in
     don't_wait_for
       (Pipe.transfer raw_reader w ~f:(function
         | `Message msg -> { Message.message = msg; metadata = None }
         | `Error e ->
-            Logs.err (fun m -> m "Transport error: %s" (Error.to_string_hum e));
-            (* Create an error notification or close? For now we might just drop or throw? 
-               Actually we can't easily synthesize a session_message from Error.t here 
-               unless we wrap it in a pseudo notification or just close. *)
-            {
-              Message.message =
-                `Notification
-                  {
-                    Mcp.Types.jsonrpc = "2.0";
-                    method_ = "transport_error";
-                    params =
-                      Some
-                        (`Assoc
-                           [ ("error", `String (Error.to_string_hum e)) ]);
-                  };
-              metadata = None;
-            }));
+          Logs.err (fun m -> m "Transport error: %s" (Error.to_string_hum e));
+          (* Create an error notification or close? For now we might just drop
+             or throw? Actually we can't easily synthesize a session_message
+             from Error.t here unless we wrap it in a pseudo notification or
+             just close. *)
+          {
+            Message.message =
+              `Notification
+                {
+                  Mcp.Types.jsonrpc = "2.0";
+                  method_ = "transport_error";
+                  params =
+                    Some (`Assoc [ ("error", `String (Error.to_string_hum e)) ]);
+                };
+            metadata = None;
+          }));
     r
   in
   let pipe_adapter_write () =
@@ -274,117 +277,231 @@ let connect_session transport _session_kwargs =
   in
   match transport with
   | Sse_transport config ->
-      let sse_config =
-        Sse.create_config ~url:config.url
-          ~headers:config.headers (* TODO: Handle auth headers *)
-          ?sse_read_timeout:
-            (Option.map config.sse_read_timeout ~f:Core.Time_ns.Span.to_span_float_round_nearest)
-          ()
-      in
-      let t = Sse.connect sse_config in
-      let read_stream = pipe_adapter_read (Sse.read_stream t) in
-      let raw_write_read, write_stream = pipe_adapter_write () in
-      don't_wait_for (Pipe.transfer raw_write_read (Sse.write_stream t) ~f:Fn.id);
-      return
-        (Ok
-           (Client_session.create_from_pipes ~read_stream ~write_stream
-              (* TODO: Map callbacks from session_kwargs *)
-              ()))
+    let auth_headers = auth_config_to_headers config.auth in
+    let all_headers = config.headers @ auth_headers in
+    let sse_config =
+      Sse.create_config ~url:config.url ~headers:all_headers
+        ?sse_read_timeout:
+          (Option.map config.sse_read_timeout
+             ~f:Core.Time_ns.Span.to_span_float_round_nearest)
+        ()
+    in
+    let t = Sse.connect sse_config in
+    let read_stream = pipe_adapter_read (Sse.read_stream t) in
+    let raw_write_read, write_stream = pipe_adapter_write () in
+    don't_wait_for (Pipe.transfer raw_write_read (Sse.write_stream t) ~f:Fn.id);
+    return
+      (Ok
+         (Client_session.create_from_pipes ~read_stream ~write_stream
+            ?read_timeout:session_kwargs.read_timeout_seconds
+            ?sampling_callback:session_kwargs.sampling_callback
+            ?logging_callback:session_kwargs.logging_callback
+            ?elicitation_callback:session_kwargs.elicitation_callback
+            ?list_roots_callback:session_kwargs.list_roots_callback
+            ?message_handler:session_kwargs.message_handler
+            ?client_info:session_kwargs.client_info ()))
   | Streamable_http_transport config ->
-      let http_config =
-        Streamable_http.create_config ~url:config.url
-          ~headers:config.headers (* TODO: Handle auth *)
-          ?sse_read_timeout:
-            (Option.map config.sse_read_timeout ~f:Core.Time_ns.Span.to_span_float_round_nearest)
-          ()
-      in
-      let t = Streamable_http.connect http_config in
-      let read_stream =
-        let stream = Streamable_http.read_stream t in
-        pipe_adapter_read
-          (Pipe.map stream ~f:(function
-            | `Message m -> `Message m
-            | `Error e ->
-                `Error (Error.of_string (Streamable_http.Error.to_string e))))
-      in
-      let raw_write_read, write_stream = pipe_adapter_write () in
-      don't_wait_for
-        (Pipe.transfer raw_write_read (Streamable_http.write_stream t) ~f:Fn.id);
-      return
-        (Ok
-           (Client_session.create_from_pipes ~read_stream ~write_stream
-              (* TODO: Map callbacks *)
-               ()))
+    let auth_headers = auth_config_to_headers config.auth in
+    let all_headers = config.headers @ auth_headers in
+    let http_config =
+      Streamable_http.create_config ~url:config.url ~headers:all_headers
+        ?sse_read_timeout:
+          (Option.map config.sse_read_timeout
+             ~f:Core.Time_ns.Span.to_span_float_round_nearest)
+        ()
+    in
+    let t = Streamable_http.connect http_config in
+    let read_stream =
+      let stream = Streamable_http.read_stream t in
+      pipe_adapter_read
+        (Pipe.map stream ~f:(function
+          | `Message m -> `Message m
+          | `Error e ->
+            `Error (Error.of_string (Streamable_http.Error.to_string e))))
+    in
+    let raw_write_read, write_stream = pipe_adapter_write () in
+    don't_wait_for
+      (Pipe.transfer raw_write_read (Streamable_http.write_stream t) ~f:Fn.id);
+    return
+      (Ok
+         (Client_session.create_from_pipes ~read_stream ~write_stream
+            ?read_timeout:session_kwargs.read_timeout_seconds
+            ?sampling_callback:session_kwargs.sampling_callback
+            ?logging_callback:session_kwargs.logging_callback
+            ?elicitation_callback:session_kwargs.elicitation_callback
+            ?list_roots_callback:session_kwargs.list_roots_callback
+            ?message_handler:session_kwargs.message_handler
+            ?client_info:session_kwargs.client_info ()))
   | Stdio_transport config ->
-      let params =
-        {
-          Stdio.command = config.command;
-          args = config.args;
-          env = config.env;
-          cwd = config.cwd;
-          encoding = "utf-8";
-          encoding_error_handler = `Replace;
-        }
-      in
-      let%bind read_pipe, write_pipe =
-        Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
-      in
-      return
-        (Ok
-           (Client_session.create_from_pipes ~read_stream:read_pipe
-              ~write_stream:write_pipe ()))
+    let params =
+      {
+        Stdio.command = config.command;
+        args = config.args;
+        env = config.env;
+        cwd = config.cwd;
+        encoding = "utf-8";
+        encoding_error_handler = `Replace;
+      }
+    in
+    let%bind read_pipe, write_pipe =
+      Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
+    in
+    return
+      (Ok
+         (Client_session.create_from_pipes ~read_stream:read_pipe
+            ~write_stream:write_pipe ()))
   | Python_stdio_transport config ->
-      let args =
-        config.script_path :: Option.value config.args ~default:[]
-      in
-      let params =
-        {
-          Stdio.command = config.python_cmd;
-          args;
-          env = config.env;
-          cwd = config.cwd;
-          encoding = "utf-8";
-          encoding_error_handler = `Replace;
-        }
-      in
-      let%bind read_pipe, write_pipe =
-        Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
-      in
-      return
-        (Ok
-           (Client_session.create_from_pipes ~read_stream:read_pipe
-              ~write_stream:write_pipe ()))
+    let args = config.script_path :: Option.value config.args ~default:[] in
+    let params =
+      {
+        Stdio.command = config.python_cmd;
+        args;
+        env = config.env;
+        cwd = config.cwd;
+        encoding = "utf-8";
+        encoding_error_handler = `Replace;
+      }
+    in
+    let%bind read_pipe, write_pipe =
+      Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
+    in
+    return
+      (Ok
+         (Client_session.create_from_pipes ~read_stream:read_pipe
+            ~write_stream:write_pipe ()))
   | Node_stdio_transport config ->
-      (* Node transport uses same config structure as Python, but python_cmd is "node" *)
-      let args =
-        config.script_path :: Option.value config.args ~default:[]
-      in
-      let params =
-        {
-          Stdio.command = config.python_cmd; (* "node" for Node transport *)
-          args;
-          env = config.env;
-          cwd = config.cwd;
-          encoding = "utf-8";
-          encoding_error_handler = `Replace;
-        }
-      in
-      let%bind read_pipe, write_pipe =
-        Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
-      in
-      return
-        (Ok
-           (Client_session.create_from_pipes ~read_stream:read_pipe
-              ~write_stream:write_pipe ()))
-  | _ ->
-      Logs.warn (fun m ->
-          m "Transport.connect_session is stubbed for non-HTTP transports");
-      (* Return a dummy session or error out. But Client_session is now Mcp_client.Session.t 
-         We need to create a dummy pipes session? *)
-      let r, _ = Pipe.create () in
-      let _, w = Pipe.create () in
-      return
-        (Ok (Client_session.create_from_pipes ~read_stream:r ~write_stream:w ()))
+    (* Node transport uses same config structure as Python, but python_cmd is
+       "node" *)
+    let args = config.script_path :: Option.value config.args ~default:[] in
+    let params =
+      {
+        Stdio.command = config.python_cmd;
+        (* "node" for Node transport *)
+        args;
+        env = config.env;
+        cwd = config.cwd;
+        encoding = "utf-8";
+        encoding_error_handler = `Replace;
+      }
+    in
+    let%bind read_pipe, write_pipe =
+      Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
+    in
+    return
+      (Ok
+         (Client_session.create_from_pipes ~read_stream:read_pipe
+            ~write_stream:write_pipe ()))
+  | Fastmcp_stdio_transport config ->
+    (* FastMCP uses python -m fastmcp run <script> pattern *)
+    let args =
+      [ "-m"; "fastmcp"; "run"; config.script_path ]
+      @ Option.value config.args ~default:[]
+    in
+    let params =
+      {
+        Stdio.command = config.python_cmd;
+        args;
+        env = config.env;
+        cwd = config.cwd;
+        encoding = "utf-8";
+        encoding_error_handler = `Replace;
+      }
+    in
+    let%bind read_pipe, write_pipe =
+      Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
+    in
+    return
+      (Ok
+         (Client_session.create_from_pipes ~read_stream:read_pipe
+            ~write_stream:write_pipe ()))
+  | Uv_stdio_transport config ->
+    (* UV transport uses: uv run <command> [args...] *)
+    let args = "run" :: config.command :: config.args in
+    let params =
+      {
+        Stdio.command = "uv";
+        args;
+        env = config.env;
+        cwd = config.cwd;
+        encoding = "utf-8";
+        encoding_error_handler = `Replace;
+      }
+    in
+    let%bind read_pipe, write_pipe =
+      Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
+    in
+    return
+      (Ok
+         (Client_session.create_from_pipes ~read_stream:read_pipe
+            ~write_stream:write_pipe ()))
+  | Uvx_stdio_transport config ->
+    (* UVX transport uses: uvx <command> [args...] *)
+    let args = config.command :: config.args in
+    let params =
+      {
+        Stdio.command = "uvx";
+        args;
+        env = config.env;
+        cwd = config.cwd;
+        encoding = "utf-8";
+        encoding_error_handler = `Replace;
+      }
+    in
+    let%bind read_pipe, write_pipe =
+      Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
+    in
+    return
+      (Ok
+         (Client_session.create_from_pipes ~read_stream:read_pipe
+            ~write_stream:write_pipe ()))
+  | Npx_stdio_transport config ->
+    (* NPX transport uses: npx <package> [args...] *)
+    let args = config.command :: config.args in
+    let params =
+      {
+        Stdio.command = "npx";
+        args;
+        env = config.env;
+        cwd = config.cwd;
+        encoding = "utf-8";
+        encoding_error_handler = `Replace;
+      }
+    in
+    let%bind read_pipe, write_pipe =
+      Stdio.stdio_client params ~stderr:(Writer.create (Fd.stderr ()))
+    in
+    return
+      (Ok
+         (Client_session.create_from_pipes ~read_stream:read_pipe
+            ~write_stream:write_pipe ()))
+  | Fastmcp_transport _server_name ->
+    (* FastMCP in-memory transport - requires server.run_on_pipes integration *)
+    Logs.warn (fun m ->
+        m
+          "Fastmcp_transport (in-memory) not yet implemented - requires \
+           Server.run_on_pipes integration");
+    let r, _ = Pipe.create () in
+    let _, w = Pipe.create () in
+    return
+      (Ok (Client_session.create_from_pipes ~read_stream:r ~write_stream:w ()))
+  | Mcp_config_transport _config_path ->
+    (* MCP Config transport - requires parsing config file *)
+    Logs.warn (fun m ->
+        m
+          "Mcp_config_transport not yet implemented - requires config file \
+           parsing");
+    let r, _ = Pipe.create () in
+    let _, w = Pipe.create () in
+    return
+      (Ok (Client_session.create_from_pipes ~read_stream:r ~write_stream:w ()))
+  | Ws_transport _config ->
+    (* WebSocket transport - deprecated, use StreamableHttp instead *)
+    Logs.warn (fun m ->
+        m "Ws_transport is deprecated - use StreamableHttpTransport instead");
+    let r, _ = Pipe.create () in
+    let _, w = Pipe.create () in
+    return
+      (Ok (Client_session.create_from_pipes ~read_stream:r ~write_stream:w ()))
 
 (** Close transport *)
 let close _transport =

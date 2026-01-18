@@ -291,7 +291,9 @@ module Session_manager = struct
     { json_response; stateless }
 
   let run _t : (unit -> unit Deferred.t) Deferred.t =
-    (* TODO: Implement session manager run *)
+    (* PLACEHOLDER: Return actual session manager lifecycle. Needs: integrate
+       with Mcp_server.Session for proper MCP request handling. See http.todo
+       for implementation guidance. *)
     return (fun () -> return ())
 end
 
@@ -309,9 +311,11 @@ module Auth_config = struct
   let get_resource_url t path = t.get_resource_url path
 end
 
-(** Build RFC 9728-compliant resource metadata URL *)
+(** Build RFC 9728-compliant resource metadata URL. \@see
+    https://datatracker.ietf.org/doc/rfc9728/ for spec *)
 let build_resource_metadata_url (resource_url : string) : string =
-  (* TODO: Implement proper RFC 9728 URL building *)
+  (* PLACEHOLDER: Proper RFC 9728 URL building requires path normalization.
+     Currently uses simple concatenation. *)
   resource_url ^ "/.well-known/oauth-protected-resource"
 
 (** Require authentication middleware wrapper *)
@@ -320,7 +324,9 @@ let require_auth_middleware ~(handler : Route.handler)
     Route.handler =
   let _ = required_scopes in
   let _ = resource_metadata_url in
-  (* TODO: Implement actual auth checking *)
+  (* PLACEHOLDER: Auth checking passes all requests through. Implement: extract
+     Authorization header, verify JWT/Bearer token, check scopes match
+     required_scopes. See http.todo for details. *)
   handler
 
 (** Create an SSE (Server-Sent Events) application.
@@ -346,7 +352,8 @@ let create_sse_app ~(server : Yojson.Safe.t) ~(message_path : string)
   (* Create handler for SSE connections *)
   let handle_sse (request : Request.t) : Response.t Deferred.t =
     let%bind _cleanup = Sse_transport.connect_sse sse request in
-    (* TODO: Run MCP server with streams *)
+    (* PLACEHOLDER: Wire SSE connection to MCP server session. Needs: create
+       pipes, run server.run_on_pipes, stream responses as SSE events. *)
     return (Response.ok ())
   in
 
@@ -414,7 +421,8 @@ let create_sse_app ~(server : Yojson.Safe.t) ~(message_path : string)
 
   (* Create lifespan function *)
   let lifespan () =
-    (* TODO: Implement proper lifespan with server lifecycle *)
+    (* PLACEHOLDER: Lifespan should manage startup/shutdown hooks. Currently
+       just returns unit - add initialization and cleanup logic. *)
     return ()
   in
 
@@ -463,7 +471,9 @@ let create_streamable_http_app ~(server : Yojson.Safe.t)
         {
           handle_request =
             (fun _request ->
-              (* TODO: Implement actual request handling *)
+              (* PLACEHOLDER: Route requests to actual MCP server handlers.
+                 Parse JSON-RPC, dispatch to tools/resources/prompts, return
+                 response. Integrate with Server.handle_request or similar. *)
               return (Response.ok ()));
         }
   in
@@ -528,7 +538,8 @@ let create_streamable_http_app ~(server : Yojson.Safe.t)
   (* Create lifespan function that manages session manager lifecycle *)
   let lifespan () =
     let%bind _cleanup = Session_manager.run session_manager in
-    (* TODO: Implement proper lifespan with server lifecycle *)
+    (* PLACEHOLDER: Lifespan should manage startup/shutdown hooks. Currently
+       just returns unit - add proper initialization and cleanup. *)
     return ()
   in
 

@@ -338,6 +338,15 @@ module Stateful_proxy_client : sig
   val create : client:Proxy_client.t -> 'client t
   val clear : 'client t -> unit Deferred.t
 
+  val get_or_create_client :
+    'client t ->
+    session:session ->
+    create_client:(unit -> 'client Deferred.t) ->
+    'client Deferred.t
+
   val new_stateful :
-    'client t -> session:session -> create_client:(unit -> 'client) -> 'client
+    'client t ->
+    session:session ->
+    create_client:(unit -> 'client Deferred.t) ->
+    'client Deferred.t
 end

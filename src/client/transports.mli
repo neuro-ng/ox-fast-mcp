@@ -9,12 +9,14 @@ module Session = Mcp_client.Session
 
 (** {1 Session Configuration} *)
 
-type sampling_fn = unit -> unit Deferred.t
-type list_roots_fn = unit -> unit Deferred.t
-type logging_fn = string -> unit Deferred.t
-type elicitation_fn = unit -> unit Deferred.t
-type message_handler_fn = unit -> unit Deferred.t
-type implementation = { name : string; version : string }
+type sampling_fn = Session.sampling_fn
+(** Re-exported callback types from Session for consistency *)
+
+type elicitation_fn = Session.elicitation_fn
+type list_roots_fn = Session.list_roots_fn
+type logging_fn = Session.logging_fn
+type message_handler = Session.message_handler
+type implementation = Mcp.Types.implementation
 
 type session_kwargs = {
   read_timeout_seconds : Time_ns.Span.t option;
@@ -22,7 +24,7 @@ type session_kwargs = {
   list_roots_callback : list_roots_fn option;
   logging_callback : logging_fn option;
   elicitation_callback : elicitation_fn option;
-  message_handler : message_handler_fn option;
+  message_handler : message_handler option;
   client_info : implementation option;
 }
 

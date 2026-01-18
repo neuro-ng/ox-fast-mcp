@@ -7,17 +7,31 @@
 
 open Core
 open Async
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Types = Mcp.Types
+
+(* Time_ns converters for yojson *)
+type time_ns = Time_ns.t
+
+let yojson_of_time_ns t = `Float (Time_ns.to_span_since_epoch t |> Time_ns.Span.to_sec)
+let time_ns_of_yojson = function
+  | `Float f -> Time_ns.of_span_since_epoch (Time_ns.Span.of_sec f)
+  | `Int i -> Time_ns.of_span_since_epoch (Time_ns.Span.of_sec (Float.of_int i))
+  | json -> raise (Yojson.Safe.Util.Type_error ("Expected float or int for time", json))
+
+let sexp_of_time_ns = Time_ns.sexp_of_t
+let time_ns_of_sexp = Time_ns.t_of_sexp
+let compare_time_ns = Time_ns.compare
 
 type get_task_result = {
   taskId : string;
   status : string;
       (* "working" | "input_required" | "completed" | "failed" | "cancelled" *)
-  pollInterval : int option;
-  createdAt : Time_ns.t;
-  lastUpdatedAt : Time_ns.t;
+  pollInterval : int option; [@yojson.option]
+  createdAt : time_ns;
+  lastUpdatedAt : time_ns;
 }
-[@@deriving sexp, compare]
+[@@deriving sexp, compare, yojson]
 (** Placeholder type for GetTaskResult - TODO: Move to Mcp.Types when task
     support is added **)
 

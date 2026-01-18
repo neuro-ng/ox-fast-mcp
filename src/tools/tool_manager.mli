@@ -52,6 +52,7 @@ module Tool : sig
     ?description:string ->
     ?tags:string list ->
     ?annotations:(string * string) list ->
+    ?parameters:Yojson.Safe.t ->
     ?_exclude_args:string list ->
     ?_serializer:(Yojson.Safe.t -> string) ->
     ?enabled:bool ->

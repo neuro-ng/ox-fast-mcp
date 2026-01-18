@@ -49,7 +49,7 @@ val call_tool_as_task :
   string ->
   ?arguments:Yojson.Safe.t ->
   ?ttl:int ->
-  ?meta:(string * Yojson.Safe.t) list ->
+  ?meta:Yojson.Safe.t ->
   unit ->
   create_task_result Deferred.t
 (** Call a tool as a task, returning a CreateTaskResult for polling.
@@ -57,9 +57,6 @@ val call_tool_as_task :
     This is a convenience method for calling tools that support task execution.
     The server will return a task reference instead of the immediate result,
     which can then be polled via [get_task] and retrieved via [get_task_result].
-
-    NOTE: Currently not implemented - requires Session support for task
-    metadata.
 
     Args: name: The tool name arguments: Tool arguments ttl: Task time-to-live
     in milliseconds (default: 60000 = 1 minute) meta: Optional metadata to

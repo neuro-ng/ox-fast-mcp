@@ -58,10 +58,13 @@ let%expect_test "Stateful_proxy_client.new_stateful - creates client with \
     Server__Proxy.Stateful_proxy_client.create ~client:proxy_client
   in
   let session = `String "session-123" in
-  let create_client () = Conftest.Mock_client.create ~name:"SessionClient" () in
+  let create_client () =
+    Async.return (Conftest.Mock_client.create ~name:"SessionClient" ())
+  in
   let client =
-    Server__Proxy.Stateful_proxy_client.new_stateful stateful ~session
-      ~create_client
+    Async.Thread_safe.block_on_async_exn (fun () ->
+        Server__Proxy.Stateful_proxy_client.new_stateful stateful ~session
+          ~create_client)
   in
   printf "client_created: true\n";
   let _ = client in

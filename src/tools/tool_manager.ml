@@ -80,8 +80,9 @@ module Tool = struct
     | x -> [ Fmcp_types.create_text_content (serialize x) ]
 
   let from_function ?name ?description ?(tags = []) ?(annotations = [])
-      ?(_exclude_args = []) ?(_serializer : (Fmcp_types.json -> string) option)
-      ?(enabled = true) (simple_fn : simple_handler) =
+      ?parameters ?(_exclude_args = [])
+      ?(_serializer : (Fmcp_types.json -> string) option) ?(enabled = true)
+      (simple_fn : simple_handler) =
     (* Convert simple handler to internal handler *)
     let internal_fn : internal_handler =
      fun _ctx args ->
@@ -92,8 +93,15 @@ module Tool = struct
       match name with
       | Some n -> String.lowercase n
       | None ->
-        (* TODO: Extract function name using Caml.Obj.extension_constructor *)
+        (* Function name extraction not reliable in OCaml - use explicit name *)
         "<function>"
+    in
+    let schema =
+      match parameters with
+      | Some s -> s
+      | None ->
+        (* Empty schema as fallback - callers should provide explicit schema *)
+        `Assoc []
     in
     {
       key;
@@ -101,7 +109,7 @@ module Tool = struct
       description;
       tags;
       annotations;
-      parameters = `Assoc [] (* TODO: Generate JSON schema from function type *);
+      parameters = schema;
       enabled;
       fn = internal_fn;
     }

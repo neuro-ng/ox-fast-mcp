@@ -67,7 +67,7 @@ let to_assertion jwt_params ~with_audience_fallback =
     | None ->
       return
         (Error (Error.of_string "Missing signing key for JWT bearer grant"))
-    | Some _signing_key -> (
+    | Some signing_key -> (
       match jwt_params.issuer with
       | None ->
         return (Error (Error.of_string "Missing issuer for JWT bearer grant"))
@@ -84,35 +84,59 @@ let to_assertion jwt_params ~with_audience_fallback =
             return
               (Error (Error.of_string "Missing audience for JWT bearer grant"))
           else
-            (* Generate JWT with jose library - STUBBED for now *)
-            let () =
-              Logs.warn (fun m ->
-                  m "JWT generation stubbed - requires jose/jwk library")
-            in
             let now =
               Time_ns.to_span_since_epoch (Time_ns.now ())
               |> Time_ns.Span.to_int_sec
             in
-            let jti = sprintf "jti-%d" now in
-            (* Placeholder for UUID *)
-            let _claims =
-              `Assoc
-                [
-                  ("iss", `String issuer);
-                  ("sub", `String subject);
-                  ("aud", `String audience);
-                  ("exp", `Int (now + jwt_params.jwt_lifetime_seconds));
-                  ("iat", `Int now);
-                  ("jti", `String jti);
-                ]
+            (* Generate UUID v4-like jti *)
+            let jti =
+              sprintf "%08x-%04x-4%03x-%04x-%012x" (Random.int 0x100000000)
+                (Random.int 0x10000) (Random.int 0x1000) (Random.int 0x10000)
+                (Random.int 0x1000000000000)
             in
-            (* TODO: Implement actual JWT encoding with jose library *)
-            (* let encoded = Jose.Jwt.encode ~claims ~key:signing_key ~alg:jwt_signing_algorithm in *)
-            return
-              (Error
-                 (Error.of_string
-                    "JWT encoding not yet implemented - requires jose library"))
-        )))
+            (* Build JWT claims as Yojson payload *)
+            let base_claims =
+              [
+                ("iss", `String issuer);
+                ("sub", `String subject);
+                ("aud", `String audience);
+                ("exp", `Int (now + jwt_params.jwt_lifetime_seconds));
+                ("iat", `Int now);
+                ("jti", `String jti);
+              ]
+            in
+            (* Merge additional claims *)
+            let all_claims =
+              match jwt_params.claims with
+              | None -> base_claims
+              | Some extra ->
+                let claim_map = String.Map.of_alist_exn base_claims in
+                let updated_map =
+                  List.fold extra ~init:claim_map ~f:(fun acc (k, v) ->
+                      Map.set acc ~key:k ~data:v)
+                in
+                Map.to_alist updated_map
+            in
+            let payload = `Assoc all_claims in
+            
+            (* Determine algorithm and sign *)
+            let alg = Option.value jwt_params.jwt_signing_algorithm ~default:"RS256" in
+            let jwt_result = 
+              if String.is_prefix alg ~prefix:"HS" then
+                (* HMAC symmetric key - use oct *)
+                let jwk = Jose.Jwk.make_oct ~use:`Sig signing_key in
+                Jose.Jwt.sign ~payload jwk
+              else
+                (* RSA asymmetric key - parse as PEM *)
+                match Jose.Jwk.of_priv_pem ~use:`Sig signing_key with
+                | Ok jwk -> Jose.Jwt.sign ~payload jwk
+                | Error (`Msg msg) -> Error (`Msg (sprintf "Failed to parse signing key: %s" msg))
+                | Error `Unsupported_kty -> Error (`Msg "Unsupported key type")
+            in
+            
+            match jwt_result with
+            | Ok jwt -> return (Ok (Jose.Jwt.to_string jwt))
+            | Error (`Msg msg) -> return (Error (Error.of_string (sprintf "JWT signing failed: %s" msg))))))
 
 (** {1 RFC 7523 OAuth Client Provider} *)
 

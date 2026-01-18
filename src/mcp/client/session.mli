@@ -18,11 +18,27 @@ type error =
 type ('req, 'res) request_responder
 type request_context
 
-type sampling_fn = request_context -> create_message_request_params -> (create_message_result, error_data) Result.t Deferred.t
-type elicitation_fn = request_context -> elicit_request_params -> (elicit_result, error_data) Result.t Deferred.t
-type list_roots_fn = request_context -> (list_roots_result, error_data) Result.t Deferred.t
+type sampling_fn =
+  request_context ->
+  create_message_request_params ->
+  (create_message_result, error_data) Result.t Deferred.t
+
+type elicitation_fn =
+  request_context ->
+  elicit_request_params ->
+  (elicit_result, error_data) Result.t Deferred.t
+
+type list_roots_fn =
+  request_context -> (list_roots_result, error_data) Result.t Deferred.t
+
 type logging_fn = logging_message_notification_params -> unit Deferred.t
-type message_handler = [ `Exception of exn | `Notification of server_notification | `Request of (server_request, client_result) request_responder ] -> unit Deferred.t
+
+type message_handler =
+  [ `Exception of exn
+  | `Notification of server_notification
+  | `Request of (server_request, client_result) request_responder ] ->
+  unit Deferred.t
+
 type progress_fn = float -> float option -> string option -> unit Deferred.t
 
 val default_client_info : implementation
@@ -49,7 +65,6 @@ val create_from_pipes :
   unit ->
   t
 (** Create a session from existing pipes (for use by session_group) *)
-(** Convert error to string *)
 
 val initialize : t -> initialize_result Deferred.t
 (** Initialize the session *)
@@ -64,8 +79,7 @@ val list_resources :
   t -> ?cursor:string -> unit -> list_resources_result Deferred.t
 (** List resources *)
 
-val list_prompts :
-  t -> ?cursor:string -> unit -> list_prompts_result Deferred.t
+val list_prompts : t -> ?cursor:string -> unit -> list_prompts_result Deferred.t
 (** List prompts *)
 
 val list_resource_templates :
@@ -96,3 +110,16 @@ val list_tools : t -> ?cursor:string -> unit -> list_tools_result Deferred.t
 
 val send_roots_list_changed : t -> unit Deferred.t
 (** Send roots list changed notification *)
+
+val send_request :
+  t ->
+  method_name:string ->
+  params:Yojson.Safe.t option ->
+  result_decoder:(Yojson.Safe.t -> ('a, string) Result.t) ->
+  unit ->
+  'a Deferred.t
+(** Send a custom JSON-RPC request. Used by experimental APIs.
+    @param method_name The JSON-RPC method name
+    @param params Optional parameters
+    @param result_decoder Function to decode the result JSON
+    @return The decoded result *)

@@ -1,0 +1,17 @@
+(library
+ (name test_contrib)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_expect))
+ (libraries
+  core
+  async
+  expect_test_helpers_core
+  bulk_tool_caller
+  mcp_mixin
+  tools
+  resources
+  prompts
+  mcp
+  utilities
+  ox_fast_mcp))

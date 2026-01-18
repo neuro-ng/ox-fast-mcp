@@ -17,7 +17,7 @@ type get_task_result = {
   createdAt : Time_ns.t;
   lastUpdatedAt : Time_ns.t;
 }
-[@@deriving sexp, compare]
+[@@deriving sexp, compare, yojson]
 (** Placeholder type for GetTaskResult - TODO: Move to Mcp.Types when task
     support is added *)
 

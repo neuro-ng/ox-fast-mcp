@@ -282,8 +282,10 @@ let connect_to_server t ~server_params ?session_params ~stderr () =
   let%bind init_result = Session.initialize session in
   let server_info = init_result.Mcp.Types.server_info in
 
-  (* TODO: Track cleanup resources (writer/process) for later disconnect *)
-  (* For now, we don't have access to the Process.t from stdio_client *)
+  (* PLACEHOLDER: Track cleanup resources (writer, process) for graceful
+     disconnect. The stdio_client returns pipes but not the Process.t handle.
+     Either: 1. Modify stdio_client to also return Process.t, or 2. Store a
+     custom cleanup function. See session_group.todo for details. *)
 
   (* Aggregate components from this server *)
   let%bind () = aggregate_components t server_info session in
@@ -327,12 +329,35 @@ let disconnect_from_server t ~session =
   (* Cleanup session resources *)
   match Hashtbl.find t.session_cleanups session with
   | None -> return ()
-  | Some (_writer, process) ->
+  | Some (writer, process) -> (
     Hashtbl.remove t.session_cleanups session;
-    (* TODO: Implement graceful process shutdown *)
-    (* For now, just terminate *)
-    Signal_unix.send_i Signal.term (`Pid (Process.pid process));
-    return ()
+
+    (* Graceful shutdown sequence: 1. Close writer (stdin) to signal EOF to
+       server 2. Wait up to 2 seconds for process to exit 3. Send SIGTERM if
+       still running, wait 2 more seconds 4. Send SIGKILL as last resort *)
+
+    (* Step 1: Close stdin pipe to signal server *)
+    let%bind () = Writer.close writer in
+
+    (* Step 2: Wait up to 2 seconds for graceful exit *)
+    let wait_result =
+      Clock_ns.with_timeout (Time_ns.Span.of_sec 2.0) (Process.wait process)
+    in
+    match%bind wait_result with
+    | `Result _ -> return () (* Process exited gracefully *)
+    | `Timeout -> (
+      (* Step 3: Send SIGTERM *)
+      Signal_unix.send_i Signal.term (`Pid (Process.pid process));
+      let term_result =
+        Clock_ns.with_timeout (Time_ns.Span.of_sec 2.0) (Process.wait process)
+      in
+      match%bind term_result with
+      | `Result _ -> return () (* Process exited after SIGTERM *)
+      | `Timeout ->
+        (* Step 4: Send SIGKILL as last resort *)
+        Signal_unix.send_i Signal.kill (`Pid (Process.pid process));
+        let%bind _ = Process.wait process in
+        return ()))
 
 (** {1 Tool Calling} *)
 

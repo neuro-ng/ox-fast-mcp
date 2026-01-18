@@ -4,32 +4,38 @@
 
     WARNING: These APIs are experimental and may change without notice.
 
-    NOTE: This module currently has placeholder implementations due to missing
-    task types in Mcp.Types and incomplete Session.send_request. Full
-    implementation will be available once these dependencies are complete.
+    Uses Session.send_request for JSON-RPC communication with task endpoints.
 
-    Example: (* Call a tool as a task *) let%bind result =
-    Tasks.call_tool_as_task t "tool_name" ~arguments:(Some args) () in let
-    task_id = result.taskId in
+    Example: 
+      (* Get task status *) 
+      let%bind status = Tasks.get_task t task_id in
 
-    (* Get task status *) let%bind status = Tasks.get_task t task_id in
+      (* List all tasks *)
+      let%bind result = Tasks.list_tasks t () in
 
-    (* Poll task *) let task_pipe = Tasks.poll_task t task_id in ... *)
+      (* Poll task until complete *)
+      let task_pipe = Tasks.poll_task t task_id in ... *)
 
 open Core
-open Async
+open! Async
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Types = Mcp.Types
 module Session = Mcp_client.Session
 module Polling = Mcp_shared_experimental_tasks.Polling
-
-(* Use polling module's get_task_result type *)
+(* Use polling module's get_task_result type and converters *)
 type get_task_result = Polling.get_task_result
+
+let yojson_of_get_task_result = Polling.yojson_of_get_task_result
+let get_task_result_of_yojson = Polling.get_task_result_of_yojson
+
 type create_task_result = { taskId : string }
+[@@deriving yojson]
 
 type list_tasks_result = {
   tasks : get_task_result list;
-  nextCursor : string option;
+  nextCursor : string option; [@yojson.option]
 }
+[@@deriving yojson]
 
 type cancel_task_result = get_task_result
 
@@ -43,43 +49,70 @@ type t = { session : Session.t }
 
 let create session = { session }
 
-let call_tool_as_task _t _name ?arguments:_ ?ttl:_ ?meta:_ () =
-  (* TODO: Requires Session.call_tool to support task metadata *)
-  (* And needs CreateTaskResult return type *)
-  failwith
-    "call_tool_as_task not implemented - requires Session support for task \
-     metadata and CreateTaskResult return type"
+(** Call a tool and run it as a background task.
+    
+    Note: The server must support task-based tool execution for this to work.
+    If not supported, the tool will execute synchronously and return immediately. *)
+let call_tool_as_task t name ?arguments ?ttl ?meta () =
+  let params =
+    `Assoc
+      ([ ("name", `String name) ]
+      @ (match arguments with Some args -> [ ("arguments", args) ] | None -> [])
+      @ (match ttl with Some t -> [ ("ttl", `Int t) ] | None -> [])
+      @ (match meta with Some m -> [ ("_meta", m) ] | None -> []))
+  in
+  Session.send_request t.session ~method_name:"tasks/call"
+    ~params:(Some params)
+    ~result_decoder:(fun json ->
+      try Ok (create_task_result_of_yojson json)
+      with exn -> Error (Exn.to_string exn))
+    ()
 
-let get_task _t task_id =
-  (* TODO: Requires Session.send_request to be implemented with GetTaskRequest support *)
-  (* Returning placeholder for now *)
-  Deferred.return
-    {
-      Polling.taskId = task_id;
-      status = "working";
-      pollInterval = Some 500;
-      createdAt = Time_ns.now ();
-      lastUpdatedAt = Time_ns.now ();
-    }
+(** Get the current status of a task by ID. *)
+let get_task t task_id =
+  let params = `Assoc [ ("taskId", `String task_id) ] in
+  Session.send_request t.session ~method_name:"tasks/get"
+    ~params:(Some params)
+    ~result_decoder:(fun json ->
+      try Ok (Polling.get_task_result_of_yojson json)
+      with exn -> Error (Exn.to_string exn))
+    ()
 
-let get_task_result _t _task_id =
-  (* TODO: Requires Session.send_request with GetTaskPayloadRequest support *)
-  failwith "get_task_result not implemented - requires Session.send_request"
+(** Get the result/payload of a completed task. *)
+let get_task_result t task_id =
+  let params = `Assoc [ ("taskId", `String task_id) ] in
+  Session.send_request t.session ~method_name:"tasks/getResult"
+    ~params:(Some params)
+    ~result_decoder:(fun json -> Ok json)
+    ()
 
-let list_tasks _t ?cursor:_ () =
-  (* TODO: Requires Session.send_request with ListTasksRequest support *)
-  Deferred.return { tasks = []; nextCursor = None }
+(** List all tasks, optionally with cursor for pagination. *)
+let list_tasks t ?cursor () =
+  let params =
+    match cursor with
+    | Some c -> Some (`Assoc [ ("cursor", `String c) ])
+    | None -> None
+  in
+  Session.send_request t.session ~method_name:"tasks/list"
+    ~params
+    ~result_decoder:(fun json ->
+      try Ok (list_tasks_result_of_yojson json)
+      with exn -> Error (Exn.to_string exn))
+    ()
 
-let cancel_task _t task_id =
-  (* TODO: Requires Session.send_request with CancelTaskRequest support *)
-  Deferred.return
-    {
-      Polling.taskId = task_id;
-      status = "cancelled";
-      pollInterval = None;
-      createdAt = Time_ns.now ();
-      lastUpdatedAt = Time_ns.now ();
-    }
+(** Cancel a running task. *)
+let cancel_task t task_id =
+  let params = `Assoc [ ("taskId", `String task_id) ] in
+  Session.send_request t.session ~method_name:"tasks/cancel"
+    ~params:(Some params)
+    ~result_decoder:(fun json ->
+      try Ok (Polling.get_task_result_of_yojson json)
+      with exn -> Error (Exn.to_string exn))
+    ()
 
+(** Poll a task until it reaches a terminal state.
+    
+    Returns a pipe that emits task status updates until the task completes,
+    is cancelled, or fails. *)
 let poll_task t task_id =
   Polling.poll_until_terminal ~get_task:(get_task t) ~task_id ()

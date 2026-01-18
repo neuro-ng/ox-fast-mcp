@@ -682,7 +682,9 @@ module Proxy_client = struct
 
   (** Default sampling handler - forwards to proxy's connected clients *)
   let default_sampling_handler ~messages:_ ~params:_ =
-    (* TODO: Implement actual sampling forwarding *)
+    (* PLACEHOLDER: Sampling forwarding not implemented. Needs: connect to
+       upstream server, forward create_message request, return actual LLM
+       response. See proxy.todo for details. *)
     return
       (`Assoc
         [
@@ -693,17 +695,19 @@ module Proxy_client = struct
 
   (** Default elicitation handler *)
   let default_elicitation_handler ~message:_ ~params:_ =
-    (* TODO: Implement actual elicitation forwarding *)
+    (* PLACEHOLDER: Elicitation forwarding not implemented. Needs: forward
+       elicit request to upstream, return user's response. *)
     return (`Assoc [ ("action", `String "accept"); ("content", `Null) ])
 
   (** Default log handler *)
   let default_log_handler ~message:_ =
-    (* TODO: Implement actual log forwarding *)
+    (* PLACEHOLDER: Log forwarding not implemented. Forward to upstream
+       logger. *)
     return ()
 
   (** Default progress handler *)
   let default_progress_handler ~progress:_ ~total:_ ~message:_ =
-    (* TODO: Implement actual progress forwarding *)
+    (* PLACEHOLDER: Progress forwarding not implemented. Forward to upstream. *)
     return ()
 end
 
@@ -721,9 +725,17 @@ module Stateful_proxy_client = struct
     Hashtbl.clear t.caches;
     return ()
 
+  (** Get or create a client for a given session. Returns cached client if
+      exists, otherwise creates new one and caches it. *)
+  let get_or_create_client t ~session ~create_client =
+    match Hashtbl.find t.caches session with
+    | Some client -> return client
+    | None ->
+      let%bind client = create_client () in
+      Hashtbl.set t.caches ~key:session ~data:client;
+      return client
+
   (** Create a new stateful proxy client instance with the same configuration *)
-  let new_stateful _t ~session ~create_client =
-    (* TODO: Implement session-bound client creation *)
-    let _ = session in
-    create_client ()
+  let new_stateful t ~session ~create_client =
+    get_or_create_client t ~session ~create_client
 end
