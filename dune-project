@@ -9,6 +9,44 @@
  (synopsis "OCaml implementation of FastMCP")
  (description "OCaml implementation of FastMCP using Jane Street libraries")
  (depends
+  (stdio
+   (and
+    (>= v0.18~preview.130.76+222)
+    :with-test))
+  (ptime
+   (>= 1.2.0))
+  (ppx_yojson_conv_lib
+   (>= v0.18~preview.130.76+222))
+  (ppx_yojson_conv
+   (>= v0.18~preview.130.76+222))
+  (ppx_sexp_message
+   (>= v0.18~preview.130.76+222))
+  (ppx_sexp_conv
+   (>= v0.18~preview.130.76+222))
+  (ppx_let
+   (>= v0.18~preview.130.76+222))
+  (ppx_fields_conv
+   (>= v0.18~preview.130.76+222))
+  (ppx_compare
+   (>= v0.18~preview.130.76+222))
+  (parsexp
+   (>= v0.18~preview.130.76+222))
+  (mirage-crypto-rng
+   (>= 0.11.3))
+  (logs
+   (>= 0.9.0))
+  (digestif
+   (>= 1.3.0))
+  (cohttp-lwt
+   (>= 6.1.1))
+  (cohttp-async
+   (>= 6.1.1))
+  (cohttp
+   (>= 6.1.1))
+  (base
+   (>= v0.18~preview.130.76+222))
+  (async_log
+   (>= v0.18~preview.130.76+222))
   (ocaml
    (>= 4.14.0))
   (ocaml-variants
