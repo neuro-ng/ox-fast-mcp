@@ -13,11 +13,14 @@ module Types = Mcp.Types
 (* Time_ns converters for yojson *)
 type time_ns = Time_ns.t
 
-let yojson_of_time_ns t = `Float (Time_ns.to_span_since_epoch t |> Time_ns.Span.to_sec)
+let yojson_of_time_ns t =
+  `Float (Time_ns.to_span_since_epoch t |> Time_ns.Span.to_sec)
+
 let time_ns_of_yojson = function
   | `Float f -> Time_ns.of_span_since_epoch (Time_ns.Span.of_sec f)
   | `Int i -> Time_ns.of_span_since_epoch (Time_ns.Span.of_sec (Float.of_int i))
-  | json -> raise (Yojson.Safe.Util.Type_error ("Expected float or int for time", json))
+  | json ->
+    raise (Yojson.Safe.Util.Type_error ("Expected float or int for time", json))
 
 let sexp_of_time_ns = Time_ns.sexp_of_t
 let time_ns_of_sexp = Time_ns.t_of_sexp

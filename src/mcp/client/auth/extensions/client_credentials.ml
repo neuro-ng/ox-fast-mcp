@@ -76,7 +76,7 @@ let to_assertion jwt_params ~with_audience_fallback =
         | None ->
           return
             (Error (Error.of_string "Missing subject for JWT bearer grant"))
-        | Some subject ->
+        | Some subject -> (
           let audience =
             Option.value jwt_params.audience ~default:with_audience_fallback
           in
@@ -118,10 +118,12 @@ let to_assertion jwt_params ~with_audience_fallback =
                 Map.to_alist updated_map
             in
             let payload = `Assoc all_claims in
-            
+
             (* Determine algorithm and sign *)
-            let alg = Option.value jwt_params.jwt_signing_algorithm ~default:"RS256" in
-            let jwt_result = 
+            let alg =
+              Option.value jwt_params.jwt_signing_algorithm ~default:"RS256"
+            in
+            let jwt_result =
               if String.is_prefix alg ~prefix:"HS" then
                 (* HMAC symmetric key - use oct *)
                 let jwk = Jose.Jwk.make_oct ~use:`Sig signing_key in
@@ -130,13 +132,17 @@ let to_assertion jwt_params ~with_audience_fallback =
                 (* RSA asymmetric key - parse as PEM *)
                 match Jose.Jwk.of_priv_pem ~use:`Sig signing_key with
                 | Ok jwk -> Jose.Jwt.sign ~payload jwk
-                | Error (`Msg msg) -> Error (`Msg (sprintf "Failed to parse signing key: %s" msg))
+                | Error (`Msg msg) ->
+                  Error (`Msg (sprintf "Failed to parse signing key: %s" msg))
                 | Error `Unsupported_kty -> Error (`Msg "Unsupported key type")
             in
-            
+
             match jwt_result with
             | Ok jwt -> return (Ok (Jose.Jwt.to_string jwt))
-            | Error (`Msg msg) -> return (Error (Error.of_string (sprintf "JWT signing failed: %s" msg))))))
+            | Error (`Msg msg) ->
+              return
+                (Error (Error.of_string (sprintf "JWT signing failed: %s" msg)))
+          ))))
 
 (** {1 RFC 7523 OAuth Client Provider} *)
 

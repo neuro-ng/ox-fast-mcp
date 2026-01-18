@@ -133,7 +133,7 @@ module Jwt_parameters = struct
             in
             match audience with
             | None -> failwith "Missing audience for JWT bearer grant"
-            | Some aud ->
+            | Some aud -> (
               let now = Float.to_int (Core_unix.time ()) in
               let exp = now + t.jwt_lifetime_seconds in
               (* Generate a simple UUID v4-like string using random data *)
@@ -167,18 +167,18 @@ module Jwt_parameters = struct
                   Map.to_alist updated_map
               in
               let payload = `Assoc all_claims in
-              
+
               Logging.Logger.debug logger
                 (sprintf
                    "Generated JWT claims for issuer=%s, subject=%s, audience=%s"
                    issuer subject aud);
-              
+
               (* Parse the signing key and create signed JWT *)
               let key_str = Secret_string.to_string key_secret in
               let alg = Option.value t.jwt_signing_algorithm ~default:"RS256" in
-              
+
               (* Determine key type and sign accordingly *)
-              let jwt_result = 
+              let jwt_result =
                 if String.is_prefix alg ~prefix:"HS" then
                   (* HMAC symmetric key - use oct *)
                   let jwk = Jose.Jwk.make_oct ~use:`Sig key_str in
@@ -187,13 +187,16 @@ module Jwt_parameters = struct
                   (* RSA asymmetric key - parse as PEM *)
                   match Jose.Jwk.of_priv_pem ~use:`Sig key_str with
                   | Ok jwk -> Jose.Jwt.sign ~payload jwk
-                  | Error (`Msg msg) -> Error (`Msg (sprintf "Failed to parse signing key: %s" msg))
-                  | Error `Unsupported_kty -> Error (`Msg "Unsupported key type")
+                  | Error (`Msg msg) ->
+                    Error (`Msg (sprintf "Failed to parse signing key: %s" msg))
+                  | Error `Unsupported_kty ->
+                    Error (`Msg "Unsupported key type")
               in
-              
+
               match jwt_result with
               | Ok jwt -> Jose.Jwt.to_string jwt
-              | Error (`Msg msg) -> failwith (sprintf "JWT signing failed: %s" msg)))))
+              | Error (`Msg msg) ->
+                failwith (sprintf "JWT signing failed: %s" msg))))))
 end
 
 (* RFC 7523 OAuth Client Provider

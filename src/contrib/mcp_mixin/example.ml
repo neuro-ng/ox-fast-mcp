@@ -66,8 +66,8 @@ module CalculatorMixin = struct
         handler = multiply_handler t;
         info =
           Mcp_mixin.make_tool_info ~name:"multiply"
-            ~description:"Multiply two numbers"
-            ~tags:[ "math"; "arithmetic" ] ();
+            ~description:"Multiply two numbers" ~tags:[ "math"; "arithmetic" ]
+            ();
       };
     ]
 
@@ -80,8 +80,7 @@ module CalculatorMixin = struct
   (* Register all items with server managers *)
   let register_all t ~tool_manager ~resource_manager ~prompt_manager ?prefix
       ?tool_separator ?resource_separator ?prompt_separator () =
-    Mcp_mixin.register_all ~tools:(get_tools t)
-      ~resources:(get_resources t)
+    Mcp_mixin.register_all ~tools:(get_tools t) ~resources:(get_resources t)
       ~prompts:(get_prompts t) ~tool_manager ~resource_manager ~prompt_manager
       ?prefix ?tool_separator ?resource_separator ?prompt_separator ()
 end
@@ -95,7 +94,8 @@ let example_bulk_calling () =
           {
             Mcp.Types.type_ = `Text;
             text =
-              sprintf "Called %s with: %s" name (Yojson.Safe.to_string arguments);
+              sprintf "Called %s with: %s" name
+                (Yojson.Safe.to_string arguments);
             annotations = None;
             meta = None;
           };
