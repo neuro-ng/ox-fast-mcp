@@ -1,6 +1,11 @@
 (library
  (name test_bearer)
- (modules test_bearer test_oauth)
+ (modules
+  test_bearer
+  test_oauth
+  test_oauth_callback
+  test_oauth_integration
+  test_oauth2_middleware)
  (libraries
   base
   core

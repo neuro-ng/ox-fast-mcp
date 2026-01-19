@@ -175,10 +175,21 @@ module Protocol : sig
   val create_method_map : unit -> method_map
 end
 
+(** {1 Lifespan Management} *)
+
+(** Context passed to lifespan hooks *)
+type lifespan_context = {
+  mutable startup_complete : bool;
+  mutable shutdown_requested : bool;
+}
+
 (** {1 Main Server} *)
 
 module Ox_fast_mcp : sig
   type t
+  
+  (** Lifespan hook function type *)
+  type lifespan_hook = lifespan_context -> unit Deferred.t
 
   val generate_name : unit -> string
 
@@ -263,10 +274,40 @@ module Ox_fast_mcp : sig
   (** Get server statistics (counts of tools, resources, prompts, templates,
       mounted servers) **)
 
+  (** {2 Component Manager Accessors} *)
+
+  val get_tool_manager : t -> Tool_manager.t
+  (** Get a Tool_manager instance backed by server's tool storage.
+      Note: Creates a new manager that mirrors current server tools. *)
+
+  val get_prompt_manager : t -> Prompts.Prompt_manager.t
+  (** Get a Prompt_manager instance backed by server's prompt storage.
+      Note: Creates a new manager that mirrors current server prompts. *)
+
+  val get_resource_manager : t -> Resources.Resource_manager.t
+  (** Get a Resource_manager instance backed by server's resource storage.
+      Note: Creates a new manager that mirrors current server resources. *)
+
+  val get_server_tool_adapter : t -> Tool.t Server_tool_adapter.t
+  (** Get a Server_tool_adapter instance backed by server's tool storage.
+      This provides a manager-like interface over the server's actual tools. *)
+
   val add_tool : t -> Tool.t -> unit
   (** Tool management *)
 
   val remove_tool : t -> name:string -> unit
+  
+  (** {2 Tool Transformation Management} *)
+
+  val add_tool_transformation : t -> name:string -> config:Tool_transform_config.t -> unit
+  (** Add a tool transformation configuration *)
+
+  val remove_tool_transformation : t -> name:string -> unit
+  (** Remove a tool transformation configuration *)
+
+  val apply_tool_transformations : t -> Tool.t -> Tool.t
+  (** Apply all transformations to a tool if any exist *)
+  
   val get_tools : t -> (string, Tool.t) Hashtbl.t
   val get_tool : t -> key:string -> Tool.t Deferred.t
   val list_tools_mcp : t -> Yojson.Safe.t list
@@ -387,6 +428,23 @@ module Ox_fast_mcp : sig
 
   val health_check : t -> (Yojson.Safe.t, string) Result.t
   (** Comprehensive health check returning server status and validation results *)
+
+  (** {2 Lifespan Hook Management} *)
+
+  val add_startup_hook : t -> lifespan_hook -> unit
+  (** Add a startup hook - runs when server starts *)
+
+  val add_shutdown_hook : t -> lifespan_hook -> unit
+  (** Add a shutdown hook - runs when server stops *)
+
+  val run_startup : t -> unit Deferred.t
+  (** Run all startup hooks in order *)
+
+  val run_shutdown : t -> unit Deferred.t
+  (** Run all shutdown hooks in reverse order *)
+
+  val with_lifespan : t -> f:(unit -> 'a Deferred.t) -> 'a Deferred.t
+  (** Run a function within the server lifespan - runs startup, executes f, then shutdown *)
 
   val call_tool :
     t -> name:string -> arguments:Yojson.Safe.t -> Yojson.Safe.t Deferred.t

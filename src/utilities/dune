@@ -16,7 +16,11 @@
   magic-mime
   ppx_yojson_conv
   yojson
-  uri)
+  uri
+  cohttp-async
+  digestif
+  ox-fast-mcp.mcp.shared
+  ox-fast-mcp.mcp_client_auth)
  (modules
   cache
   components
@@ -27,7 +31,9 @@
   manager
   mcp_config
   network_utils
-  secret_string)
+  secret_string
+  headless_oauth
+  mock_oauth_server)
  (preprocess
   (pps ppx_jane ppx_compare ppx_sexp_conv ppx_sexp_message ppx_yojson_conv))
  (instrumentation

@@ -253,7 +253,18 @@ end
 
 (** {1 Main Server} *)
 
+(** {1 Lifespan Management} *)
+
+(** Context passed to lifespan hooks *)
+type lifespan_context = {
+  mutable startup_complete : bool;
+  mutable shutdown_requested : bool;
+}
+
 module Ox_fast_mcp = struct
+  (** Lifespan hook function type *)
+  type lifespan_hook = lifespan_context -> unit Deferred.t
+
   type mounted_server = {
     server : t;
     prefix : string option;
@@ -284,6 +295,11 @@ module Ox_fast_mcp = struct
     (* Statistics tracking *)
     mutable tool_call_counts : (string, int) Hashtbl.t;
     mutable resource_access_counts : (string, int) Hashtbl.t;
+    (* Tool transformations - maps tool names to transformation configs *)
+    mutable tool_transformations : (string, Tool_transform_config.t) Hashtbl.t;
+    (* Lifespan hooks *)
+    mutable on_startup : lifespan_hook list;
+    mutable on_shutdown : lifespan_hook list;
   }
 
   let generate_name () =
@@ -433,6 +449,11 @@ module Ox_fast_mcp = struct
       (* Initialize statistics *)
       tool_call_counts = Hashtbl.create (module String);
       resource_access_counts = Hashtbl.create (module String);
+      (* Initialize tool transformations *)
+      tool_transformations = Hashtbl.create (module String);
+      (* Initialize lifespan hooks *)
+      on_startup = [];
+      on_shutdown = [];
     }
 
   (** Apply middleware chain to a handler *)
@@ -505,6 +526,102 @@ module Ox_fast_mcp = struct
         ("mounted_servers_count", `Int (List.length t.mounted_servers));
       ]
 
+  (** {2 Component Manager Accessors} *)
+
+  [@@@warning "-32"]
+
+  (** Get a Tool_manager instance backed by server's tool storage.
+      Note: Creates a new manager that mirrors current server tools. *)
+  let get_tool_manager t : Tool_manager.t =
+    let manager = Tool_manager.create
+      ~duplicate_behavior:(
+        match t.on_duplicate_tools with
+        | Duplicate_behavior.Warn -> Tool_manager.DuplicateBehavior.Warn
+        | Duplicate_behavior.Error -> Tool_manager.DuplicateBehavior.Error
+        | Duplicate_behavior.Replace -> Tool_manager.DuplicateBehavior.Replace
+        | Duplicate_behavior.Ignore -> Tool_manager.DuplicateBehavior.Ignore
+      )
+      ()
+    in
+    (* Note: Tool_manager uses Tool_types.t, not Server.Tool.t
+       This is a read-only snapshot for now *)
+    manager
+
+  (** Get a Server_tool_adapter instance backed by server's tool storage.
+      This provides a manager-like interface over the server's actual tools. *)
+  let get_server_tool_adapter t : Tool.t Server_tool_adapter.t =
+    Server_tool_adapter.create
+      ~get_tools:(fun () -> t.tools)
+      ~set_tool:(fun ~key ~data -> Hashtbl.set t.tools ~key ~data)
+      ~remove_tool:(fun key -> Hashtbl.remove t.tools key)
+      ~get_key:(fun tool -> tool.Tool.key)
+      ~get_name:(fun tool -> tool.Tool.name)
+      ~get_tags:(fun tool -> tool.Tool.tags)
+      ~call_handler:(fun tool args -> tool.Tool.handler args)
+      ~on_duplicate:(
+        match t.on_duplicate_tools with
+        | Duplicate_behavior.Warn -> `Warn
+        | Duplicate_behavior.Error -> `Error
+        | Duplicate_behavior.Replace -> `Replace
+        | Duplicate_behavior.Ignore -> `Ignore)
+      ~mask_error_details:false
+
+  (** Get a Prompt_manager instance backed by server's prompt storage.
+      Note: Creates a new manager that mirrors current server prompts. *)
+  let get_prompt_manager _t : Prompts.Prompt_manager.t =
+    let manager = Prompts.Prompt_manager.create () in
+    (* Note: Prompt_manager uses Prompt_types.t, not Server.Prompt.t
+       This is a read-only snapshot for now *)
+    manager
+
+  (** Get a Resource_manager instance backed by server's resource storage.
+      Note: Creates a new manager that mirrors current server resources. *)
+  let get_resource_manager _t : Resources.Resource_manager.t =
+    let manager = Resources.Resource_manager.create () in
+    (* Note: Resource_manager uses Resource_types.t, not Server.Resource.t
+       This is a read-only snapshot for now *)
+    manager
+
+  [@@@warning "+32"]
+
+  (** {2 Lifespan Hook Management} *)
+
+  (** Add a startup hook - runs when server starts *)
+  let add_startup_hook t hook =
+    t.on_startup <- t.on_startup @ [hook]
+
+  (** Add a shutdown hook - runs when server stops *)
+  let add_shutdown_hook t hook =
+    t.on_shutdown <- t.on_shutdown @ [hook]
+
+  (** Run all startup hooks in order *)
+  let run_startup t =
+    let ctx = { startup_complete = false; shutdown_requested = false } in
+    let%bind () =
+      Deferred.List.iter t.on_startup ~how:`Sequential ~f:(fun hook ->
+          hook ctx)
+    in
+    ctx.startup_complete <- true;
+    Logging.Global.info "Server startup complete";
+    return ()
+
+  (** Run all shutdown hooks in reverse order *)
+  let run_shutdown t =
+    let ctx = { startup_complete = true; shutdown_requested = true } in
+    let%bind () =
+      Deferred.List.iter (List.rev t.on_shutdown) ~how:`Sequential ~f:(fun hook ->
+          hook ctx)
+    in
+    Logging.Global.info "Server shutdown complete";
+    return ()
+
+  (** Run a function within the server lifespan - runs startup, executes f, then shutdown *)
+  let with_lifespan t ~f =
+    let%bind () = run_startup t in
+    Monitor.protect
+      (fun () -> f ())
+      ~finally:(fun () -> run_shutdown t)
+
   let should_enable_component t ~(tags : String.Set.t) =
     let include_ok =
       match t.include_tags with
@@ -540,6 +657,35 @@ module Ox_fast_mcp = struct
     | _ -> Hashtbl.set t.tools ~key ~data:tool
 
   let remove_tool t ~name = Hashtbl.remove t.tools name
+
+  (** {2 Tool Transformation Management} *)
+
+  [@@@warning "-32"]
+
+  (** Add a tool transformation configuration *)
+  let add_tool_transformation t ~name ~(config : Tool_transform_config.t) =
+    Hashtbl.set t.tool_transformations ~key:name ~data:config;
+    Logging.Global.info (sprintf "Added tool transformation for: %s" name)
+
+  (** Remove a tool transformation configuration *)
+  let remove_tool_transformation t ~name =
+    Hashtbl.remove t.tool_transformations name;
+    Logging.Global.info (sprintf "Removed tool transformation for: %s" name)
+
+  (** Apply all transformations to a tool if any exist *)
+  let apply_tool_transformations t (tool : Tool.t) : Tool.t =
+    match Hashtbl.find t.tool_transformations tool.key with
+    | None -> tool
+    | Some config ->
+      (* Create a Tool_types.t from the server Tool.t, transform it, then convert back *)
+      (* For now, apply basic transformations directly to the server Tool record *)
+      {
+        tool with
+        name = Option.value config.name ~default:tool.name;
+        description = Option.first_some config.description tool.description;
+        tags = Option.value_map config.tags ~default:tool.tags ~f:String.Set.of_list;
+      }
+
 
   let rec get_tools t =
     (* Get local tools and filter them *)

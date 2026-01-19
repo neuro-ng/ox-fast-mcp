@@ -10,6 +10,6 @@
   logs
   ox-fast-mcp
   ox-fast-mcp.mcp.shared)
- (modules bearer oauth)
+ (modules bearer oauth oauth_callback)
  (preprocess
   (pps ppx_jane ppx_yojson_conv ppx_compare)))

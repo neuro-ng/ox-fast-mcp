@@ -253,16 +253,23 @@ let redirect_handler _t authorization_url =
     return ())
 
 let callback_handler t =
-  (* STUB: This needs a full HTTP server implementation to handle OAuth callback *)
-  (* For now, return placeholder values *)
-  Logs.warn (fun m ->
-      m "OAuth callback handler is stubbed - full browser flow not implemented");
-  Logs.warn (fun m ->
-      m "Callback server would run on http://localhost:%d" t.redirect_port);
-
-  (* In a real implementation, this would: 1. Start an HTTP server on
-     redirect_port 2. Wait for OAuth callback with code and state 3. Return the
-     authorization code and state *)
-  failwith "OAuth callback handler not implemented - see oauth.todo"
+  (* Start OAuth callback HTTP server and wait for browser redirect *)
+  Logs.info (fun m ->
+      m "Starting OAuth callback server on http://localhost:%d" t.redirect_port);
+  
+  let timeout = Time_ns.Span.of_min 5.0 in
+  let%bind result = Oauth_callback.start_callback_server ~port:t.redirect_port ~timeout in
+  
+  match result.Oauth_callback.code with
+  | Some code ->
+    Logs.info (fun m -> m "OAuth authorization code received");
+    return (code, result.state)
+  | None ->
+    match result.error with
+    | Some err ->
+      let desc = Option.value result.error_description ~default:"Unknown error" in
+      failwith (sprintf "OAuth authorization failed: %s - %s" err desc)
+    | None ->
+      failwith "No authorization code received from OAuth callback"
 
 let clear_cache t = Token_storage_adapter.clear t.token_storage
