@@ -30,6 +30,8 @@
   proxy
   server
   server_tool_adapter
+  server_prompt_adapter
+  server_resource_adapter
   session_bridge)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))

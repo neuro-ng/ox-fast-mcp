@@ -574,6 +574,25 @@ module Ox_fast_mcp = struct
        This is a read-only snapshot for now *)
     manager
 
+  (** Get a Server_prompt_adapter instance backed by server's prompt storage.
+      This provides a manager-like interface over the server's actual prompts. *)
+  let get_server_prompt_adapter t : Prompt.t Server_prompt_adapter.t =
+    Server_prompt_adapter.create
+      ~get_prompts:(fun () -> t.prompts)
+      ~set_prompt:(fun ~key ~data -> Hashtbl.set t.prompts ~key ~data)
+      ~remove_prompt:(fun key -> Hashtbl.remove t.prompts key)
+      ~get_key:(fun prompt -> prompt.Prompt.key)
+      ~get_name:(fun prompt -> prompt.Prompt.name)
+      ~get_tags:(fun prompt -> prompt.Prompt.tags)
+      ~get_description:(fun prompt -> prompt.Prompt.description)
+      ~render_handler:(fun prompt args -> prompt.Prompt.render args)
+      ~on_duplicate:(
+        match t.on_duplicate_prompts with
+        | Duplicate_behavior.Warn -> `Warn
+        | Duplicate_behavior.Error -> `Error
+        | Duplicate_behavior.Replace -> `Replace
+        | Duplicate_behavior.Ignore -> `Ignore)
+
   (** Get a Resource_manager instance backed by server's resource storage.
       Note: Creates a new manager that mirrors current server resources. *)
   let get_resource_manager _t : Resources.Resource_manager.t =
@@ -581,6 +600,27 @@ module Ox_fast_mcp = struct
     (* Note: Resource_manager uses Resource_types.t, not Server.Resource.t
        This is a read-only snapshot for now *)
     manager
+
+  (** Get a Server_resource_adapter instance backed by server's resource storage.
+      This provides a manager-like interface over the server's actual resources. *)
+  let get_server_resource_adapter t : Resource.t Server_resource_adapter.t =
+    Server_resource_adapter.create
+      ~get_resources:(fun () -> t.resources)
+      ~set_resource:(fun ~key ~data -> Hashtbl.set t.resources ~key ~data)
+      ~remove_resource:(fun key -> Hashtbl.remove t.resources key)
+      ~get_key:(fun resource -> resource.Resource.key)
+      ~get_uri:(fun resource -> resource.Resource.uri)
+      ~get_name:(fun resource -> resource.Resource.name)
+      ~get_tags:(fun resource -> resource.Resource.tags)
+      ~get_description:(fun resource -> resource.Resource.description)
+      ~get_mime_type:(fun resource -> resource.Resource.mime_type)
+      ~read_handler:(fun resource -> resource.Resource.reader ())
+      ~on_duplicate:(
+        match t.on_duplicate_resources with
+        | Duplicate_behavior.Warn -> `Warn
+        | Duplicate_behavior.Error -> `Error
+        | Duplicate_behavior.Replace -> `Replace
+        | Duplicate_behavior.Ignore -> `Ignore)
 
   [@@@warning "+32"]
 

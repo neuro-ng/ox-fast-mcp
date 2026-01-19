@@ -943,7 +943,7 @@ let%expect_test "import_server_resource_template_name_prefixing" =
     ("Unknown resource template" (key file://fs/{path})
       (did_you_mean file://fs//{path}))
     ("Called from Base__Error.raise_s in file \"src/error.ml\" (inlined), line 26, characters 52-76"
-      "Called from Server.Ox_fast_mcp.get_template in file \"src/server/server.ml\", lines 872-876, characters 8-159"
+      "Called from Server.Ox_fast_mcp.get_template in file \"src/server/server.ml\", lines 912-916, characters 8-159"
       "Called from Test_server__Test_import_server.(fun) in file \"test/server/test_import_server.ml\", line 931, characters 22-70"
       "Caught by monitor block_on_async at file \"src/thread_safe.ml\", line 105, characters 17-17"))
   Raised at Base__Result.ok_exn in file "src/result.ml" (inlined), line 125, characters 17-26

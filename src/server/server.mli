@@ -292,6 +292,14 @@ module Ox_fast_mcp : sig
   (** Get a Server_tool_adapter instance backed by server's tool storage.
       This provides a manager-like interface over the server's actual tools. *)
 
+  val get_server_prompt_adapter : t -> Prompt.t Server_prompt_adapter.t
+  (** Get a Server_prompt_adapter instance backed by server's prompt storage.
+      This provides a manager-like interface over the server's actual prompts. *)
+
+  val get_server_resource_adapter : t -> Resource.t Server_resource_adapter.t
+  (** Get a Server_resource_adapter instance backed by server's resource storage.
+      This provides a manager-like interface over the server's actual resources. *)
+
   val add_tool : t -> Tool.t -> unit
   (** Tool management *)
 
