@@ -114,52 +114,76 @@ module Tool = struct
     `Assoc with_meta
 end
 
-(** Resource representation *)
+(** Resource representation - adapts Resource_types for server use **)
 module Resource = struct
-  type t = {
-    uri : string;
-    key : string;
-    name : string;
-    description : string option;
-    mime_type : string;
-    meta : Yojson.Safe.t option;
-    tags : String.Set.t;
-    reader : unit -> string Deferred.t;
-  }
+  (* Use the polymorphic Resource_types.t as the underlying type *)
+  type t = Resources.Resource_types.t
 
-  let create ~uri ~name ?description ?(mime_type = "text/plain") ?meta
+  (* Create a function resource with a simpler interface *)
+  let create ~uri ~name ?description ?(mime_type = "text/plain")
       ?(tags = String.Set.empty) ~reader () =
-    { uri; key = uri; name; description; mime_type; meta; tags; reader }
+    (* Convert server's simple reader to Resource_types reader *)
+    let resource_reader () :
+        ( Resources.Resource_types.content,
+          Ox_fast_mcp.Exceptions.error_data )
+        Deferred.Result.t =
+      let%map content = reader () in
+      Ok (Resources.Resource_types.Text content)
+    in
+    Resources.Resource_types.create_function_resource ~uri ~name ?description
+      ~mime_type ~tags:(Set.to_list tags) ?key:None ?annotations:None
+      ~enabled:true resource_reader
 
-  let to_mcp_resource ?(include_fastmcp_meta = false) t =
+  (* Accessor functions to maintain compatibility *)
+  let uri (t : t) = Resources.Resource_types.get_uri t
+  let key (t : t) = Resources.Resource_types.key t
+  let name (t : t) = Resources.Resource_types.get_name t
+  let description (t : t) = Resources.Resource_types.get_description t
+  let mime_type (t : t) = Resources.Resource_types.get_mime_type t
+  let tags (t : t) = Resources.Resource_types.get_tags t |> String.Set.of_list
+
+  (* Reader function - convert Result.t back to simple string *)
+  let reader (t : t) : unit -> string Deferred.t =
+   fun () ->
+    let%bind result = Resources.Resource_types.read t in
+    match result with
+    | Ok (Resources.Resource_types.Text content) -> return content
+    | Ok (Resources.Resource_types.Binary bytes) ->
+      return (Bytes.to_string bytes)
+    | Error error ->
+      raise_s [%message "Resource read failed" (error.message : string)]
+
+  (* Convert to MCP resource format *)
+  let to_mcp_resource ?(include_fastmcp_meta = false) (t : t) =
+    let _ =
+      Resources.Resource_types.to_mcp_resource
+        ~_include_fastmcp_meta:include_fastmcp_meta t
+    in
+    (* Convert Mcp.Types.resource to Yojson.Safe.t *)
     let base =
       [
-        ("uri", `String t.key);
-        ("name", `String t.name);
-        ("mimeType", `String t.mime_type);
+        ("uri", `String (Resources.Resource_types.get_uri t));
+        ("name", `String (Resources.Resource_types.get_name t));
+        ("mimeType", `String (Resources.Resource_types.get_mime_type t));
       ]
     in
     let with_desc =
-      match t.description with
+      match Resources.Resource_types.get_description t with
       | Some d -> ("description", `String d) :: base
       | None -> base
     in
+    (* TODO: Extract meta from mcp_resource if needed *)
     let with_meta =
       if include_fastmcp_meta then
         let tags_list =
-          `List (Set.to_list t.tags |> List.map ~f:(fun s -> `String s))
+          `List
+            (Resources.Resource_types.get_tags t
+            |> List.map ~f:(fun s -> `String s))
         in
         let fastmcp_meta = `Assoc [ ("tags", tags_list) ] in
-        let meta =
-          match t.meta with
-          | Some (`Assoc fields) -> `Assoc (("_fastmcp", fastmcp_meta) :: fields)
-          | _ -> `Assoc [ ("_fastmcp", fastmcp_meta) ]
-        in
+        let meta = `Assoc [ ("_fastmcp", fastmcp_meta) ] in
         ("meta", meta) :: with_desc
-      else
-        match t.meta with
-        | Some m -> ("meta", m) :: with_desc
-        | None -> with_desc
+      else with_desc
     in
     `Assoc with_meta
 end
@@ -255,15 +279,15 @@ end
 
 (** {1 Lifespan Management} *)
 
-(** Context passed to lifespan hooks *)
 type lifespan_context = {
   mutable startup_complete : bool;
   mutable shutdown_requested : bool;
 }
+(** Context passed to lifespan hooks *)
 
 module Ox_fast_mcp = struct
-  (** Lifespan hook function type *)
   type lifespan_hook = lifespan_context -> unit Deferred.t
+  (** Lifespan hook function type *)
 
   type mounted_server = {
     server : t;
@@ -422,7 +446,7 @@ module Ox_fast_mcp = struct
         Hashtbl.set tools_tbl ~key:tool.Tool.key ~data:tool);
     (* Add bulk resources *)
     List.iter resources ~f:(fun resource ->
-        Hashtbl.set resources_tbl ~key:resource.Resource.key ~data:resource);
+        Hashtbl.set resources_tbl ~key:(Resource.key resource) ~data:resource);
     (* Add bulk prompts *)
     List.iter prompts ~f:(fun prompt ->
         Hashtbl.set prompts_tbl ~key:prompt.Prompt.key ~data:prompt);
@@ -530,25 +554,25 @@ module Ox_fast_mcp = struct
 
   [@@@warning "-32"]
 
-  (** Get a Tool_manager instance backed by server's tool storage.
-      Note: Creates a new manager that mirrors current server tools. *)
+  (** Get a Tool_manager instance backed by server's tool storage. Note: Creates
+      a new manager that mirrors current server tools. *)
   let get_tool_manager t : Tool_manager.t =
-    let manager = Tool_manager.create
-      ~duplicate_behavior:(
-        match t.on_duplicate_tools with
-        | Duplicate_behavior.Warn -> Tool_manager.DuplicateBehavior.Warn
-        | Duplicate_behavior.Error -> Tool_manager.DuplicateBehavior.Error
-        | Duplicate_behavior.Replace -> Tool_manager.DuplicateBehavior.Replace
-        | Duplicate_behavior.Ignore -> Tool_manager.DuplicateBehavior.Ignore
-      )
-      ()
+    let manager =
+      Tool_manager.create
+        ~duplicate_behavior:
+          (match t.on_duplicate_tools with
+          | Duplicate_behavior.Warn -> Tool_manager.DuplicateBehavior.Warn
+          | Duplicate_behavior.Error -> Tool_manager.DuplicateBehavior.Error
+          | Duplicate_behavior.Replace -> Tool_manager.DuplicateBehavior.Replace
+          | Duplicate_behavior.Ignore -> Tool_manager.DuplicateBehavior.Ignore)
+        ()
     in
-    (* Note: Tool_manager uses Tool_types.t, not Server.Tool.t
-       This is a read-only snapshot for now *)
+    (* Note: Tool_manager uses Tool_types.t, not Server.Tool.t This is a
+       read-only snapshot for now *)
     manager
 
-  (** Get a Server_tool_adapter instance backed by server's tool storage.
-      This provides a manager-like interface over the server's actual tools. *)
+  (** Get a Server_tool_adapter instance backed by server's tool storage. This
+      provides a manager-like interface over the server's actual tools. *)
   let get_server_tool_adapter t : Tool.t Server_tool_adapter.t =
     Server_tool_adapter.create
       ~get_tools:(fun () -> t.tools)
@@ -558,20 +582,20 @@ module Ox_fast_mcp = struct
       ~get_name:(fun tool -> tool.Tool.name)
       ~get_tags:(fun tool -> tool.Tool.tags)
       ~call_handler:(fun tool args -> tool.Tool.handler args)
-      ~on_duplicate:(
-        match t.on_duplicate_tools with
+      ~on_duplicate:
+        (match t.on_duplicate_tools with
         | Duplicate_behavior.Warn -> `Warn
         | Duplicate_behavior.Error -> `Error
         | Duplicate_behavior.Replace -> `Replace
         | Duplicate_behavior.Ignore -> `Ignore)
       ~mask_error_details:false
 
-  (** Get a Prompt_manager instance backed by server's prompt storage.
-      Note: Creates a new manager that mirrors current server prompts. *)
+  (** Get a Prompt_manager instance backed by server's prompt storage. Note:
+      Creates a new manager that mirrors current server prompts. *)
   let get_prompt_manager _t : Prompts.Prompt_manager.t =
     let manager = Prompts.Prompt_manager.create () in
-    (* Note: Prompt_manager uses Prompt_types.t, not Server.Prompt.t
-       This is a read-only snapshot for now *)
+    (* Note: Prompt_manager uses Prompt_types.t, not Server.Prompt.t This is a
+       read-only snapshot for now *)
     manager
 
   (** Get a Server_prompt_adapter instance backed by server's prompt storage.
@@ -586,37 +610,38 @@ module Ox_fast_mcp = struct
       ~get_tags:(fun prompt -> prompt.Prompt.tags)
       ~get_description:(fun prompt -> prompt.Prompt.description)
       ~render_handler:(fun prompt args -> prompt.Prompt.render args)
-      ~on_duplicate:(
-        match t.on_duplicate_prompts with
+      ~on_duplicate:
+        (match t.on_duplicate_prompts with
         | Duplicate_behavior.Warn -> `Warn
         | Duplicate_behavior.Error -> `Error
         | Duplicate_behavior.Replace -> `Replace
         | Duplicate_behavior.Ignore -> `Ignore)
 
-  (** Get a Resource_manager instance backed by server's resource storage.
-      Note: Creates a new manager that mirrors current server resources. *)
+  (** Get a Resource_manager instance backed by server's resource storage. Note:
+      Creates a new manager that mirrors current server resources. *)
   let get_resource_manager _t : Resources.Resource_manager.t =
     let manager = Resources.Resource_manager.create () in
-    (* Note: Resource_manager uses Resource_types.t, not Server.Resource.t
-       This is a read-only snapshot for now *)
+    (* Note: Resource_manager uses Resource_types.t, not Server.Resource.t This
+       is a read-only snapshot for now *)
     manager
 
-  (** Get a Server_resource_adapter instance backed by server's resource storage.
-      This provides a manager-like interface over the server's actual resources. *)
+  (** Get a Server_resource_adapter instance backed by server's resource
+      storage. This provides a manager-like interface over the server's actual
+      resources. *)
   let get_server_resource_adapter t : Resource.t Server_resource_adapter.t =
     Server_resource_adapter.create
       ~get_resources:(fun () -> t.resources)
       ~set_resource:(fun ~key ~data -> Hashtbl.set t.resources ~key ~data)
       ~remove_resource:(fun key -> Hashtbl.remove t.resources key)
-      ~get_key:(fun resource -> resource.Resource.key)
-      ~get_uri:(fun resource -> resource.Resource.uri)
-      ~get_name:(fun resource -> resource.Resource.name)
-      ~get_tags:(fun resource -> resource.Resource.tags)
-      ~get_description:(fun resource -> resource.Resource.description)
-      ~get_mime_type:(fun resource -> resource.Resource.mime_type)
-      ~read_handler:(fun resource -> resource.Resource.reader ())
-      ~on_duplicate:(
-        match t.on_duplicate_resources with
+      ~get_key:(fun resource -> Resource.key resource)
+      ~get_uri:(fun resource -> Resource.uri resource)
+      ~get_name:(fun resource -> Resource.name resource)
+      ~get_tags:(fun resource -> Resource.tags resource)
+      ~get_description:(fun resource -> Resource.description resource)
+      ~get_mime_type:(fun resource -> Resource.mime_type resource)
+      ~read_handler:(fun resource -> Resource.reader resource ())
+      ~on_duplicate:
+        (match t.on_duplicate_resources with
         | Duplicate_behavior.Warn -> `Warn
         | Duplicate_behavior.Error -> `Error
         | Duplicate_behavior.Replace -> `Replace
@@ -627,19 +652,16 @@ module Ox_fast_mcp = struct
   (** {2 Lifespan Hook Management} *)
 
   (** Add a startup hook - runs when server starts *)
-  let add_startup_hook t hook =
-    t.on_startup <- t.on_startup @ [hook]
+  let add_startup_hook t hook = t.on_startup <- t.on_startup @ [ hook ]
 
   (** Add a shutdown hook - runs when server stops *)
-  let add_shutdown_hook t hook =
-    t.on_shutdown <- t.on_shutdown @ [hook]
+  let add_shutdown_hook t hook = t.on_shutdown <- t.on_shutdown @ [ hook ]
 
   (** Run all startup hooks in order *)
   let run_startup t =
     let ctx = { startup_complete = false; shutdown_requested = false } in
     let%bind () =
-      Deferred.List.iter t.on_startup ~how:`Sequential ~f:(fun hook ->
-          hook ctx)
+      Deferred.List.iter t.on_startup ~how:`Sequential ~f:(fun hook -> hook ctx)
     in
     ctx.startup_complete <- true;
     Logging.Global.info "Server startup complete";
@@ -649,18 +671,17 @@ module Ox_fast_mcp = struct
   let run_shutdown t =
     let ctx = { startup_complete = true; shutdown_requested = true } in
     let%bind () =
-      Deferred.List.iter (List.rev t.on_shutdown) ~how:`Sequential ~f:(fun hook ->
-          hook ctx)
+      Deferred.List.iter (List.rev t.on_shutdown) ~how:`Sequential
+        ~f:(fun hook -> hook ctx)
     in
     Logging.Global.info "Server shutdown complete";
     return ()
 
-  (** Run a function within the server lifespan - runs startup, executes f, then shutdown *)
+  (** Run a function within the server lifespan - runs startup, executes f, then
+      shutdown *)
   let with_lifespan t ~f =
     let%bind () = run_startup t in
-    Monitor.protect
-      (fun () -> f ())
-      ~finally:(fun () -> run_shutdown t)
+    Monitor.protect (fun () -> f ()) ~finally:(fun () -> run_shutdown t)
 
   let should_enable_component t ~(tags : String.Set.t) =
     let include_ok =
@@ -723,9 +744,9 @@ module Ox_fast_mcp = struct
         tool with
         name = Option.value config.name ~default:tool.name;
         description = Option.first_some config.description tool.description;
-        tags = Option.value_map config.tags ~default:tool.tags ~f:String.Set.of_list;
+        tags =
+          Option.value_map config.tags ~default:tool.tags ~f:String.Set.of_list;
       }
-
 
   let rec get_tools t =
     (* Get local tools and filter them *)
@@ -768,7 +789,7 @@ module Ox_fast_mcp = struct
          ~f:(Tool.to_mcp_tool ~include_fastmcp_meta:t.include_fastmcp_meta)
 
   let add_resource t (resource : Resource.t) =
-    let key = resource.key in
+    let key = Resource.key resource in
     if Hashtbl.mem t.resources key then
       handle_duplicate ~behavior:t.on_duplicate_resources ~key
         ~component_type:"resource";
@@ -794,7 +815,8 @@ module Ox_fast_mcp = struct
           List.filter_map child_resources ~f:(fun (key, child_resource) ->
               if
                 not
-                  (should_enable_component t ~tags:child_resource.Resource.tags)
+                  (should_enable_component t
+                     ~tags:(Resource.tags child_resource))
               then None
               else
                 let new_key =
@@ -999,10 +1021,10 @@ module Ox_fast_mcp = struct
              ])
 
   (** Simple helper to add a resource with just uri and handler *)
-  let add_simple_resource ?description ?(mime_type = "text/plain") ?meta
+  let add_simple_resource ?description ?(mime_type = "text/plain")
       ?(tags = String.Set.empty) ~uri ~name ~reader t =
     let resource =
-      Resource.create ~uri ~name ?description ~mime_type ?meta ~tags ~reader ()
+      Resource.create ~uri ~name ?description ~mime_type ~tags ~reader ()
     in
     add_resource t resource
 
@@ -1070,7 +1092,7 @@ module Ox_fast_mcp = struct
   let find_resources_by_scheme t ~scheme =
     get_resources t |> Hashtbl.data
     |> List.filter ~f:(fun resource ->
-           String.is_prefix resource.Resource.uri ~prefix:(scheme ^ "://"))
+           String.is_prefix (Resource.uri resource) ~prefix:(scheme ^ "://"))
 
   (** Find prompts with a specific tag *)
   let find_prompts_by_tag t ~tag =
@@ -1092,7 +1114,7 @@ module Ox_fast_mcp = struct
     (* Check for invalid URIs *)
     get_resources t
     |> Hashtbl.iter ~f:(fun resource ->
-           match validate_resource_uri resource.Resource.uri with
+           match validate_resource_uri (Resource.uri resource) with
            | Error msg ->
              errors := sprintf "Invalid resource URI: %s" msg :: !errors
            | Ok () -> ());
@@ -1141,7 +1163,7 @@ module Ox_fast_mcp = struct
     (* Count resource tags *)
     get_resources t
     |> Hashtbl.iter ~f:(fun resource ->
-           Set.iter resource.Resource.tags ~f:increment_tag);
+           Set.iter (Resource.tags resource) ~f:increment_tag);
     (* Count prompt tags *)
     get_prompts t
     |> Hashtbl.iter ~f:(fun prompt ->
@@ -1270,9 +1292,9 @@ module Ox_fast_mcp = struct
   let rec read_resource t ~uri =
     match Hashtbl.find t.resources uri with
     | Some resource ->
-      if not (should_enable_component t ~tags:resource.tags) then
+      if not (should_enable_component t ~tags:(Resource.tags resource)) then
         raise_s [%message "Resource is disabled" (uri : string)]
-      else resource.reader ()
+      else Resource.reader resource ()
     | None ->
       (* Not found locally, try mounted servers *)
       let rec try_mounted servers =

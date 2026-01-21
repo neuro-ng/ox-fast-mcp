@@ -83,7 +83,9 @@ let%expect_test "Proxy_client.default_sampling_handler - returns expected \
   printf "has_model: %b\n"
     (Option.is_some (result |> member "model" |> to_string_option));
   printf "role: %s\n" (result |> member "role" |> to_string);
-  [%expect {|
+  [%expect
+    {|
+    WARNING Proxy sampling handler called but not fully implemented. Returning empty response.
     has_role: true
     has_model: true
     role: assistant
@@ -98,7 +100,11 @@ let%expect_test "Proxy_client.default_elicitation_handler - returns accept \
   in
   let open Yojson.Safe.Util in
   printf "action: %s\n" (result |> member "action" |> to_string);
-  [%expect {| action: accept |}]
+  [%expect
+    {|
+    WARNING Proxy elicitation handler called but not fully implemented. Declining elicitation.
+    action: declined
+    |}]
 
 (* =============================================================================
    Test: Tool Result Type

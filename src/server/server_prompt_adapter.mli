@@ -1,14 +1,14 @@
 (** Server Prompt Adapter
 
     Provides an adapter that wraps the server's inline prompt storage with an
-    interface compatible with Prompt_manager patterns. Uses a generic type 
+    interface compatible with Prompt_manager patterns. Uses a generic type
     parameter to work with any prompt record type. *)
 
 open! Core
 open! Async
 
-(** Generic adapter type working with any prompt type *)
 type 'prompt t
+(** Generic adapter type working with any prompt type *)
 
 val create :
   get_prompts:(unit -> (string, 'prompt) Hashtbl.t) ->
@@ -32,4 +32,9 @@ val add_prompt : 'prompt t -> 'prompt -> (unit, string) Result.t
 val remove_prompt : 'prompt t -> string -> (unit, string) Result.t
 val find_by_tags : 'prompt t -> string list -> 'prompt list
 val find_by_name : 'prompt t -> string -> 'prompt option
-val render_prompt : 'prompt t -> string -> Yojson.Safe.t -> (Yojson.Safe.t, string) Result.t Deferred.t
+
+val render_prompt :
+  'prompt t ->
+  string ->
+  Yojson.Safe.t ->
+  (Yojson.Safe.t, string) Result.t Deferred.t

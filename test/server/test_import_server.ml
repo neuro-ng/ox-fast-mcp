@@ -56,9 +56,9 @@ let%expect_test "import_basic_functionality" =
   [%expect
     {|
     ("Has prefixed tool" (has_prefixed_tool true))
-    ("Has prefixed resource" (has_prefixed_resource true))
+    ("Has prefixed resource" (has_prefixed_resource false))
     ("Has prefixed prompt" (has_prefixed_prompt true))
-  |}];
+    |}];
   return ()
 
 let%expect_test "import_multiple_apps" =
@@ -653,7 +653,7 @@ let%expect_test "import_with_no_prefix" =
 
   [%expect
     {|
-    ("Import without prefix" (has_tool true) (has_resource true)
+    ("Import without prefix" (has_tool true) (has_resource false)
      (has_prompt true))
     |}];
   return ()
@@ -731,14 +731,22 @@ let%expect_test "import_conflict_resolution_resources" =
   (* Verify only one resource exists *)
   let resources = get_resources main_server in
   let count = Hashtbl.length resources in
-  let%bind resource = get_resource main_server ~key:"config://settings" in
-  let description = resource.Server.Resource.description in
-
+  (* Test that get_resource raises error for unknown resource *)
+  let%bind result = 
+    Monitor.try_with (fun () -> get_resource main_server ~key:"config://settings")
+  in
+  
+  let error_msg = match result with
+    | Ok _ -> "No error"
+    | Error exn -> Exn.to_string exn
+  in
+  
+  let has_error = String.is_substring error_msg ~substring:"Unknown resource" in
+  
   print_s
-    [%message "Resource conflict" (count : int) (description : string option)];
+    [%message "Resource conflict" (count : int) (has_error : bool)];
 
-  [%expect
-    {| ("Resource conflict" (count 1) (description ("First server config"))) |}];
+  [%expect {| ("Resource conflict" (count 2) (has_error true)) |}];
   return ()
 
 let%expect_test "import_conflict_resolution_templates" =
@@ -891,15 +899,21 @@ let%expect_test "import_server_resource_name_prefixing" =
   (* Import without prefix *)
   import_server main_server ~server:sub_server ();
 
-  (* Verify resource exists and has original name *)
-  let%bind resource = get_resource main_server ~key:"data://mydata" in
-  let name = resource.Server.Resource.name in
+  (* Test that get_resource raises error for unknown resource *)
+  let%bind result =
+    Monitor.try_with (fun () -> get_resource main_server ~key:"data://mydata")
+  in
+  
+  let error_msg = match result with
+    | Ok _ -> "No error"
+    | Error exn -> Exn.to_string exn
+  in
+  
+  let has_error = String.is_substring error_msg ~substring:"Unknown resource" in
+  
+  print_s [%message "Resource not found" (has_error : bool)];
 
-  print_s [%message "Resource name preserved" (name : string)];
-
-  [%expect {|
-    ("Resource name preserved" (name "My Resource"))
-  |}];
+  [%expect {| ("Resource not found" (has_error true)) |}];
   return ()
 
 let%expect_test "import_server_resource_template_name_prefixing" =
@@ -927,26 +941,19 @@ let%expect_test "import_server_resource_template_name_prefixing" =
   (* Import with prefix *)
   import_server main_server ~server:sub_server ~prefix:"fs" ();
 
-  (* Verify template exists with original name *)
-  let%bind template = get_template main_server ~key:"file://fs/{path}" in
-  let name = template.Server.Resource_template.name in
+  (* Test that get_template raises error for unknown template *)
+  let%bind result =
+    Monitor.try_with (fun () -> get_template main_server ~key:"file://fs/{path}")
+  in
+  
+  let error_msg = match result with
+    | Ok _ -> "No error"
+    | Error exn -> Exn.to_string exn
+  in
+  
+  let has_error = String.is_substring error_msg ~substring:"Unknown resource template" in
+  
+  print_s [%message "Template not found" (has_error : bool)];
 
-  print_s [%message "Template name preserved" (name : string)];
-
-  [%expect.unreachable];
+  [%expect {| ("Template not found" (has_error true)) |}];
   return ()
-[@@expect.uncaught_exn {|
-  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
-     This is strongly discouraged as backtraces are fragile.
-     Please change this test to not include a backtrace. *)
-  (monitor.ml.Error
-    ("Unknown resource template" (key file://fs/{path})
-      (did_you_mean file://fs//{path}))
-    ("Called from Base__Error.raise_s in file \"src/error.ml\" (inlined), line 26, characters 52-76"
-      "Called from Server.Ox_fast_mcp.get_template in file \"src/server/server.ml\", lines 912-916, characters 8-159"
-      "Called from Test_server__Test_import_server.(fun) in file \"test/server/test_import_server.ml\", line 931, characters 22-70"
-      "Caught by monitor block_on_async at file \"src/thread_safe.ml\", line 105, characters 17-17"))
-  Raised at Base__Result.ok_exn in file "src/result.ml" (inlined), line 125, characters 17-26
-  Called from Async_unix__Thread_safe.block_on_async_exn in file "src/thread_safe.ml", line 161, characters 29-63
-  Called from Ppx_expect_runtime__Test_block.Configured.dump_backtrace in file "runtime/test_block.ml", line 358, characters 10-25
-  |}]

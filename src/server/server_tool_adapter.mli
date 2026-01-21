@@ -1,14 +1,14 @@
 (** Server Tool Adapter
 
     Provides an adapter that wraps the server's inline tool storage with an
-    interface compatible with Tool_manager patterns. Uses a generic type 
+    interface compatible with Tool_manager patterns. Uses a generic type
     parameter to work with any tool record type. *)
 
 open! Core
 open! Async
 
-(** Generic adapter type working with any tool type *)
 type 'tool t
+(** Generic adapter type working with any tool type *)
 
 val create :
   get_tools:(unit -> (string, 'tool) Hashtbl.t) ->
@@ -32,4 +32,9 @@ val add_tool : 'tool t -> 'tool -> (unit, string) Result.t
 val remove_tool : 'tool t -> string -> (unit, string) Result.t
 val find_by_tags : 'tool t -> string list -> 'tool list
 val find_by_name : 'tool t -> string -> 'tool option
-val call_tool : 'tool t -> string -> Yojson.Safe.t -> (Yojson.Safe.t, string) Result.t Deferred.t
+
+val call_tool :
+  'tool t ->
+  string ->
+  Yojson.Safe.t ->
+  (Yojson.Safe.t, string) Result.t Deferred.t

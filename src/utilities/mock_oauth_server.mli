@@ -2,8 +2,8 @@
 
     HTTP server for OAuth integration testing. *)
 
-(** Mock OAuth server instance *)
 type t
+(** Mock OAuth server instance *)
 
 val create : port:int -> unit -> t
 (** Create mock server on specified port *)
@@ -21,9 +21,8 @@ val is_token_valid : t -> token:string -> bool
 (** Check if a token was issued by this mock server *)
 
 val get_issuer : t -> string
-(** Get the issuer URL (http://localhost:{port}) *)
+(** Get the issuer URL (http://localhost:[{port}]) *)
 
-(** Token response from mock server *)
 type token_response = {
   access_token : string;
   token_type : string;
@@ -31,5 +30,6 @@ type token_response = {
   refresh_token : string option;
   scope : string option;
 }
+(** Token response from mock server *)
 
 val yojson_of_token_response : token_response -> Yojson.Safe.t

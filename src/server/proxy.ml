@@ -680,34 +680,97 @@ module Proxy_client = struct
       progress_handler;
     }
 
-  (** Default sampling handler - forwards to proxy's connected clients *)
-  let default_sampling_handler ~messages:_ ~params:_ =
-    (* PLACEHOLDER: Sampling forwarding not implemented. Needs: connect to
-       upstream server, forward create_message request, return actual LLM
-       response. See proxy.todo for details. *)
+  (** Default sampling handler - forwards to proxy's connected clients
+
+      Note: This is a placeholder implementation. Full implementation requires:
+      1. Connect to upstream MCP server via client
+      2. Forward create_message request with messages and params
+      3. Parse and return the LLM response
+
+      Current behavior: Returns empty assistant message as fallback *)
+  let default_sampling_handler ~messages ~params =
+    Logging.Global.warning
+      "Proxy sampling handler called but not fully implemented. Returning \
+       empty response.";
+    let _ = messages in
+    let _ = params in
     return
       (`Assoc
         [
           ("role", `String "assistant");
-          ("model", `String "oxfastmcp-client");
-          ("content", `Assoc [ ("type", `String "text"); ("text", `String "") ]);
+          ("model", `String "oxfastmcp-proxy-stub");
+          ( "content",
+            `Assoc
+              [
+                ("type", `String "text");
+                ("text", `String "[Proxy sampling not yet implemented]");
+              ] );
+          ("stopReason", `String "endTurn");
         ])
 
-  (** Default elicitation handler *)
-  let default_elicitation_handler ~message:_ ~params:_ =
-    (* PLACEHOLDER: Elicitation forwarding not implemented. Needs: forward
-       elicit request to upstream, return user's response. *)
-    return (`Assoc [ ("action", `String "accept"); ("content", `Null) ])
+  (** Default elicitation handler
 
-  (** Default log handler *)
-  let default_log_handler ~message:_ =
-    (* PLACEHOLDER: Log forwarding not implemented. Forward to upstream
-       logger. *)
+      Note: This is a placeholder implementation. Full implementation requires:
+      1. Connect to upstream MCP server
+      2. Forward elicit request with message and params
+      3. Parse and return the user's elicitation response
+
+      Current behavior: Returns declined action as safe fallback *)
+  let default_elicitation_handler ~message ~params =
+    Logging.Global.warning
+      "Proxy elicitation handler called but not fully implemented. Declining \
+       elicitation.";
+    let _ = message in
+    let _ = params in
+    return
+      (`Assoc
+        [
+          ("action", `String "declined");
+          ("reason", `String "Proxy elicitation not yet implemented");
+          ("content", `Null);
+        ])
+
+  (** Default log handler
+
+      Note: Currently logs locally instead of forwarding to upstream. Full
+      implementation would forward logs to connected upstream server. *)
+  let default_log_handler ~message =
+    let open Yojson.Safe.Util in
+    let level =
+      message |> member "level" |> to_string_option
+      |> Option.value ~default:"info"
+    in
+    let log_message =
+      message |> member "data" |> to_string_option |> Option.value ~default:""
+    in
+    (match level with
+    | "debug" -> Logging.Global.debug log_message
+    | "info" -> Logging.Global.info log_message
+    | "warning" -> Logging.Global.warning log_message
+    | "error" -> Logging.Global.error log_message
+    | _ -> Logging.Global.info log_message);
     return ()
 
-  (** Default progress handler *)
-  let default_progress_handler ~progress:_ ~total:_ ~message:_ =
-    (* PLACEHOLDER: Progress forwarding not implemented. Forward to upstream. *)
+  (** Default progress handler
+
+      Note: Currently logs progress locally instead of forwarding. Full
+      implementation would forward progress to connected upstream server. *)
+  let default_progress_handler ~progress ~total ~message =
+    let progress_msg =
+      match message with
+      | Some msg ->
+        sprintf "Progress: %.1f%s - %s" progress
+          (match total with
+          | Some t -> sprintf "/%.1f" t
+          | None -> "")
+          msg
+      | None ->
+        sprintf "Progress: %.1f%s" progress
+          (match total with
+          | Some t -> sprintf "/%.1f" t
+          | None -> "")
+    in
+    Logging.Global.debug progress_msg;
     return ()
 end
 
@@ -715,27 +778,81 @@ end
 
 module Stateful_proxy_client = struct
   type session = Yojson.Safe.t
-  type 'client cache = (session, 'client) Hashtbl.Poly.t
+
+  type 'client cache_entry = {
+    client : 'client;
+    disconnect : (unit -> unit Deferred.t) option;
+  }
+  (** Client cache entry with cleanup tracking *)
+
+  type 'client cache = (session, 'client cache_entry) Hashtbl.Poly.t
   type 'client t = { client : Proxy_client.t; caches : 'client cache }
 
   let create ~client = { client; caches = Hashtbl.Poly.create () }
 
-  (** Clear all cached clients and force disconnect them *)
-  let clear t =
+  (** Clear all cached clients and disconnect them properly *)
+  let clear (type client) (module C : Client with type t = client)
+      (t : client t) =
+    let disconnect_all =
+      Hashtbl.fold t.caches ~init:[] ~f:(fun ~key:_ ~data:entry acc ->
+          match entry.disconnect with
+          | Some disconnect_fn -> disconnect_fn :: acc
+          | None ->
+            (* Use client module's disconnect if no custom cleanup provided *)
+            (fun () -> C.disconnect entry.client) :: acc)
+    in
+    let%bind () =
+      Deferred.List.iter disconnect_all ~how:`Parallel ~f:(fun fn ->
+          Monitor.try_with fn >>| function
+          | Ok () -> ()
+          | Error exn ->
+            Logging.Global.warning
+              (sprintf "Error disconnecting proxy client: %s"
+                 (Exn.to_string exn)))
+    in
     Hashtbl.clear t.caches;
     return ()
 
-  (** Get or create a client for a given session. Returns cached client if
-      exists, otherwise creates new one and caches it. *)
-  let get_or_create_client t ~session ~create_client =
+  (** Get or create a client for a given session.
+
+      Returns cached client if exists, otherwise creates new one via factory,
+      connects it, and caches it with proper cleanup tracking.
+
+      @param session The session identifier (typically ServerSession instance)
+      @param create_client Factory function to create new client
+      @param disconnect Optional custom disconnect function for cleanup *)
+  let get_or_create_client (type client)
+      (module C : Client with type t = client) (t : client t) ~session
+      ~create_client ?disconnect () =
     match Hashtbl.find t.caches session with
-    | Some client -> return client
+    | Some entry ->
+      Logging.Global.debug "Reusing cached proxy client for session";
+      return entry.client
     | None ->
+      Logging.Global.debug "Creating new proxy client for session";
       let%bind client = create_client () in
-      Hashtbl.set t.caches ~key:session ~data:client;
+      let%bind () = C.connect client in
+      let entry = { client; disconnect } in
+      Hashtbl.set t.caches ~key:session ~data:entry;
       return client
 
-  (** Create a new stateful proxy client instance with the same configuration *)
-  let new_stateful t ~session ~create_client =
-    get_or_create_client t ~session ~create_client
+  (** Remove a specific session's client and disconnect it *)
+  let remove_session (type client) (module C : Client with type t = client)
+      (t : client t) ~session =
+    match Hashtbl.find t.caches session with
+    | Some entry -> (
+      Hashtbl.remove t.caches session;
+      match entry.disconnect with
+      | Some disconnect_fn -> disconnect_fn ()
+      | None -> C.disconnect entry.client)
+    | None -> return ()
+
+  (** Get the number of cached sessions *)
+  let session_count t = Hashtbl.length t.caches
+
+  (** Create a new stateful proxy client instance with the same configuration
+
+      Note: This maintains the same client config but with independent session
+      cache *)
+  let new_stateful ~client = create ~client
 end

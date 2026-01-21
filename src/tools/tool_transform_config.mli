@@ -2,7 +2,6 @@
 
 (** {1 Argument Transform Configuration} *)
 
-(** JSON-serializable configuration for a single argument transform *)
 type arg_transform_config = {
   name : string option;
   description : string option;
@@ -11,9 +10,9 @@ type arg_transform_config = {
   required : bool option;
   examples : Yojson.Safe.t option;
 }
+(** JSON-serializable configuration for a single argument transform *)
 
 val default_arg_transform_config : arg_transform_config
-
 val arg_transform_config_of_yojson : Yojson.Safe.t -> arg_transform_config
 val yojson_of_arg_transform_config : arg_transform_config -> Yojson.Safe.t
 
@@ -22,7 +21,6 @@ val to_arg_transform : arg_transform_config -> Tool_types.Arg_transform.t
 
 (** {1 Tool Transform Configuration} *)
 
-(** JSON-serializable configuration for transforming a tool *)
 type t = {
   name : string option;
   description : string option;
@@ -30,6 +28,7 @@ type t = {
   transform_args : (string * arg_transform_config) list;
   enabled : bool option;
 }
+(** JSON-serializable configuration for transforming a tool *)
 
 val t_of_yojson : Yojson.Safe.t -> t
 val yojson_of_t : t -> Yojson.Safe.t

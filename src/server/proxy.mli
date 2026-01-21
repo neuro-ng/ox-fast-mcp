@@ -336,17 +336,31 @@ module Stateful_proxy_client : sig
   type 'client t
 
   val create : client:Proxy_client.t -> 'client t
-  val clear : 'client t -> unit Deferred.t
+
+  val clear :
+    (module Client with type t = 'client) -> 'client t -> unit Deferred.t
+  (** Clear all cached clients and disconnect them properly *)
 
   val get_or_create_client :
+    (module Client with type t = 'client) ->
     'client t ->
     session:session ->
     create_client:(unit -> 'client Deferred.t) ->
+    ?disconnect:(unit -> unit Deferred.t) ->
+    unit ->
     'client Deferred.t
+  (** Get or create a client for a given session with optional custom disconnect *)
 
-  val new_stateful :
+  val remove_session :
+    (module Client with type t = 'client) ->
     'client t ->
     session:session ->
-    create_client:(unit -> 'client Deferred.t) ->
-    'client Deferred.t
+    unit Deferred.t
+  (** Remove a specific session's client and disconnect it *)
+
+  val session_count : 'client t -> int
+  (** Get the number of cached sessions *)
+
+  val new_stateful : client:Proxy_client.t -> 'client t
+  (** Create a new stateful proxy client instance with independent cache *)
 end

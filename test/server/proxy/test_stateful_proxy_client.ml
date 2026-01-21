@@ -40,7 +40,8 @@ let%expect_test "Stateful_proxy_client.clear - clears cache" =
   in
   (* Clear should complete without error *)
   Async.Thread_safe.block_on_async_exn (fun () ->
-      Server__Proxy.Stateful_proxy_client.clear stateful);
+      Server__Proxy.Stateful_proxy_client.clear (module Conftest.Mock_client)
+        stateful);
   printf "cache_cleared: true\n";
   [%expect {| cache_cleared: true |}]
 
@@ -54,20 +55,13 @@ let%expect_test "Stateful_proxy_client.new_stateful - creates client with \
     Server__Proxy.Proxy_client.create ~transport:(`Assoc []) ~name:"test-client"
       ()
   in
-  let stateful =
+  let _stateful =
     Server__Proxy.Stateful_proxy_client.create ~client:proxy_client
   in
-  let session = `String "session-123" in
-  let create_client () =
-    Async.return (Conftest.Mock_client.create ~name:"SessionClient" ())
-  in
-  let client =
-    Async.Thread_safe.block_on_async_exn (fun () ->
-        Server__Proxy.Stateful_proxy_client.new_stateful stateful ~session
-          ~create_client)
+  let _stateful2 =
+    Server__Proxy.Stateful_proxy_client.new_stateful ~client:proxy_client
   in
   printf "client_created: true\n";
-  let _ = client in
   [%expect {| client_created: true |}]
 
 (* =============================================================================
@@ -192,8 +186,14 @@ let%expect_test "Multi-proxy pattern - proxies don't mix" =
     Mock_proxy.create ~prefix:"b" ~tools:[ ("tool_b", `Assoc []) ] ()
   in
 
-  let result_a = Mock_proxy.call_tool proxy_a ~name:"a_tool_a" in
-  let result_b = Mock_proxy.call_tool proxy_b ~name:"b_tool_b" in
+  let result_a =
+    Async.Thread_safe.block_on_async_exn (fun () ->
+        Mock_proxy.call_tool proxy_a ~name:"a_tool_a")
+  in
+  let result_b =
+    Async.Thread_safe.block_on_async_exn (fun () ->
+        Mock_proxy.call_tool proxy_b ~name:"b_tool_b")
+  in
 
   let open Yojson.Safe.Util in
   let is_error_a =

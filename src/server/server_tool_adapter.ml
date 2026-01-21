@@ -3,13 +3,12 @@
     Provides an adapter that wraps the server's inline tool storage (Hashtbl)
     with an interface compatible with Tool_manager. This enables using manager
     patterns without changing the underlying server storage mechanism.
-    
+
     Uses a generic type parameter to work with any tool record type. *)
 
 open! Core
 open! Async
 
-(** Generic adapter type working with any tool type that has a 'key' field *)
 type 'tool t = {
   get_tools : unit -> (string, 'tool) Hashtbl.t;
   set_tool : key:string -> data:'tool -> unit;
@@ -21,25 +20,28 @@ type 'tool t = {
   on_duplicate : [ `Warn | `Error | `Replace | `Ignore ];
   mask_error_details : bool;
 }
+(** Generic adapter type working with any tool type that has a 'key' field *)
 
 let create ~get_tools ~set_tool ~remove_tool ~get_key ~get_name ~get_tags
     ~call_handler ~on_duplicate ~mask_error_details =
-  { get_tools; set_tool; remove_tool; get_key; get_name; get_tags; 
-    call_handler; on_duplicate; mask_error_details }
+  {
+    get_tools;
+    set_tool;
+    remove_tool;
+    get_key;
+    get_name;
+    get_tags;
+    call_handler;
+    on_duplicate;
+    mask_error_details;
+  }
 
 (** {1 Manager-like Interface} *)
 
-let has_tool t key =
-  Hashtbl.mem (t.get_tools ()) key
-
-let get_tool t key =
-  Hashtbl.find (t.get_tools ()) key
-
-let list_tools t =
-  Hashtbl.data (t.get_tools ())
-
-let count t =
-  Hashtbl.length (t.get_tools ())
+let has_tool t key = Hashtbl.mem (t.get_tools ()) key
+let get_tool t key = Hashtbl.find (t.get_tools ()) key
+let list_tools t = Hashtbl.data (t.get_tools ())
+let count t = Hashtbl.length (t.get_tools ())
 
 let add_tool t tool =
   let key = t.get_key tool in
@@ -54,17 +56,15 @@ let add_tool t tool =
       t.set_tool ~key ~data:tool;
       Ok ()
     | `Ignore -> Ok ()
-  else begin
+  else (
     t.set_tool ~key ~data:tool;
-    Ok ()
-  end
+    Ok ())
 
 let remove_tool t key =
-  if Hashtbl.mem (t.get_tools ()) key then begin
+  if Hashtbl.mem (t.get_tools ()) key then (
     t.remove_tool key;
-    Ok ()
-  end else
-    Error (sprintf "Tool not found: %s" key)
+    Ok ())
+  else Error (sprintf "Tool not found: %s" key)
 
 let find_by_tags t tags =
   Hashtbl.data (t.get_tools ())
@@ -78,15 +78,13 @@ let find_by_name t name =
 
 let call_tool t key arguments =
   match get_tool t key with
-  | None -> 
-    return (Error (sprintf "Tool not found: %s" key))
-  | Some tool ->
-    Monitor.try_with (fun () -> t.call_handler tool arguments)
-    >>| function
+  | None -> return (Error (sprintf "Tool not found: %s" key))
+  | Some tool -> (
+    Monitor.try_with (fun () -> t.call_handler tool arguments) >>| function
     | Ok result -> Ok result
     | Error exn ->
-      let msg = 
+      let msg =
         if t.mask_error_details then sprintf "Error calling tool %s" key
         else sprintf "Error calling tool %s: %s" key (Exn.to_string exn)
       in
-      Error msg
+      Error msg)

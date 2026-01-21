@@ -2,12 +2,12 @@
 
     Persistent token storage using JSON files on disk. *)
 
-(** Storage implementation that saves tokens to JSON files *)
 type t
+(** Storage implementation that saves tokens to JSON files *)
 
 val create : base_path:string -> server_url:string -> t
 (** Create file-based storage.
-    
+
     @param base_path Base directory for auth files (e.g., ~/.ox-fast-mcp/auth)
     @param server_url Server URL (used to derive filename) *)
 

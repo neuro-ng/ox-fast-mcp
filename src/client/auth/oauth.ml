@@ -256,20 +256,23 @@ let callback_handler t =
   (* Start OAuth callback HTTP server and wait for browser redirect *)
   Logs.info (fun m ->
       m "Starting OAuth callback server on http://localhost:%d" t.redirect_port);
-  
+
   let timeout = Time_ns.Span.of_min 5.0 in
-  let%bind result = Oauth_callback.start_callback_server ~port:t.redirect_port ~timeout in
-  
+  let%bind result =
+    Oauth_callback.start_callback_server ~port:t.redirect_port ~timeout
+  in
+
   match result.Oauth_callback.code with
   | Some code ->
     Logs.info (fun m -> m "OAuth authorization code received");
     return (code, result.state)
-  | None ->
+  | None -> (
     match result.error with
     | Some err ->
-      let desc = Option.value result.error_description ~default:"Unknown error" in
+      let desc =
+        Option.value result.error_description ~default:"Unknown error"
+      in
       failwith (sprintf "OAuth authorization failed: %s - %s" err desc)
-    | None ->
-      failwith "No authorization code received from OAuth callback"
+    | None -> failwith "No authorization code received from OAuth callback")
 
 let clear_cache t = Token_storage_adapter.clear t.token_storage

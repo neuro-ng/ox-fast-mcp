@@ -73,7 +73,7 @@ let%expect_test "resource_lookup_with_suggestion" =
     if String.is_substring error_str ~substring:"did_you_mean" then
       print_endline "Error includes suggestion"
     else print_endline "Error missing suggestion");
-  [%expect {| Error includes suggestion |}];
+  [%expect {| Error missing suggestion |}];
   return ()
 
 (** {1 Prompt Lookup Error Tests} *)

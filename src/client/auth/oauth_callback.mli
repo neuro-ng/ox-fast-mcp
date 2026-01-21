@@ -5,21 +5,21 @@
 open Core
 open Async
 
-(** Callback result containing code and state from OAuth redirect *)
 type callback_result = {
   code : string option;
   state : string option;
   error : string option;
   error_description : string option;
 }
+(** Callback result containing code and state from OAuth redirect *)
 
 val start_callback_server :
   port:int -> timeout:Time_ns.Span.t -> callback_result Deferred.t
 (** Start HTTP server to receive OAuth callback.
-    
-    Listens on [localhost:port/callback] for the OAuth redirect.
-    Returns when callback is received or timeout expires.
-    
+
+    Listens on [localhost:port/callback] for the OAuth redirect. Returns when
+    callback is received or timeout expires.
+
     @param port Port to listen on (e.g., 8080)
     @param timeout Maximum time to wait for callback (e.g., 5 minutes) *)
 

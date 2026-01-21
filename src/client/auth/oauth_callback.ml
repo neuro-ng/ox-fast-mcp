@@ -1,7 +1,7 @@
 (** OAuth Callback Server
 
-    HTTP server to handle OAuth browser authorization callbacks.
-    Listens for the OAuth redirect containing authorization code and state. *)
+    HTTP server to handle OAuth browser authorization callbacks. Listens for the
+    OAuth redirect containing authorization code and state. *)
 
 open Core
 open Async
@@ -68,7 +68,8 @@ let success_html =
 </html>|}
 
 let error_html ~error =
-  let template_start = {|<!DOCTYPE html>
+  let template_start =
+    {|<!DOCTYPE html>
 <html>
 <head>
   <title>Authorization Failed</title>
@@ -115,7 +116,8 @@ let error_html ~error =
     <div class="error-icon"></div>
     <h1>Authorization Failed</h1>
     <p>Something went wrong during authorization.</p>
-    <p class="error-detail">|} in
+    <p class="error-detail">|}
+  in
   let template_end = {|</p>
   </div>
 </body>
@@ -160,8 +162,7 @@ let start_callback_server ~port ~timeout =
           (error_html ~error:(sprintf "%s: %s" err desc), `Bad_request)
         | None, None ->
           Logs.warn (fun m -> m "OAuth callback missing code and error");
-          ( error_html ~error:"Missing authorization code",
-            `Bad_request )
+          (error_html ~error:"Missing authorization code", `Bad_request)
       in
 
       (* Fill the result ivar (only once) *)
@@ -171,12 +172,10 @@ let start_callback_server ~port ~timeout =
       let headers =
         Cohttp.Header.of_list
           [
-            ("Content-Type", "text/html; charset=utf-8");
-            ("Connection", "close");
+            ("Content-Type", "text/html; charset=utf-8"); ("Connection", "close");
           ]
       in
       Cohttp_async.Server.respond_string ~headers ~status response_body
-
     | _ ->
       (* 404 for other paths *)
       Cohttp_async.Server.respond_string ~status:`Not_found
@@ -185,19 +184,24 @@ let start_callback_server ~port ~timeout =
 
   (* Start the server *)
   let%bind server =
-    Cohttp_async.Server.create
-      ~on_handler_error:`Raise
+    Cohttp_async.Server.create ~on_handler_error:`Raise
       (Async.Tcp.Where_to_listen.of_port port)
       handler
   in
   server_ref := Some server;
 
-  Logs.info (fun m -> m "OAuth callback server started on http://localhost:%d" port);
+  Logs.info (fun m ->
+      m "OAuth callback server started on http://localhost:%d" port);
 
   (* Wait for result or timeout *)
   let timeout_result =
     let%map () = Clock_ns.after timeout in
-    { code = None; state = None; error = Some "timeout"; error_description = Some "Authorization timed out" }
+    {
+      code = None;
+      state = None;
+      error = Some "timeout";
+      error_description = Some "Authorization timed out";
+    }
   in
 
   let result_or_timeout =

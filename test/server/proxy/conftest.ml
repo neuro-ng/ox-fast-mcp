@@ -21,80 +21,102 @@ module Mock_client = struct
       ?(prompts = []) () =
     { name; tools; resources; prompts; connected = false }
 
-  let connect t = t.connected <- true
-  let disconnect t = t.connected <- false
+  let connect t =
+    t.connected <- true;
+    Async.return ()
+
+  let disconnect t =
+    t.connected <- false;
+    Async.return ()
+
   let is_connected t = t.connected
 
+  let new_ t =
+    create ~name:t.name ~tools:t.tools ~resources:t.resources ~prompts:t.prompts
+      ()
+
   let list_tools t =
-    List.map t.tools ~f:(fun (name, schema) ->
-        `Assoc [ ("name", `String name); ("inputSchema", schema) ])
+    Async.return
+      (List.map t.tools ~f:(fun (name, schema) ->
+           `Assoc [ ("name", `String name); ("inputSchema", schema) ]))
 
   let call_tool t ~name ~arguments:_ =
-    match List.Assoc.find t.tools ~equal:String.equal name with
-    | Some _ ->
-      `Assoc
-        [
-          ( "content",
-            `List
-              [
-                `Assoc
-                  [
-                    ("type", `String "text");
-                    ("text", `String ("Result from " ^ name));
-                  ];
-              ] );
-        ]
-    | None ->
-      `Assoc
-        [
-          ("isError", `Bool true);
-          ( "content",
-            `List
-              [
-                `Assoc
-                  [ ("type", `String "text"); ("text", `String "Unknown tool") ];
-              ] );
-        ]
-
-  let list_resources t =
-    List.map t.resources ~f:(fun (uri, _) ->
+    Async.return
+      (match List.Assoc.find t.tools ~equal:String.equal name with
+      | Some _ ->
         `Assoc
           [
-            ("uri", `String uri);
-            ("name", `String uri);
-            ("mimeType", `String "text/plain");
+            ( "content",
+              `List
+                [
+                  `Assoc
+                    [
+                      ("type", `String "text");
+                      ("text", `String ("Result from " ^ name));
+                    ];
+                ] );
+          ]
+      | None ->
+        `Assoc
+          [
+            ("isError", `Bool true);
+            ( "content",
+              `List
+                [
+                  `Assoc
+                    [
+                      ("type", `String "text"); ("text", `String "Unknown tool");
+                    ];
+                ] );
           ])
 
+  let call_tool_mcp t ~name ~arguments = call_tool t ~name ~arguments
+
+  let list_resources t =
+    Async.return
+      (List.map t.resources ~f:(fun (uri, _) ->
+           `Assoc
+             [
+               ("uri", `String uri);
+               ("name", `String uri);
+               ("mimeType", `String "text/plain");
+             ]))
+
+  let list_resource_templates _t = Async.return []
+
   let read_resource t ~uri =
-    match List.Assoc.find t.resources ~equal:String.equal uri with
-    | Some content -> `Assoc [ ("contents", `List [ content ]) ]
-    | None -> `Assoc [ ("contents", `List []) ]
+    Async.return
+      (match List.Assoc.find t.resources ~equal:String.equal uri with
+      | Some content -> `Assoc [ ("contents", `List [ content ]) ]
+      | None -> `Assoc [ ("contents", `List []) ])
 
   let list_prompts t =
-    List.map t.prompts ~f:(fun (name, schema) ->
-        `Assoc [ ("name", `String name); ("arguments", schema) ])
+    Async.return
+      (List.map t.prompts ~f:(fun (name, schema) ->
+           `Assoc [ ("name", `String name); ("arguments", schema) ]))
 
   let get_prompt t ~name ~arguments:_ =
-    match List.Assoc.find t.prompts ~equal:String.equal name with
-    | Some _ ->
-      `Assoc
-        [
-          ( "messages",
-            `List
-              [
-                `Assoc
-                  [
-                    ("role", `String "user");
-                    ( "content",
-                      `Assoc
-                        [
-                          ("type", `String "text");
-                          ("text", `String ("Prompt: " ^ name));
-                        ] );
-                  ];
-              ] );
-        ]
-    | None -> `Assoc [ ("messages", `List []) ]
+    Async.return
+      (match List.Assoc.find t.prompts ~equal:String.equal name with
+      | Some _ ->
+        `Assoc
+          [
+            ( "messages",
+              `List
+                [
+                  `Assoc
+                    [
+                      ("role", `String "user");
+                      ( "content",
+                        `Assoc
+                          [
+                            ("type", `String "text");
+                            ("text", `String ("Prompt: " ^ name));
+                          ] );
+                    ];
+                ] );
+          ]
+      | None -> `Assoc [ ("messages", `List []) ])
 end
 
 (* =============================================================================

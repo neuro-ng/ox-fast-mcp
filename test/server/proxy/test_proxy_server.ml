@@ -689,10 +689,12 @@ let%expect_test "Mock_client - basic operations" =
       ()
   in
   printf "connected_initially: %b\n" (Conftest.Mock_client.is_connected client);
-  Conftest.Mock_client.connect client;
+  Async.Thread_safe.block_on_async_exn (fun () ->
+      Conftest.Mock_client.connect client);
   printf "connected_after_connect: %b\n"
     (Conftest.Mock_client.is_connected client);
-  Conftest.Mock_client.disconnect client;
+  Async.Thread_safe.block_on_async_exn (fun () ->
+      Conftest.Mock_client.disconnect client);
   printf "connected_after_disconnect: %b\n"
     (Conftest.Mock_client.is_connected client);
   [%expect
@@ -705,15 +707,19 @@ let%expect_test "Mock_client - basic operations" =
 let%expect_test "Mock_client.list_tools - returns configured tools" =
   let tools = [ ("echo", `Assoc []); ("greet", `Assoc []) ] in
   let client = Conftest.Mock_client.create ~tools () in
-  let result = Conftest.Mock_client.list_tools client in
+  let result =
+    Async.Thread_safe.block_on_async_exn (fun () ->
+        Conftest.Mock_client.list_tools client)
+  in
   printf "tool_count: %d\n" (List.length result);
   [%expect {| tool_count: 2 |}]
 
 let%expect_test "Mock_client.call_tool - returns result for known tool" =
   let client = Conftest.Mock_client.create ~tools:[ ("echo", `Assoc []) ] () in
   let result =
-    Conftest.Mock_client.call_tool client ~name:"echo"
-      ~arguments:(`Assoc [ ("message", `String "hello") ])
+    Async.Thread_safe.block_on_async_exn (fun () ->
+        Conftest.Mock_client.call_tool client ~name:"echo"
+          ~arguments:(`Assoc [ ("message", `String "hello") ]))
   in
   let open Yojson.Safe.Util in
   printf "has_content: %b\n"
@@ -725,7 +731,8 @@ let%expect_test "Mock_client.call_tool - returns result for known tool" =
 let%expect_test "Mock_client.call_tool - returns error for unknown tool" =
   let client = Conftest.Mock_client.create () in
   let result =
-    Conftest.Mock_client.call_tool client ~name:"unknown" ~arguments:`Null
+    Async.Thread_safe.block_on_async_exn (fun () ->
+        Conftest.Mock_client.call_tool client ~name:"unknown" ~arguments:`Null)
   in
   let open Yojson.Safe.Util in
   printf "is_error: %b\n"

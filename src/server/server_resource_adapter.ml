@@ -1,15 +1,16 @@
-(** Server Resource Adapter - Resource_manager-like interface over server storage
+(** Server Resource Adapter - Resource_manager-like interface over server
+    storage
 
-    Provides an adapter that wraps the server's inline resource storage (Hashtbl)
-    with an interface compatible with Resource_manager. This enables using manager
-    patterns without changing the underlying server storage mechanism.
-    
+    Provides an adapter that wraps the server's inline resource storage
+    (Hashtbl) with an interface compatible with Resource_manager. This enables
+    using manager patterns without changing the underlying server storage
+    mechanism.
+
     Uses a generic type parameter to work with any resource record type. *)
 
 open! Core
 open! Async
 
-(** Generic adapter type working with any resource type that has a 'key' field *)
 type 'resource t = {
   get_resources : unit -> (string, 'resource) Hashtbl.t;
   set_resource : key:string -> data:'resource -> unit;
@@ -23,25 +24,31 @@ type 'resource t = {
   read_handler : 'resource -> string Deferred.t;
   on_duplicate : [ `Warn | `Error | `Replace | `Ignore ];
 }
+(** Generic adapter type working with any resource type that has a 'key' field *)
 
-let create ~get_resources ~set_resource ~remove_resource ~get_key ~get_uri 
-    ~get_name ~get_tags ~get_description ~get_mime_type ~read_handler ~on_duplicate =
-  { get_resources; set_resource; remove_resource; get_key; get_uri; get_name; 
-    get_tags; get_description; get_mime_type; read_handler; on_duplicate }
+let create ~get_resources ~set_resource ~remove_resource ~get_key ~get_uri
+    ~get_name ~get_tags ~get_description ~get_mime_type ~read_handler
+    ~on_duplicate =
+  {
+    get_resources;
+    set_resource;
+    remove_resource;
+    get_key;
+    get_uri;
+    get_name;
+    get_tags;
+    get_description;
+    get_mime_type;
+    read_handler;
+    on_duplicate;
+  }
 
 (** {1 Manager-like Interface} *)
 
-let has_resource t key =
-  Hashtbl.mem (t.get_resources ()) key
-
-let get_resource t key =
-  Hashtbl.find (t.get_resources ()) key
-
-let list_resources t =
-  Hashtbl.data (t.get_resources ())
-
-let count t =
-  Hashtbl.length (t.get_resources ())
+let has_resource t key = Hashtbl.mem (t.get_resources ()) key
+let get_resource t key = Hashtbl.find (t.get_resources ()) key
+let list_resources t = Hashtbl.data (t.get_resources ())
+let count t = Hashtbl.length (t.get_resources ())
 
 let add_resource t resource =
   let key = t.get_key resource in
@@ -56,17 +63,15 @@ let add_resource t resource =
       t.set_resource ~key ~data:resource;
       Ok ()
     | `Ignore -> Ok ()
-  else begin
+  else (
     t.set_resource ~key ~data:resource;
-    Ok ()
-  end
+    Ok ())
 
 let remove_resource t key =
-  if Hashtbl.mem (t.get_resources ()) key then begin
+  if Hashtbl.mem (t.get_resources ()) key then (
     t.remove_resource key;
-    Ok ()
-  end else
-    Error (sprintf "Resource not found: %s" key)
+    Ok ())
+  else Error (sprintf "Resource not found: %s" key)
 
 let find_by_tags t tags =
   Hashtbl.data (t.get_resources ())
@@ -86,11 +91,9 @@ let find_by_scheme t scheme =
 
 let read_resource t key =
   match get_resource t key with
-  | None -> 
-    return (Error (sprintf "Resource not found: %s" key))
-  | Some resource ->
-    Monitor.try_with (fun () -> t.read_handler resource)
-    >>| function
+  | None -> return (Error (sprintf "Resource not found: %s" key))
+  | Some resource -> (
+    Monitor.try_with (fun () -> t.read_handler resource) >>| function
     | Ok result -> Ok result
     | Error exn ->
-      Error (sprintf "Error reading resource %s: %s" key (Exn.to_string exn))
+      Error (sprintf "Error reading resource %s: %s" key (Exn.to_string exn)))

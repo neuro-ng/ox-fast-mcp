@@ -66,30 +66,29 @@ module Tool : sig
   val to_mcp_tool : ?include_fastmcp_meta:bool -> t -> Yojson.Safe.t
 end
 
-(** Resource representation *)
+(** Resource representation - adapts Resource_types for server use *)
 module Resource : sig
-  type t = {
-    uri : string;
-    key : string;
-    name : string;
-    description : string option;
-    mime_type : string;
-    meta : Yojson.Safe.t option;
-    tags : String.Set.t;
-    reader : unit -> string Deferred.t;
-  }
+  (* Use the polymorphic Resource_types.t as the underlying type *)
+  type t = Resources.Resource_types.t
 
   val create :
     uri:string ->
     name:string ->
     ?description:string ->
     ?mime_type:string ->
-    ?meta:Yojson.Safe.t ->
     ?tags:String.Set.t ->
     reader:(unit -> string Deferred.t) ->
     unit ->
     t
 
+  (* Accessor functions *)
+  val uri : t -> string
+  val key : t -> string
+  val name : t -> string
+  val description : t -> string option
+  val mime_type : t -> string
+  val tags : t -> String.Set.t
+  val reader : t -> unit -> string Deferred.t
   val to_mcp_resource : ?include_fastmcp_meta:bool -> t -> Yojson.Safe.t
 end
 
@@ -177,19 +176,19 @@ end
 
 (** {1 Lifespan Management} *)
 
-(** Context passed to lifespan hooks *)
 type lifespan_context = {
   mutable startup_complete : bool;
   mutable shutdown_requested : bool;
 }
+(** Context passed to lifespan hooks *)
 
 (** {1 Main Server} *)
 
 module Ox_fast_mcp : sig
   type t
-  
-  (** Lifespan hook function type *)
+
   type lifespan_hook = lifespan_context -> unit Deferred.t
+  (** Lifespan hook function type *)
 
   val generate_name : unit -> string
 
@@ -277,37 +276,39 @@ module Ox_fast_mcp : sig
   (** {2 Component Manager Accessors} *)
 
   val get_tool_manager : t -> Tool_manager.t
-  (** Get a Tool_manager instance backed by server's tool storage.
-      Note: Creates a new manager that mirrors current server tools. *)
+  (** Get a Tool_manager instance backed by server's tool storage. Note: Creates
+      a new manager that mirrors current server tools. *)
 
   val get_prompt_manager : t -> Prompts.Prompt_manager.t
-  (** Get a Prompt_manager instance backed by server's prompt storage.
-      Note: Creates a new manager that mirrors current server prompts. *)
+  (** Get a Prompt_manager instance backed by server's prompt storage. Note:
+      Creates a new manager that mirrors current server prompts. *)
 
   val get_resource_manager : t -> Resources.Resource_manager.t
-  (** Get a Resource_manager instance backed by server's resource storage.
-      Note: Creates a new manager that mirrors current server resources. *)
+  (** Get a Resource_manager instance backed by server's resource storage. Note:
+      Creates a new manager that mirrors current server resources. *)
 
   val get_server_tool_adapter : t -> Tool.t Server_tool_adapter.t
-  (** Get a Server_tool_adapter instance backed by server's tool storage.
-      This provides a manager-like interface over the server's actual tools. *)
+  (** Get a Server_tool_adapter instance backed by server's tool storage. This
+      provides a manager-like interface over the server's actual tools. *)
 
   val get_server_prompt_adapter : t -> Prompt.t Server_prompt_adapter.t
   (** Get a Server_prompt_adapter instance backed by server's prompt storage.
       This provides a manager-like interface over the server's actual prompts. *)
 
   val get_server_resource_adapter : t -> Resource.t Server_resource_adapter.t
-  (** Get a Server_resource_adapter instance backed by server's resource storage.
-      This provides a manager-like interface over the server's actual resources. *)
+  (** Get a Server_resource_adapter instance backed by server's resource
+      storage. This provides a manager-like interface over the server's actual
+      resources. *)
 
   val add_tool : t -> Tool.t -> unit
   (** Tool management *)
 
   val remove_tool : t -> name:string -> unit
-  
+
   (** {2 Tool Transformation Management} *)
 
-  val add_tool_transformation : t -> name:string -> config:Tool_transform_config.t -> unit
+  val add_tool_transformation :
+    t -> name:string -> config:Tool_transform_config.t -> unit
   (** Add a tool transformation configuration *)
 
   val remove_tool_transformation : t -> name:string -> unit
@@ -315,7 +316,7 @@ module Ox_fast_mcp : sig
 
   val apply_tool_transformations : t -> Tool.t -> Tool.t
   (** Apply all transformations to a tool if any exist *)
-  
+
   val get_tools : t -> (string, Tool.t) Hashtbl.t
   val get_tool : t -> key:string -> Tool.t Deferred.t
   val list_tools_mcp : t -> Yojson.Safe.t list
@@ -347,7 +348,6 @@ module Ox_fast_mcp : sig
   val add_simple_resource :
     ?description:string ->
     ?mime_type:string ->
-    ?meta:Yojson.Safe.t ->
     ?tags:String.Set.t ->
     uri:string ->
     name:string ->
@@ -452,7 +452,8 @@ module Ox_fast_mcp : sig
   (** Run all shutdown hooks in reverse order *)
 
   val with_lifespan : t -> f:(unit -> 'a Deferred.t) -> 'a Deferred.t
-  (** Run a function within the server lifespan - runs startup, executes f, then shutdown *)
+  (** Run a function within the server lifespan - runs startup, executes f, then
+      shutdown *)
 
   val call_tool :
     t -> name:string -> arguments:Yojson.Safe.t -> Yojson.Safe.t Deferred.t

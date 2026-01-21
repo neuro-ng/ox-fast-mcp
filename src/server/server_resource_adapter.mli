@@ -1,14 +1,14 @@
 (** Server Resource Adapter
 
     Provides an adapter that wraps the server's inline resource storage with an
-    interface compatible with Resource_manager patterns. Uses a generic type 
+    interface compatible with Resource_manager patterns. Uses a generic type
     parameter to work with any resource record type. *)
 
 open! Core
 open! Async
 
-(** Generic adapter type working with any resource type *)
 type 'resource t
+(** Generic adapter type working with any resource type *)
 
 val create :
   get_resources:(unit -> (string, 'resource) Hashtbl.t) ->
@@ -35,4 +35,6 @@ val remove_resource : 'resource t -> string -> (unit, string) Result.t
 val find_by_tags : 'resource t -> string list -> 'resource list
 val find_by_name : 'resource t -> string -> 'resource option
 val find_by_scheme : 'resource t -> string -> 'resource list
-val read_resource : 'resource t -> string -> (string, string) Result.t Deferred.t
+
+val read_resource :
+  'resource t -> string -> (string, string) Result.t Deferred.t

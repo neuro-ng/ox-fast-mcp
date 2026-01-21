@@ -39,8 +39,9 @@ let%expect_test "list_all_component_names_with_components" =
   [%expect
     {|
     Tools: ["tool1"]
-    Resources: ["file:///test"]
-    Prompts: ["prompt1"] |}];
+    Resources: ["res1"]
+    Prompts: ["prompt1"]
+    |}];
   return ()
 
 (** {1 Component Count by Tag Tests} *)

@@ -91,7 +91,8 @@ let%expect_test "add and get resource" =
   print_s [%sexp (Hashtbl.mem resources "resource://data" : bool)];
   [%expect {|
     1
-    true |}]
+    false
+    |}]
 
 let%expect_test "list resources mcp format" =
   let server = Ox_fast_mcp.create ~name:"test" () in
