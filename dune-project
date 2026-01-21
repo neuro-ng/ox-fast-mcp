@@ -87,4 +87,10 @@
   (ounit2 :with-test)
   (expect_test_helpers_core :with-test)
   (expect_test_helpers_async :with-test)
-  (ppx_expect :with-test)))
+  (ppx_expect :with-test))
+ (license Apache-2.0)
+ (authors "Norwen Gonio")
+ (homepage "https://github.com/neuro-ng/ox-fast-mcp")
+ (maintainers "neuro-ng@github.com")
+ (source
+  (github neuro-ng/ox-fast-mcp)))

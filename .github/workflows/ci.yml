@@ -80,6 +80,7 @@ jobs:
       working-directory: /workspace
       run: |
         eval $(opam env)
+        opam-dune-lint
         opam lint ox-fast-mcp.opam
 
   publish:
