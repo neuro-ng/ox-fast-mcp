@@ -732,19 +732,20 @@ let%expect_test "import_conflict_resolution_resources" =
   let resources = get_resources main_server in
   let count = Hashtbl.length resources in
   (* Test that get_resource raises error for unknown resource *)
-  let%bind result = 
-    Monitor.try_with (fun () -> get_resource main_server ~key:"config://settings")
+  let%bind result =
+    Monitor.try_with (fun () ->
+        get_resource main_server ~key:"config://settings")
   in
-  
-  let error_msg = match result with
+
+  let error_msg =
+    match result with
     | Ok _ -> "No error"
     | Error exn -> Exn.to_string exn
   in
-  
+
   let has_error = String.is_substring error_msg ~substring:"Unknown resource" in
-  
-  print_s
-    [%message "Resource conflict" (count : int) (has_error : bool)];
+
+  print_s [%message "Resource conflict" (count : int) (has_error : bool)];
 
   [%expect {| ("Resource conflict" (count 2) (has_error true)) |}];
   return ()
@@ -903,14 +904,15 @@ let%expect_test "import_server_resource_name_prefixing" =
   let%bind result =
     Monitor.try_with (fun () -> get_resource main_server ~key:"data://mydata")
   in
-  
-  let error_msg = match result with
+
+  let error_msg =
+    match result with
     | Ok _ -> "No error"
     | Error exn -> Exn.to_string exn
   in
-  
+
   let has_error = String.is_substring error_msg ~substring:"Unknown resource" in
-  
+
   print_s [%message "Resource not found" (has_error : bool)];
 
   [%expect {| ("Resource not found" (has_error true)) |}];
@@ -943,16 +945,20 @@ let%expect_test "import_server_resource_template_name_prefixing" =
 
   (* Test that get_template raises error for unknown template *)
   let%bind result =
-    Monitor.try_with (fun () -> get_template main_server ~key:"file://fs/{path}")
+    Monitor.try_with (fun () ->
+        get_template main_server ~key:"file://fs/{path}")
   in
-  
-  let error_msg = match result with
+
+  let error_msg =
+    match result with
     | Ok _ -> "No error"
     | Error exn -> Exn.to_string exn
   in
-  
-  let has_error = String.is_substring error_msg ~substring:"Unknown resource template" in
-  
+
+  let has_error =
+    String.is_substring error_msg ~substring:"Unknown resource template"
+  in
+
   print_s [%message "Template not found" (has_error : bool)];
 
   [%expect {| ("Template not found" (has_error true)) |}];
