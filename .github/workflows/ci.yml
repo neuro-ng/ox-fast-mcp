@@ -96,7 +96,7 @@ jobs:
       OPAMSWITCH: 5.2.0+ox
       OPAMYES: 1
     needs: [build-and-test, lint]
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' && github.event.release.target_commitish == 'main'
     
     steps:
     - name: Checkout code

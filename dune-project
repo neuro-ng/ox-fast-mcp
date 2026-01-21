@@ -6,31 +6,32 @@
 
 (package
  (name ox-fast-mcp)
- (synopsis "OCaml implementation of FastMCP")
- (description "OCaml implementation of FastMCP using Jane Street libraries")
+ (synopsis "Fast, functional way to build MCP servers and clients in OCaml")
+ (description
+  "\n\n\nAn OCaml implementation of FastMCP inspired by the Python library, providing \na high-level, type-safe interface for building Model Context Protocol (MCP) \nservers and clients using functional programming principles.\n\nFeatures:\n- Fast: High-level interface with minimal boilerplate\n- Type-Safe: Leverages OCaml's strong type system  \n- Functional: Built with functional programming principles\n- TDD: Developed using Test-Driven Development\n- Complete: Full MCP protocol implementation for servers and clients\n- Interoperable: Compatible with other MCP implementations\n")
  (depends
   (stdio
    (and
-    (>= v0.18~preview.130.76+222)
+    (>= v0.18~preview.130.36+326)
     :with-test))
   (ptime
    (>= 1.2.0))
   (ppx_yojson_conv_lib
-   (>= v0.18~preview.130.76+222))
+   (>= v0.18~preview.130.36+326))
   (ppx_yojson_conv
-   (>= v0.18~preview.130.76+222))
+   (>= v0.18~preview.130.36+326))
   (ppx_sexp_message
-   (>= v0.18~preview.130.76+222))
+   (>= v0.18~preview.130.36+326))
   (ppx_sexp_conv
-   (>= v0.18~preview.130.76+222))
+   (>= v0.18~preview.130.36+326))
   (ppx_let
-   (>= v0.18~preview.130.76+222))
+   (>= v0.18~preview.130.36+326))
   (ppx_fields_conv
-   (>= v0.18~preview.130.76+222))
+   (>= v0.18~preview.130.36+326))
   (ppx_compare
-   (>= v0.18~preview.130.76+222))
+   (>= v0.18~preview.130.36+326))
   (parsexp
-   (>= v0.18~preview.130.76+222))
+   (>= v0.18~preview.130.36+326))
   (mirage-crypto-rng
    (>= 0.11.3))
   (logs
@@ -44,9 +45,9 @@
   (cohttp
    (>= 6.1.1))
   (base
-   (>= v0.18~preview.130.76+222))
+   (>= v0.18~preview.130.36+326))
   (async_log
-   (>= v0.18~preview.130.76+222))
+   (>= v0.18~preview.130.36+326))
   (ocaml
    (>= 4.14.0))
   (ocaml-variants

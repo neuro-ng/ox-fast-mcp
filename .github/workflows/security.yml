@@ -33,17 +33,9 @@ jobs:
         cp -r . /workspace/
         cd /workspace
 
-    - name: Install opam-dune-lint
-      working-directory: /workspace
-      run: |
-        eval $(opam env)
-        opam install opam-dune-lint
-
     - name: Check for dependency issues
       working-directory: /workspace
       run: |
-        mv ox-fast-mcp.opam ox-fast-mcp.opam.bak
-        mv deps-only ox-fast-mcp.opam
         eval $(opam env)
         opam-dune-lint
 
