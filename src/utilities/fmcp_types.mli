@@ -143,7 +143,7 @@ module Stable : sig
         ?mime_type:string ->
         ?annotations:(string * json) list ->
         t ->
-        image_content
+        image_content Deferred.t
 
       val path : t -> string option
       val data : t -> string option
@@ -172,7 +172,7 @@ module Stable : sig
         ?mime_type:string ->
         ?annotations:(string * json) list ->
         t ->
-        audio_content
+        audio_content Deferred.t
 
       val path : t -> string option
       val data : t -> string option
@@ -203,7 +203,7 @@ module Stable : sig
         ?mime_type:string ->
         ?annotations:(string * json) list ->
         t ->
-        embedded_resource
+        embedded_resource Deferred.t
 
       val path : t -> string option
       val data : t -> string option

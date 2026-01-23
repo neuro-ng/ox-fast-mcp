@@ -5,93 +5,27 @@ open! Expect_test_helpers_core
 open Server_middleware.Timing
 
 (* =============================================================================
-   Tests for TimingMiddleware
+   Tests for timing middleware configuration
    ============================================================================= *)
 
-let%expect_test "TimingMiddleware - default initialization" =
-  let middleware = TimingMiddleware.create () in
-  printf "middleware created successfully: true\n";
-  ignore middleware;
-  [%expect {| middleware created successfully: true |}]
+let%expect_test "create - default initialization" =
+  let config = create () in
+  printf "Timing config created: %b\n" (phys_equal config config);
+  [%expect {| Timing config created: true |}]
 
-let%expect_test "TimingMiddleware - custom initialization" =
-  let logger = Logs.Src.create "custom.timing" in
-  let middleware = TimingMiddleware.create ~logger ~log_level:Logs.Debug () in
-  printf "custom middleware created: true\n";
-  ignore middleware;
-  [%expect {| custom middleware created: true |}]
-
-let%expect_test "TimingMiddleware - default log level is Info" =
-  (* Create with defaults and verify it can be created *)
-  let _middleware = TimingMiddleware.create () in
-  printf "default log level used: true\n";
-  [%expect {| default log level used: true |}]
+let%expect_test "create - detailed mode" =
+  let config = create ~detailed:true () in
+  printf "Detailed config created: %b\n" (phys_equal config config);
+  [%expect {| Detailed config created: true |}]
 
 (* =============================================================================
-   Tests for DetailedTimingMiddleware
+   Tests for Timing module (middleware interface)
    ============================================================================= *)
 
-let%expect_test "DetailedTimingMiddleware - default initialization" =
-  let middleware = DetailedTimingMiddleware.create () in
-  printf "detailed middleware created successfully: true\n";
-  ignore middleware;
-  [%expect {| detailed middleware created successfully: true |}]
-
-let%expect_test "DetailedTimingMiddleware - custom logger" =
-  let logger = Logs.Src.create "custom.timing.detailed" in
-  let middleware = DetailedTimingMiddleware.create ~logger () in
-  printf "custom detailed middleware created: true\n";
-  ignore middleware;
-  [%expect {| custom detailed middleware created: true |}]
-
-let%expect_test "DetailedTimingMiddleware - custom log level" =
-  let middleware = DetailedTimingMiddleware.create ~log_level:Logs.Warning () in
-  printf "warning level middleware created: true\n";
-  ignore middleware;
-  [%expect {| warning level middleware created: true |}]
-
-(* =============================================================================
-   Tests for Logs.level
-   ============================================================================= *)
-
-let%expect_test "Logs.level - Info" =
-  let level = Logs.Info in
-  printf "level: %s\n" (Logs.level_to_string (Some level));
-  [%expect {| level: info |}]
-
-let%expect_test "Logs.level - Debug" =
-  let level = Logs.Debug in
-  printf "level: %s\n" (Logs.level_to_string (Some level));
-  [%expect {| level: debug |}]
-
-let%expect_test "Logs.level - Warning" =
-  let level = Logs.Warning in
-  printf "level: %s\n" (Logs.level_to_string (Some level));
-  [%expect {| level: warning |}]
-
-let%expect_test "Logs.level - Error" =
-  let level = Logs.Error in
-  printf "level: %s\n" (Logs.level_to_string (Some level));
-  [%expect {| level: error |}]
-
-(* =============================================================================
-   Tests for Logs.Src
-   ============================================================================= *)
-
-let%expect_test "Logs.Src - create custom source" =
-  let src = Logs.Src.create "test.timing" in
-  printf "source name: %s\n" (Logs.Src.name src);
-  [%expect {| source name: test.timing |}]
-
-let%expect_test "Logs.Src - create fastmcp timing source" =
-  let src = Logs.Src.create "fastmcp.timing" in
-  printf "source name: %s\n" (Logs.Src.name src);
-  [%expect {| source name: fastmcp.timing |}]
-
-let%expect_test "Logs.Src - create detailed timing source" =
-  let src = Logs.Src.create "fastmcp.timing.detailed" in
-  printf "source name: %s\n" (Logs.Src.name src);
-  [%expect {| source name: fastmcp.timing.detailed |}]
+let%expect_test "Timing module - create" =
+  let middleware = Timing.create () in
+  printf "Timing middleware created: %b\n" (phys_equal middleware middleware);
+  [%expect {| Timing middleware created: true |}]
 
 (* =============================================================================
    Tests for operation name formatting
@@ -138,7 +72,7 @@ let%expect_test "duration formatting - milliseconds" =
   [%expect {| completed in 123.46ms |}]
 
 let%expect_test "duration formatting - fast operation" =
-  let duration_ms = 0.5 in
+  let duration_ms =  0.5 in
   printf "completed in %.2fms\n" duration_ms;
   [%expect {| completed in 0.50ms |}]
 

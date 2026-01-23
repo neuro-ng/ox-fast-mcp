@@ -168,7 +168,7 @@ let%expect_test "test_file_to_resource_content_text" =
   let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
   let test_data = "hello world" in
   let file = Fmcp_types.File.create ~data:test_data ~format:"plain" () in
-  let resource = Fmcp_types.File.to_resource_content file in
+  let%bind resource = Fmcp_types.File.to_resource_content file in
   print_s [%sexp (resource.type_ : [ `Resource ])];
   print_s [%sexp (resource.resource : Fmcp_types.resource_contents)];
   [%expect
@@ -185,7 +185,7 @@ let%expect_test "test_file_to_resource_content_binary" =
   let%bind () = Clock.after (Time_float_unix.Span.of_sec 0.0) in
   let test_data = "binary data" in
   let file = Fmcp_types.File.create ~data:test_data ~format:"pdf" () in
-  let resource = Fmcp_types.File.to_resource_content file in
+  let%bind resource = Fmcp_types.File.to_resource_content file in
   print_s [%sexp (resource.type_ : [ `Resource ])];
   print_s [%sexp (resource.resource : Fmcp_types.resource_contents)];
   [%expect
@@ -204,7 +204,7 @@ let%expect_test "test_file_to_resource_content_with_name" =
   let file =
     Fmcp_types.File.create ~data:test_data ~format:"pdf" ~name:"custom" ()
   in
-  let resource = Fmcp_types.File.to_resource_content file in
+  let%bind resource = Fmcp_types.File.to_resource_content file in
   print_s [%sexp (resource.type_ : [ `Resource ])];
   print_s [%sexp (resource.resource : Fmcp_types.resource_contents)];
   [%expect

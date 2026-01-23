@@ -1,81 +1,30 @@
-open Cohttp_lwt_unix
+(** Timing middleware for monitoring MCP operation performance *)
 
-(** Basic timing middleware *)
-module TimingMiddleware : sig
-  type t
+open Async
+open Middleware
+open Logging
 
-  val create : ?logger:Logs.src -> ?log_level:Logs.level -> unit -> t
+type timing_config = {
+  logger : Logger.t;
+  log_level : Logs.level;
+  detailed : bool; (** Enable detailed operation logging *)
+}
+(** Timing middleware configuration *)
 
-  val middleware :
-    t ->
-    (Request.t -> Cohttp_lwt.Body.t -> (Response.t * Cohttp_lwt.Body.t) Lwt.t) ->
-    Request.t ->
-    Cohttp_lwt.Body.t ->
-    (Response.t * Cohttp_lwt.Body.t) Lwt.t
-end
+val create :
+  ?logger:Logger.t -> ?log_level:Logs.level -> ?detailed:bool -> unit -> timing_config
+(** Create a new timing middleware configuration.
+    
+    @param logger Logger instance for timing messages (default: "OxFastMCP.Timing")
+    @param log_level Logging level for timing messages (default: Info)
+    @param detailed Enable detailed operation logging with names extracted from params (default: false)
+*)
 
-(** Detailed timing middleware with per-operation breakdowns *)
-module DetailedTimingMiddleware : sig
-  type t
+val time_operation : timing_config -> context -> 'a call_next -> 'a Deferred.t
+(** Time an operation and log the duration *)
 
-  val create : ?logger:Logs.src -> ?log_level:Logs.level -> unit -> t
+val on_message : timing_config -> context -> 'a call_next -> 'a Deferred.t
+(** Handle any message with timing *)
 
-  val middleware :
-    t ->
-    (Request.t -> Cohttp_lwt.Body.t -> (Response.t * Cohttp_lwt.Body.t) Lwt.t) ->
-    Request.t ->
-    Cohttp_lwt.Body.t ->
-    (Response.t * Cohttp_lwt.Body.t) Lwt.t
-
-  val on_call_tool :
-    t ->
-    string ->
-    (Request.t -> Cohttp_lwt.Body.t -> (Response.t * Cohttp_lwt.Body.t) Lwt.t) ->
-    Request.t ->
-    Cohttp_lwt.Body.t ->
-    (Response.t * Cohttp_lwt.Body.t) Lwt.t
-
-  val on_read_resource :
-    t ->
-    string ->
-    (Request.t -> Cohttp_lwt.Body.t -> (Response.t * Cohttp_lwt.Body.t) Lwt.t) ->
-    Request.t ->
-    Cohttp_lwt.Body.t ->
-    (Response.t * Cohttp_lwt.Body.t) Lwt.t
-
-  val on_get_prompt :
-    t ->
-    string ->
-    (Request.t -> Cohttp_lwt.Body.t -> (Response.t * Cohttp_lwt.Body.t) Lwt.t) ->
-    Request.t ->
-    Cohttp_lwt.Body.t ->
-    (Response.t * Cohttp_lwt.Body.t) Lwt.t
-
-  val on_list_tools :
-    t ->
-    (Request.t -> Cohttp_lwt.Body.t -> (Response.t * Cohttp_lwt.Body.t) Lwt.t) ->
-    Request.t ->
-    Cohttp_lwt.Body.t ->
-    (Response.t * Cohttp_lwt.Body.t) Lwt.t
-
-  val on_list_resources :
-    t ->
-    (Request.t -> Cohttp_lwt.Body.t -> (Response.t * Cohttp_lwt.Body.t) Lwt.t) ->
-    Request.t ->
-    Cohttp_lwt.Body.t ->
-    (Response.t * Cohttp_lwt.Body.t) Lwt.t
-
-  val on_list_resource_templates :
-    t ->
-    (Request.t -> Cohttp_lwt.Body.t -> (Response.t * Cohttp_lwt.Body.t) Lwt.t) ->
-    Request.t ->
-    Cohttp_lwt.Body.t ->
-    (Response.t * Cohttp_lwt.Body.t) Lwt.t
-
-  val on_list_prompts :
-    t ->
-    (Request.t -> Cohttp_lwt.Body.t -> (Response.t * Cohttp_lwt.Body.t) Lwt.t) ->
-    Request.t ->
-    Cohttp_lwt.Body.t ->
-    (Response.t * Cohttp_lwt.Body.t) Lwt.t
-end
+(** Timing middleware module implementing the Middleware.S interface *)
+module Timing : Middleware.S

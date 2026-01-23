@@ -168,14 +168,11 @@ let _validate_javascript_script path =
 
 (** {1 Transport Constructors} *)
 
-(** Create WebSocket transport (deprecated) *)
+(** Create WebSocket transport *)
 let create_ws_transport url =
   match validate_url url "ws" with
   | Error e -> Error e
-  | Ok () ->
-    Logs.warn (fun m ->
-        m "WSTransport is deprecated, use StreamableHttpTransport");
-    Ok (Ws_transport { url })
+  | Ok () -> Ok (Ws_transport { url })
 
 (** Create SSE transport *)
 let create_sse_transport ?(headers = []) ?(auth = No_auth)
@@ -494,14 +491,31 @@ let connect_session transport session_kwargs =
     let _, w = Pipe.create () in
     return
       (Ok (Client_session.create_from_pipes ~read_stream:r ~write_stream:w ()))
-  | Ws_transport _config ->
-    (* WebSocket transport - deprecated, use StreamableHttp instead *)
-    Logs.warn (fun m ->
-        m "Ws_transport is deprecated - use StreamableHttpTransport instead");
-    let r, _ = Pipe.create () in
-    let _, w = Pipe.create () in
+  | Ws_transport config ->
+    (* WebSocket transport using websocket-async *)
+    Logs.info (fun m -> m "Connecting via WebSocket transport");
+    let ws_config =
+      Mcp_client_transports.Ws_client.create_config ~url:config.url ()
+    in
+    let ws_t = Mcp_client_transports.Ws_client.connect ws_config in
+    let read_stream =
+      pipe_adapter_read (Mcp_client_transports.Ws_client.read_stream ws_t)
+    in
+    let raw_write_read, write_stream = pipe_adapter_write () in
+    don't_wait_for
+      (Pipe.transfer raw_write_read
+         (Mcp_client_transports.Ws_client.write_stream ws_t)
+         ~f:Fn.id);
     return
-      (Ok (Client_session.create_from_pipes ~read_stream:r ~write_stream:w ()))
+      (Ok
+         (Client_session.create_from_pipes ~read_stream ~write_stream
+            ?read_timeout:session_kwargs.read_timeout_seconds
+            ?sampling_callback:session_kwargs.sampling_callback
+            ?logging_callback:session_kwargs.logging_callback
+            ?elicitation_callback:session_kwargs.elicitation_callback
+            ?list_roots_callback:session_kwargs.list_roots_callback
+            ?message_handler:session_kwargs.message_handler
+            ?client_info:session_kwargs.client_info ()))
 
 (** Close transport *)
 let close _transport =

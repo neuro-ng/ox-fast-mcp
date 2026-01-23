@@ -339,3 +339,176 @@ let get_arguments_str arguments =
   match arguments with
   | None -> "null"
   | Some json -> Yojson.Safe.to_string json
+
+(* =============================================================================
+   Response Caching Middleware Implementation  
+   ============================================================================= *)
+
+open Async
+open Middleware
+
+(** Response caching middleware instance *)
+type response_caching_middleware = {
+  config : Response_caching_config.t;
+  tools_cache : (string * Tool_manager.Tool.t) list Memory_cache.t;
+  resources_cache : Mcp.Types.resource list Memory_cache.t;
+  prompts_cache : Mcp.Types.prompt list Memory_cache.t;
+  tool_result_cache : string Memory_cache.t;
+  prompt_result_cache : Mcp.Types.get_prompt_result Memory_cache.t;
+}
+
+let create_middleware ?(config = Response_caching_config.create ()) () =
+  {
+    config;
+    tools_cache = Memory_cache.create ~max_item_size:config.max_item_size ();
+    resources_cache = Memory_cache.create ~max_item_size:config.max_item_size ();
+    prompts_cache = Memory_cache.create ~max_item_size:config.max_item_size ();
+    tool_result_cache = Memory_cache.create ~max_item_size:config.max_item_size ();
+    prompt_result_cache = Memory_cache.create ~max_item_size:config.max_item_size ();
+  }
+
+let set cache key value ttl = Memory_cache.put cache ~key ~value ~ttl_seconds:ttl
+
+(** ResponseCachingMiddleware implementing Middleware.S *)
+module ResponseCachingMiddleware : Middleware.S = struct
+  type t = response_caching_middleware
+
+  let create () = create_middleware ()
+
+  let on_message _t context call_next = call_next context
+  let on_request _t context call_next = call_next context
+  let on_notification _t context call_next = call_next context
+
+  (* List tools with caching *)
+  let on_list_tools t context call_next =
+    if not (Response_caching_config.list_tools_enabled t.config) then
+      call_next context
+    else
+      let cache_key = "tools:list" in
+      match Memory_cache.get t.tools_cache cache_key with
+      | Some tools -> return (Middleware.Results.{ tools })
+      | None ->
+        let%bind result = call_next context in
+        let ttl = Response_caching_config.list_tools_ttl t.config in
+        set t.tools_cache cache_key result.tools ttl;
+        return result
+
+  (* List resources with caching *)
+  let on_list_resources t context call_next =
+    if not (Response_caching_config.list_resources_enabled t.config) then
+      call_next context
+    else
+      let cache_key = "resources:list" in
+      match Memory_cache.get t.resources_cache cache_key with
+      | Some resources -> return (Middleware.Results.{ resources })
+      | None ->
+        let%bind result = call_next context in
+        let ttl = Response_caching_config.list_resources_ttl t.config in
+        set t.resources_cache cache_key result.resources ttl;
+        return result
+
+  let on_list_resource_templates _t context call_next = call_next context
+
+  (* List prompts with caching *)
+  let on_list_prompts t context call_next =
+    if not (Response_caching_config.list_prompts_enabled t.config) then
+      call_next context
+    else
+      let cache_key = "prompts:list" in
+      match Memory_cache.get t.prompts_cache cache_key with
+      | Some prompts -> return (Middleware.Results.{ prompts })
+      | None ->
+        let%bind result = call_next context in
+        let ttl = Response_caching_config.list_prompts_ttl t.config in
+        set t.prompts_cache cache_key result.prompts ttl;
+        return result
+
+  (* Call tool - simplified caching by tool name + args *)
+  let on_call_tool t context call_next =
+    let tool_name =
+      match context.params with
+      | `Assoc fields -> (
+        match List.Assoc.find fields ~equal:String.equal "name" with
+        | Some (`String name) -> Some name
+        | _ -> None)
+      | _ -> None
+    in
+    match tool_name with
+    | None -> call_next context
+    | Some name ->
+      if
+        not (Response_caching_config.call_tool_enabled t.config)
+        || not (Response_caching_config.matches_tool_cache_settings t.config name)
+      then call_next context
+      else
+        let args_str = get_arguments_str (Some context.params) in
+        let cache_key = sprintf "tool:%s:%s" name args_str in
+        (match Memory_cache.get t.tool_result_cache cache_key with
+        | Some cached_json ->
+          (* Return cached JSON as-is *)
+          let content = [ Yojson.Safe.from_string cached_json ] in
+          return (Middleware.Results.{ content; is_error = false })
+        | None ->
+          let%bind result = call_next context in
+          let ttl = Response_caching_config.call_tool_ttl t.config in
+          (* Cache first content item as JSON *)
+          (match result.content with
+          | [] -> ()
+          | hd :: _ ->
+            let json_str = Yojson.Safe.to_string hd in
+            set t.tool_result_cache cache_key json_str ttl);
+          return result)
+
+  let on_read_resource _t context call_next = call_next context
+
+  (* Get prompt with caching *)
+  let on_get_prompt t context call_next =
+    let prompt_name =
+      match context.params with
+      | `Assoc fields -> (
+        match List.Assoc.find fields ~equal:String.equal "name" with
+        | Some (`String name) -> Some name
+        | _ -> None)
+      | _ -> None
+    in
+    match prompt_name with
+    | None -> call_next context
+    | Some name ->
+      if not (Response_caching_config.get_prompt_enabled t.config) then
+        call_next context
+      else
+        let args_str = get_arguments_str (Some context.params) in
+        let cache_key = sprintf "prompt:%s:%s" name args_str in
+        (match Memory_cache.get t.prompt_result_cache cache_key with
+        | Some cached_result -> return cached_result
+        | None ->
+          let%bind result = call_next context in
+          let ttl = Response_caching_config.get_prompt_ttl t.config in
+          set t.prompt_result_cache cache_key result ttl;
+          return result)
+
+  let dispatch_handler _t _context call_next = return call_next
+
+  let call t context call_next =
+    let%bind handler = dispatch_handler t context call_next in
+    on_message t context handler
+end
+
+(** Clear all caches *)
+let clear_all_caches t =
+  t.tools_cache.storage := Map.empty (module String);
+  t.resources_cache.storage := Map.empty (module String);
+  t.prompts_cache.storage := Map.empty (module String);
+  t.tool_result_cache.storage := Map.empty (module String);
+  t.prompt_result_cache.storage := Map.empty (module String)
+
+(** Invalidate cache on notification *)
+let invalidate_cache_on_notification t notification_method =
+  match notification_method with
+  | "notifications/tools/list_changed" ->
+    t.tools_cache.storage := Map.empty (module String)
+  | "notifications/resources/list_changed" ->  
+    t.resources_cache.storage := Map.empty (module String)
+  | "notifications/prompts/list_changed" ->
+    t.prompts_cache.storage := Map.empty (module String)
+  | _ -> ()

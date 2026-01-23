@@ -1,90 +1,105 @@
+(** Timing middleware for monitoring MCP operation performance *)
+
 open Core
-open Lwt.Syntax
-open Cohttp_lwt_unix
+open Async
+open Middleware
+open Logging
 
-(* Timing middleware implementation *)
-module TimingMiddleware = struct
-  type t = { logger : Logs.src; log_level : Logs.level }
+type timing_config = {
+  logger : Logger.t;
+  log_level : Logs.level;
+  detailed : bool; (** Enable detailed operation logging *)
+}
 
-  let create ?(logger = Logs.Src.create "fastmcp.timing")
-      ?(log_level = Logs.Info) () =
-    { logger; log_level }
+let create ?(logger = Logger.get_logger "OxFastMCP.Timing")
+    ?(log_level = Logs.Info) ?(detailed = false) () =
+  { logger; log_level; detailed }
 
-  let middleware t handler req body =
-    let method_name = req |> Request.meth |> Cohttp.Code.string_of_method in
-    let start_time = Core_unix.gettimeofday () in
+(** Extract operation name from context for detailed logging *)
+let get_operation_name context =
+  match context.method_ with
+  | Some "tools/call" -> (
+    (* Try to extract tool name from params *)
+    match context.params with
+    | `Assoc fields -> (
+      match List.Assoc.find fields ~equal:String.equal "name" with
+      | Some (`String name) -> sprintf "Tool '%s'" name
+      | _ -> "Tool call")
+    | _ -> "Tool call")
+  | Some "resources/read" -> (
+    (* Try to extract resource URI from params *)
+    match context.params with
+    | `Assoc fields -> (
+      match List.Assoc.find fields ~equal:String.equal "uri" with
+      | Some (`String uri) -> sprintf "Resource '%s'" uri
+      | _ -> "Resource read")
+    | _ -> "Resource read")
+  | Some "prompts/get" -> (
+    (* Try to extract prompt name from params *)
+    match context.params with
+    | `Assoc fields -> (
+      match List.Assoc.find fields ~equal:String.equal "name" with
+      | Some (`String name) -> sprintf "Prompt '%s'" name
+      | _ -> "Prompt get")
+    | _ -> "Prompt get")
+  | Some "tools/list" -> "List tools"
+  | Some "resources/list" -> "List resources"
+  | Some "resources/templates/list" -> "List resource templates"
+  | Some "prompts/list" -> "List prompts"
+  | Some method_name -> sprintf "Request %s" method_name
+  | None -> "Unknown request"
 
-    Lwt.catch
-      (fun () ->
-        let* response, body' = handler req body in
-        let duration_ms = (Core_unix.gettimeofday () -. start_time) *. 1000.0 in
-        Logs.msg ~src:t.logger t.log_level (fun m ->
-            m "Request %s completed in %.2fms" method_name duration_ms);
-        Lwt.return (response, body'))
-      (fun exn ->
-        let duration_ms = (Core_unix.gettimeofday () -. start_time) *. 1000.0 in
-        Logs.msg ~src:t.logger t.log_level (fun m ->
-            m "Request %s failed after %.2fms: %s" method_name duration_ms
-              (Exn.to_string exn));
-        Lwt.fail exn)
-end
+(** Time an operation and log the duration *)
+let time_operation config context call_next =
+  let start_time = Time_ns.now () in
+  let operation_name =
+    if config.detailed then get_operation_name context
+    else Option.value context.method_ ~default:"unknown"
+  in
 
-(* Detailed timing middleware implementation *)
-module DetailedTimingMiddleware = struct
-  type t = { logger : Logs.src; log_level : Logs.level }
+  Monitor.try_with (fun () -> call_next context) >>= function
+  | Ok result ->
+    let duration_ns = Time_ns.diff (Time_ns.now ()) start_time in
+    let duration_ms = Time_ns.Span.to_ms duration_ns in
+    Logger.info config.logger
+      (sprintf "%s completed in %.2fms" operation_name duration_ms);
+    return result
+  | Error exn ->
+    let duration_ns = Time_ns.diff (Time_ns.now ()) start_time in
+    let duration_ms = Time_ns.Span.to_ms duration_ns in
+    Logger.warning config.logger
+      (sprintf "%s failed after %.2fms: %s" operation_name duration_ms
+         (Exn.to_string exn));
+    raise exn
 
-  let create ?(logger = Logs.Src.create "fastmcp.timing.detailed")
-      ?(log_level = Logs.Info) () =
-    { logger; log_level }
+let on_message config context call_next = time_operation config context call_next
 
-  let time_operation t operation_name handler req body =
-    let start_time = Core_unix.gettimeofday () in
+(** Middleware module implementing the Middleware.S interface *)
+module Timing : Middleware.S = struct
+  type t = timing_config
 
-    Lwt.catch
-      (fun () ->
-        let* response, body' = handler req body in
-        let duration_ms = (Core_unix.gettimeofday () -. start_time) *. 1000.0 in
-        Logs.msg ~src:t.logger t.log_level (fun m ->
-            m "%s completed in %.2fms" operation_name duration_ms);
-        Lwt.return (response, body'))
-      (fun exn ->
-        let duration_ms = (Core_unix.gettimeofday () -. start_time) *. 1000.0 in
-        Logs.msg ~src:t.logger t.log_level (fun m ->
-            m "%s failed after %.2fms: %s" operation_name duration_ms
-              (Exn.to_string exn));
-        Lwt.fail exn)
+  let create () =
+    { logger = Logger.get_logger "OxFastMCP.Timing"; log_level = Logs.Info; detailed = false }
 
-  let middleware t handler req body =
-    let operation_name =
-      match Request.meth req with
-      | `GET -> "GET"
-      | `POST -> "POST"
-      | `PUT -> "PUT"
-      | `DELETE -> "DELETE"
-      | _ -> "Unknown"
-    in
-    time_operation t operation_name handler req body
+  let on_message = on_message
+  let on_request config context call_next = on_message config context call_next
+  let on_notification config context call_next = on_message config context call_next
+  let on_call_tool config context call_next = on_message config context call_next
+  let on_read_resource config context call_next = on_message config context call_next
+  let on_get_prompt config context call_next = on_message config context call_next
+  let on_list_tools config context call_next = on_message config context call_next
+  let on_list_resources config context call_next = on_message config context call_next
 
-  let on_call_tool t tool_name handler req body =
-    time_operation t (Printf.sprintf "Tool '%s'" tool_name) handler req body
+  let on_list_resource_templates config context call_next =
+    on_message config context call_next
 
-  let on_read_resource t resource_uri handler req body =
-    time_operation t
-      (Printf.sprintf "Resource '%s'" resource_uri)
-      handler req body
+  let on_list_prompts config context call_next = on_message config context call_next
 
-  let on_get_prompt t prompt_name handler req body =
-    time_operation t (Printf.sprintf "Prompt '%s'" prompt_name) handler req body
+  let dispatch_handler _config _context call_next =
+    (* Just return the call_next as is, timing happens in on_message *)
+    return call_next
 
-  let on_list_tools t handler req body =
-    time_operation t "List tools" handler req body
-
-  let on_list_resources t handler req body =
-    time_operation t "List resources" handler req body
-
-  let on_list_resource_templates t handler req body =
-    time_operation t "List resource templates" handler req body
-
-  let on_list_prompts t handler req body =
-    time_operation t "List prompts" handler req body
+  let call config context call_next =
+    let%bind handler = dispatch_handler config context call_next in
+    on_message config context handler
 end

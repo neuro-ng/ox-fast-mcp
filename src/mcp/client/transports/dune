@@ -10,8 +10,9 @@
   yojson
   uri
   logs
+  websocket-async
   ox-fast-mcp.mcp
   ox-fast-mcp.mcp.shared)
- (modules stdio sse sse_protocol streamable_http websocket)
+ (modules stdio sse sse_protocol streamable_http ws_client)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))

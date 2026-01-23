@@ -179,19 +179,23 @@ module Stable = struct
             | _ -> "image/png")
           | None -> "image/png")
 
-      let to_image_content ?mime_type ?(annotations = []) t : image_content =
-        let data =
+      let to_image_content ?mime_type ?(annotations = []) t : image_content Deferred.t =
+        let%bind data =
           match (t.path, t.data) with
-          | Some path, None -> In_channel.read_all path |> Base64.encode_exn
-          | None, Some data -> Base64.encode_exn data
+          | Some path, None ->
+            let%bind result = Monitor.try_with (fun () -> Reader.file_contents path) in
+            (match result with
+             | Ok contents -> return (Base64.encode_exn contents)
+             | Error exn -> failwith (sprintf "Failed to read image file: %s" (Exn.to_string exn)))
+          | None, Some data -> return (Base64.encode_exn data)
           | _ -> failwith "No image data available"
         in
-        {
+        return ({
           data;
           mime_type = Core.Option.value mime_type ~default:(get_mime_type t);
           annotations;
           format = t.format;
-        }
+        } : image_content)
 
       let path t = t.path
       let data t = t.data
@@ -228,19 +232,23 @@ module Stable = struct
             | _ -> "audio/wav")
           | None -> "audio/wav")
 
-      let to_audio_content ?mime_type ?(annotations = []) t : audio_content =
-        let data =
+      let to_audio_content ?mime_type ?(annotations = []) t : audio_content Deferred.t =
+        let%bind data =
           match (t.path, t.data) with
-          | Some path, None -> In_channel.read_all path |> Base64.encode_exn
-          | None, Some data -> Base64.encode_exn data
+          | Some path, None ->
+            let%bind result = Monitor.try_with (fun () -> Reader.file_contents path) in
+            (match result with
+             | Ok contents -> return (Base64.encode_exn contents)
+             | Error exn -> failwith (sprintf "Failed to read audio file: %s" (Exn.to_string exn)))
+          | None, Some data -> return (Base64.encode_exn data)
           | _ -> failwith "No audio data available"
         in
-        {
+        return ({
           data;
           mime_type = Core.Option.value mime_type ~default:(get_mime_type t);
           annotations;
           format = t.format;
-        }
+        } : audio_content)
 
       let path t = t.path
       let data t = t.data
@@ -281,7 +289,7 @@ module Stable = struct
           | None -> "application/octet-stream")
 
       let to_resource_content ?mime_type ?(annotations = []) t :
-          embedded_resource =
+          embedded_resource Deferred.t =
         let mime_type =
           Core.Option.value mime_type ~default:(get_mime_type t)
         in
@@ -291,25 +299,33 @@ module Stable = struct
         in
         let uri = sprintf "file:///%s%s" uri_base ext in
 
-        let resource : resource_contents =
+        let%bind resource =
           if String.is_prefix ~prefix:"text/" mime_type then
-            let text =
+            let%bind text =
               match (t.data, t.path) with
-              | Some d, _ -> d
-              | _, Some path -> In_channel.read_all path
+              | Some d, _ -> return d
+              | _, Some path ->
+                let%bind result = Monitor.try_with (fun () -> Reader.file_contents path) in
+                (match result with
+                 | Ok contents -> return contents
+                 | Error exn -> failwith (sprintf "Failed to read text file: %s" (Exn.to_string exn)))
               | _ -> failwith "No resource data available"
             in
-            Text { uri; mime_type; text }
+            return (Text { uri; mime_type; text })
           else
-            let blob_data =
+            let%bind blob_data =
               match (t.data, t.path) with
-              | Some d, _ -> Base64.encode_exn d
-              | _, Some path -> In_channel.read_all path |> Base64.encode_exn
+              | Some d, _ -> return (Base64.encode_exn d)
+              | _, Some path ->
+                let%bind result = Monitor.try_with (fun () -> Reader.file_contents path) in
+                (match result with
+                 | Ok contents -> return (Base64.encode_exn contents)
+                 | Error exn -> failwith (sprintf "Failed to read blob file: %s" (Exn.to_string exn)))
               | _ -> failwith "No resource data available"
             in
-            Blob { uri; mime_type; blob = blob_data }
+            return (Blob { uri; mime_type; blob = blob_data })
         in
-        { type_ = `Resource; resource; annotations }
+        return { type_ = `Resource; resource; annotations }
 
       let path t = t.path
       let data t = t.data

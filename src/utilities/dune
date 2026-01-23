@@ -33,7 +33,8 @@
   network_utils
   secret_string
   headless_oauth
-  mock_oauth_server)
+  mock_oauth_server
+  utilities_types)
  (preprocess
   (pps ppx_jane ppx_compare ppx_sexp_conv ppx_sexp_message ppx_yojson_conv))
  (instrumentation
