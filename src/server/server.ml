@@ -1559,7 +1559,8 @@ module Ox_fast_mcp = struct
           return (`Assoc response_fields))
       | _ ->
         (* Invalid request format *)
-        Logging.Global.error (sprintf "Invalid request format: %s" (Yojson.Safe.to_string message));
+        Logging.Global.error
+          (sprintf "Invalid request format: %s" (Yojson.Safe.to_string message));
         let error =
           `Assoc
             [

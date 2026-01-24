@@ -37,8 +37,7 @@ let main () =
 
   (* Add arithmetic operation tools *)
   Server.Ox_fast_mcp.add_simple_tool ~name:"add"
-    ~description:"Add two numbers together"
-    ~parameters:binary_op_schema
+    ~description:"Add two numbers together" ~parameters:binary_op_schema
     ~handler:(fun params ->
       match params with
       | `Assoc fields ->
@@ -60,8 +59,7 @@ let main () =
     server;
 
   Server.Ox_fast_mcp.add_simple_tool ~name:"subtract"
-    ~description:"Subtract b from a"
-    ~parameters:binary_op_schema
+    ~description:"Subtract b from a" ~parameters:binary_op_schema
     ~handler:(fun params ->
       match params with
       | `Assoc fields ->
@@ -80,8 +78,7 @@ let main () =
     server;
 
   Server.Ox_fast_mcp.add_simple_tool ~name:"multiply"
-    ~description:"Multiply two numbers"
-    ~parameters:binary_op_schema
+    ~description:"Multiply two numbers" ~parameters:binary_op_schema
     ~handler:(fun params ->
       match params with
       | `Assoc fields ->
