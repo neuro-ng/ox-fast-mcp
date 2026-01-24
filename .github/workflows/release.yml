@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'
     branches:
       - main
 
@@ -86,5 +86,4 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         files: /workspace/ox-fast-mcp-ubuntu.tar.gz
-
- 
+        generate_release_notes: true
