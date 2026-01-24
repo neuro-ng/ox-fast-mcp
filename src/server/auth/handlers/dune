@@ -1,0 +1,12 @@
+(library
+ (name server_auth_handlers)
+ (public_name ox-fast-mcp.server.auth.handlers)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv))
+ (libraries
+  core
+  lwt
+  yojson
+  ppx_yojson_conv_lib
+  ox-fast-mcp.utilities
+  ox-fast-mcp.mcp.server.auth))

@@ -1,0 +1,37 @@
+(library
+ (name server)
+ (public_name ox-fast-mcp.server)
+ (libraries
+  core
+  async
+  yojson
+  ppx_yojson_conv_lib
+  logs
+  cohttp
+  cohttp-lwt-unix
+  cohttp-async
+  lwt
+  lwt.unix
+  ox_fast_mcp
+  utilities
+  ox-fast-mcp.tools
+  ox-fast-mcp.prompts
+  ox-fast-mcp.mcp.resources
+  server_auth
+  ox-fast-mcp.mcp.server.auth
+  mcp_server
+  uri)
+ (modules
+  context
+  dependencies
+  elicitation
+  http
+  input_validation
+  proxy
+  server
+  server_tool_adapter
+  server_prompt_adapter
+  server_resource_adapter
+  session_bridge)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))

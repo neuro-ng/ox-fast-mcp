@@ -1,0 +1,13 @@
+(library
+ (name test_prompts)
+ (libraries
+  core
+  async
+  yojson
+  prompts
+  ox_fast_mcp
+  mcp
+  expect_test_helpers_core
+  expect_test_helpers_async)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv ppx_expect)))

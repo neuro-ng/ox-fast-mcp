@@ -1,0 +1,23 @@
+(library
+ (name server_auth_providers)
+ (public_name ox-fast-mcp.server.auth.providers)
+ (libraries
+  base64
+  core
+  cohttp
+  cohttp-lwt
+  cohttp-lwt-unix
+  jose
+  lwt
+  mirage-crypto
+  mirage-crypto-pk
+  mirage-crypto-rng
+  uri
+  x509
+  yojson
+  ox-fast-mcp.shared
+  ox-fast-mcp.mcp.server.auth
+  ox-fast-mcp.server.auth
+  ox-fast-mcp.utilities)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))

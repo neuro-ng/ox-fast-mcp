@@ -1,0 +1,18 @@
+(library
+ (name mcp_server)
+ (public_name ox-fast-mcp.mcp.server)
+ (libraries
+  base
+  core
+  async
+  yojson
+  ppx_yojson_conv_lib
+  uri
+  cohttp-lwt-unix
+  logs
+  lwt
+  mcp
+  mcp_shared)
+ (modules models session stdio)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))

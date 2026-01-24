@@ -1,0 +1,7 @@
+(library
+ (name client_auth_extensions)
+ (public_name ox-fast-mcp.client_auth_extensions)
+ (libraries base core async yojson jose ox-fast-mcp.utilities)
+ (modules client_credentials)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv ppx_compare)))

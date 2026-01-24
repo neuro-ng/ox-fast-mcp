@@ -1,0 +1,22 @@
+# HTTP Utilities TODO
+
+## COMPLETED
+- [x] Resolved module name conflict between utilities/Http and server/Http
+- [x] Renamed utilities/http.ml to network_utils.ml to avoid collision
+- [x] Updated test/utilities/test_http.ml to use Network_utils module
+- [x] Removed conflicting http.ml and http.mli from utilities
+- [x] Verified build stability after module reorganization
+- [x] All tests pass with new Network_utils module structure
+
+## NOTES
+- The original utilities/Http module contained only `find_available_port` function
+- This has been moved to utilities/Network_utils to avoid naming conflicts with server/Http
+- All tests now pass after this module reorganization
+
+## PYTHON TO OCAML MAPPING
+- Python: `http` module utilities → OCaml: `Network_utils` module
+- Python: `find_available_port()` → OCaml: `Network_utils.find_available_port()`
+
+## NEXT STEPS
+- Consider adding more network utility functions to Network_utils if needed
+- Document the module name change for users migrating from Python

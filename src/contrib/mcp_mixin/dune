@@ -1,0 +1,17 @@
+(library
+ (name mcp_mixin)
+ (public_name ox-fast-mcp.contrib.mcp_mixin)
+ (modules mcp_mixin)
+ (libraries
+  core
+  async
+  mcp
+  ox-fast-mcp.tools
+  ox-fast-mcp.mcp.resources
+  ox-fast-mcp.prompts
+  ox-fast-mcp.utilities
+  ox-fast-mcp.contrib.bulk_tool_caller
+  ox_fast_mcp
+  ppx_yojson_conv_lib)
+ (preprocess
+  (pps ppx_yojson_conv ppx_compare ppx_sexp_conv ppx_let)))

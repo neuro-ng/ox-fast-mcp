@@ -1,0 +1,19 @@
+(library
+ (name resources)
+ (public_name ox-fast-mcp.mcp.resources)
+ (libraries
+  base
+  core
+  async
+  logs
+  yojson
+  uri
+  ppx_yojson_conv
+  base64
+  mcp
+  str
+  ox-fast-mcp.utilities
+  ox_fast_mcp)
+ (modules resource resource_types resource_manager)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))

@@ -1,0 +1,83 @@
+# Settings Module TODO List
+
+## Missing Python Imports to OCaml Mappings ⚠️ MISSING ML EQUIVALENTS
+- `pydantic` and `pydantic_settings`: ⚠️ No direct equivalent, using manual validation
+- `pydantic.Field`: ⚠️ No direct equivalent, using OCaml record fields  
+- `pydantic.model_validator`: ⚠️ No direct equivalent, using manual validation functions
+- `pydantic_settings.BaseSettings`: ⚠️ No direct equivalent, using manual settings loading
+- `pydantic_settings.SettingsConfigDict`: ⚠️ No direct equivalent, using manual configuration
+- `pathlib.Path`: ⚠️ No direct equivalent, using Core.Filename for path handling
+- `typing.ClassVar`: ⚠️ No direct equivalent, using module-level constants
+- `logging.Logger`: ⚠️ No direct equivalent, using lib/utilities/logging.ml
+- `os.environ`: ⚠️ No direct equivalent, using Sys.getenv for environment access
+- `warnings.warn`: ⚠️ No direct equivalent, using Logging.Global.warning
+- `fastmcp.utilities.logging`: ✓ Using lib/utilities/logging.ml
+
+## Missing Functionality
+1. Environment Variable Support ✓ COMPLETED
+   - ✓ Python uses `ExtendedEnvSettingsSource` for env var handling
+   - ✓ OCaml equivalent implemented for reading env vars with prefixes
+   - ✓ Implemented deprecated FASTMCP_SERVER_ prefix warning
+
+2. Logging Configuration ✓ COMPLETED
+   - ✓ Using lib/utilities/logging.ml for configuration
+   - ✓ Using lib/utilities/log_types.ml for log levels
+   - ✓ Using lib/utilities/log_handler.ml for handlers
+   - ✓ Using lib/utilities/log_formatter.ml for formatting
+   - ✓ Rich traceback support implemented via Rich_handler
+
+3. Settings Validation ✓ COMPLETED
+   - ✓ Python uses Pydantic for automatic validation
+   - ✓ Implemented manual validation for:
+   - ✓ Log level values (using Log_level.of_string)
+   - ✓ Resource prefix format values
+   - ✓ Auth provider values
+   - ✓ Port range validation
+   - ✓ Path validation
+
+4. Dotenv Support ✓ COMPLETED
+   - ✓ Python uses .env file support via pydantic_settings
+   - ✓ OCaml equivalent implemented for reading .env files
+   - ✓ Supports key=value parsing with quoted value handling
+   - ✓ Skips comments and empty lines
+   - ✓ Applies same environment variable prefix logic
+
+5. File Secrets Support ✓ COMPLETED
+   - ✓ Implemented file secrets loading from {home}/secrets directory
+   - ✓ Reads each file in secrets directory as environment variable values
+   - ✓ Maps file names to uppercase environment variable names
+   - ✓ Applies same prefix logic as environment variables
+   - ✓ Gracefully handles missing secrets directory
+
+6. Settings Customization ✓ COMPLETED
+   - ✓ Python uses `settings_customise_sources` for source priority
+   - ✓ OCaml equivalent implemented for merging settings from different sources
+   - ✓ Settings_source module with priority ordering
+   - ✓ load_from_env, load_from_dotenv, load_from_file_secrets functions
+
+7. Backwards Compatibility ✓ COMPLETED
+   - ✓ Python has `settings` property for < 2.8.0 compatibility
+   - ✓ OCaml version includes deprecated `settings` function with warning
+
+8. Field Documentation ✓ COMPLETED
+   - ✓ Python uses Field annotations with descriptions
+   - ✓ OCaml version includes comprehensive documentation comments
+
+## Implementation Notes
+1. ✓ Using Core.Filename for path handling instead of Python's pathlib
+2. ✓ Using variants instead of string literals for enums
+3. ✓ Using Core.Or_error for error handling
+4. ✓ Using ppx_yojson_conv for JSON serialization
+5. ✓ Using ppx_compare and ppx_sexp for comparison and serialization
+6. ✓ Using lib/utilities/logging.ml for logging functionality
+7. ✓ Using Jane Street style with let%bind syntax for error handling
+8. ✓ Using Hashtbl for efficient key-value lookups in dotenv and secrets
+9. ✓ Using In_channel.read_lines and In_channel.read_all for file I/O
+10. ✓ Using String manipulation functions for parsing and validation
+
+## Additional OCaml-Specific Features
+1. ✓ Strong typing with variants for enums (Log_level, Resource_prefix_format, etc.)
+2. ✓ Comprehensive error handling with Or_error.t
+3. ✓ Async support for dotenv loading with Deferred.t
+4. ✓ PPX-generated comparison, serialization, and JSON conversion
+5. ✓ Modular design with separate modules for different concerns 

@@ -1,0 +1,21 @@
+(library
+ (name test_utilities)
+ (libraries
+  core
+  core_unix
+  core_unix.command_unix
+  core_unix.time_float_unix
+  async
+  async_log
+  yojson
+  ppx_yojson_conv
+  expect_test_helpers_core
+  ox-fast-mcp.utilities)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_expect ppx_sexp_conv)))
+
+(env
+ (dev
+  (flags
+   (:standard -warn-error -A))))

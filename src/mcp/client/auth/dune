@@ -1,0 +1,25 @@
+(library
+ (name mcp_client_auth)
+ (public_name ox-fast-mcp.mcp_client_auth)
+ (libraries
+  base
+  core
+  re
+  uri
+  cohttp
+  cohttp-async
+  async
+  yojson
+  digestif
+  base64
+  ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.shared)
+ (modules
+  exceptions
+  utils
+  oauth2
+  oauth2_middleware
+  crypto_utils
+  file_token_storage)
+ (preprocess
+  (pps ppx_jane)))

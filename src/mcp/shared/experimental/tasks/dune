@@ -1,0 +1,7 @@
+(library
+ (name mcp_shared_experimental_tasks)
+ (public_name ox-fast-mcp.mcp.shared.experimental.tasks)
+ (libraries core async yojson ppx_yojson_conv_lib ox-fast-mcp.mcp)
+ (modules helpers polling)
+ (preprocess
+  (pps ppx_yojson_conv ppx_jane)))

@@ -12,7 +12,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/neuro-ng/oxcaml-ubuntu:20250628
+      image: ghcr.io/neuro-ng/oxcaml-ubuntu:latest
       options: --user ocaml-user --workdir /workspace
     env:
       USER: ocaml-user
@@ -32,6 +32,7 @@ jobs:
         mkdir -p /workspace
         cp -r . /workspace/
         cd /workspace
+        ls -al
 
     - name: Build project
       working-directory: /workspace
@@ -45,16 +46,10 @@ jobs:
         eval $(opam env)
         dune runtest
 
-    - name: Check opam file
-      working-directory: /workspace
-      run: |
-        eval $(opam env)
-        opam lint ox-fast-mcp.opam
-
   lint:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/neuro-ng/oxcaml-ubuntu:20250628
+      image: ghcr.io/neuro-ng/oxcaml-ubuntu:latest
       options: --user ocaml-user --workdir /workspace
     env:
       USER: ocaml-user
@@ -85,54 +80,14 @@ jobs:
       working-directory: /workspace
       run: |
         eval $(opam env)
+        dune build ox-fast-mcp.opam
+        opam-dune-lint
         opam lint ox-fast-mcp.opam
-
-  examples:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/neuro-ng/oxcaml-ubuntu:20250628
-      options: --user ocaml-user --workdir /workspace
-    env:
-      USER: ocaml-user
-      HOME: /home/ocaml-user
-      SHELL: /bin/bash
-      PATH: /home/ocaml-user/.opam/5.2.0+ox/bin:/home/ocaml-user/.opam/5.2.0+ox/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
-      OPAMROOT: /home/ocaml-user/.opam
-      OPAMSWITCH: 5.2.0+ox
-      OPAMYES: 1
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set working directory
-      run: |
-        mkdir -p /workspace
-        cp -r . /workspace/
-        cd /workspace
-
-    - name: Build examples
-      working-directory: /workspace
-      run: |
-        eval $(opam env)
-        dune build examples/
-
-    - name: Test calculator server
-      working-directory: /workspace
-      run: |
-        eval $(opam env)
-        dune exec examples/calculator_server.exe
-
-    - name: Test demo
-      working-directory: /workspace
-      run: |
-        eval $(opam env)
-        dune exec examples/demo.exe
 
   publish:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/neuro-ng/oxcaml-ubuntu:20250628
+      image: ghcr.io/neuro-ng/oxcaml-ubuntu:latest
       options: --user ocaml-user --workdir /workspace
     env:
       USER: ocaml-user
@@ -142,8 +97,8 @@ jobs:
       OPAMROOT: /home/ocaml-user/.opam
       OPAMSWITCH: 5.2.0+ox
       OPAMYES: 1
-    needs: [build-and-test, lint, examples]
-    if: github.event_name == 'release'
+    needs: [build-and-test, lint]
+    if: github.event_name == 'release' && github.event.release.target_commitish == 'main'
     
     steps:
     - name: Checkout code

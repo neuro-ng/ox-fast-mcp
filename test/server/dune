@@ -1,0 +1,30 @@
+(library
+ (name test_server)
+ (modules
+  test_server
+  test_server_functionality
+  test_server_stats
+  test_validation
+  test_http_sse
+  test_app_state
+  test_auth_integration
+  test_import_server
+  test_experimental_openapi_feature_flag
+  test_file_server
+  test_icons
+  test_input_validation
+  test_log_level
+  test_logging
+  test_server_helpers
+  test_server_improvements
+  test_enhanced_errors
+  test_server_utilities
+  test_session_notifications
+  test_context_sampling
+  test_context_delegation
+  test_context_http
+  test_context_capabilities)
+ (libraries core async yojson expect_test_helpers_core server ox_fast_mcp)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_expect ppx_yojson_conv)))

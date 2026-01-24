@@ -1,0 +1,13 @@
+(library
+ (name test_mcp_client_transports)
+ (modules test_sse_protocol test_streamable_http)
+ (inline_tests)
+ (libraries
+  core
+  async
+  expect_test_helpers_core
+  expect_test_helpers_async
+  ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.client.transports)
+ (preprocess
+  (pps ppx_jane ppx_expect)))

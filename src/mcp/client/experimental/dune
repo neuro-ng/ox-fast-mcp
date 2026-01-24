@@ -1,0 +1,15 @@
+(library
+ (name mcp_client_experimental)
+ (public_name ox-fast-mcp.mcp.client.experimental)
+ (libraries
+  core
+  async
+  yojson
+  ppx_yojson_conv_lib
+  ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.shared
+  ox-fast-mcp.mcp.shared.experimental.tasks
+  ox-fast-mcp.mcp.client)
+ (modules task_handlers tasks)
+ (preprocess
+  (pps ppx_yojson_conv ppx_jane)))

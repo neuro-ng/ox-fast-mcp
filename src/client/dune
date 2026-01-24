@@ -1,0 +1,21 @@
+; Client library - Full implementation
+; All modules enabled with Async support
+
+(library
+ (name client_lib)
+ (public_name ox-fast-mcp.client_lib)
+ (libraries
+  base
+  core
+  async
+  yojson
+  uri
+  logs
+  ox-fast-mcp
+  ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.client
+  ox-fast-mcp.mcp.client.transports
+  ox-fast-mcp.mcp.shared)
+ (modules transports roots sampling logging progress messages)
+ (preprocess
+  (pps ppx_jane)))

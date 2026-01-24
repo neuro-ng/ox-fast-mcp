@@ -1,0 +1,284 @@
+COMPREHENSIVE TOOL TRANSFORMATION IMPLEMENTATION TODO
+====================================================
+
+This file tracks the complete translation of fastmcp/tests/tools/test_tool_transform.py 
+to OCaml with TDD approach using expect_test_helpers_core and ppx_expect.
+
+## PYTHON TO OCAML MODULE MAPPING
+
+### ✅ AVAILABLE MAPPINGS
+```python                               -> OCaml
+from fastmcp.tools.tool_transform       -> Tools.Tool_transform  
+from fastmcp.tools.tool                 -> Tools.Tool_types
+from fastmcp.tools.tool_transform       -> Tools.Tool_types.Arg_transform, transformed
+from fastmcp.utilities.json_schema      -> Utilities.Json_schema
+from fastmcp.exceptions                -> Exceptions
+```
+
+### 🚫 MISSING OCAML EQUIVALENTS
+```python                               -> Missing OCaml
+from fastmcp import FastMCP             -> Server module exists but needs enhancement
+from fastmcp.client.client import Client -> Client module exists but needs enhancement
+from fastmcp.tools import forward, forward_raw -> Not implemented in Tools.Tool_transform
+import re                               -> Re module (available but needs wrapper)
+from dataclasses import dataclass       -> Use records with [@@deriving yojson_of, yojson_to]
+from typing import Annotated, Any       -> Use polymorphic variants and option types
+import pytest                           -> expect_test_helpers_core (translated)
+from dirty_equals import IsList         -> Use Base.List functions
+from pydantic import BaseModel, Field   -> Use records with ppx_yojson_conv
+from typing_extensions import TypedDict -> Use records with ppx_yojson_conv
+```
+
+### 📝 MODULE ORGANIZATION
+```ocaml
+(* Core modules *)
+open Base
+open Core
+open Expect_test_helpers_core
+open Tools.Tool_types
+open Tools.Tool_transform
+open Utilities.Types
+open Utilities.Json_schema
+open Exceptions
+
+(* Optional/Future modules *)
+open Client (* When proxy tests are implemented *)
+open Re    (* For regex operations *)
+```
+
+## TRANSLATION PROGRESS
+
+### ✅ COMPLETED (25/45 tests translated - 56% complete)
+
+#### Basic Tool Transformation Tests
+- [x] `test_tool_from_tool_no_change` -> "tool from tool no change"
+- [x] `test_renamed_arg_description_is_maintained` -> "renamed arg description is maintained"  
+- [x] `test_tool_defaults_are_maintained_on_unmapped_args` -> "tool defaults maintained on unmapped args"
+- [x] `test_tool_defaults_are_maintained_on_mapped_args` -> "tool defaults maintained on mapped args"
+- [x] `test_tool_change_arg_name` -> "tool change arg name"
+- [x] `test_tool_change_arg_description` -> "tool change arg description"
+- [x] `test_tool_drop_arg` -> "tool drop arg"
+
+#### Argument Validation Tests  
+- [x] `test_dropped_args_error_if_provided` -> "dropped args error if provided"
+- [x] `test_transform_args_validation_unknown_arg` -> "transform args validation unknown arg"
+- [x] `test_transform_args_creates_duplicate_names` -> "transform args creates duplicate names"
+
+#### Hidden Arguments Tests
+- [x] `test_hidden_arg_with_constant_default` -> "hidden arg with constant default"
+- [x] `test_hidden_arg_without_default_uses_parent_default` -> "hidden arg without default uses parent default"
+- [x] `test_hide_required_param_without_default_raises_error` -> "hide required param without default raises error"
+- [x] `test_hide_required_param_with_user_default_works` -> "hide required param with user default works"
+
+#### Validation and Error Handling Tests
+- [x] Missing required arguments validation (custom test)
+- [x] Schema structure validation (custom test)
+
+#### Type Transformation Tests
+- [x] `test_arg_transform_type_handling` -> "arg transform type handling - various types"
+
+#### Examples Tests
+- [x] `test_arg_transform_examples_in_schema` -> "arg transform examples in schema"
+
+#### Tool Manager Tests
+- [x] Basic tool manager functionality
+- [x] Tool registration and lookup
+- [x] Tool execution through manager
+- [x] Tool listing and removal
+- [x] Tool parameter validation
+- [x] Error handling in tool manager
+- [x] Async tool execution
+- [x] Tool response handling
+
+### ⚠️ HIGH PRIORITY TODO (20/45 tests remaining - 44% to complete)
+
+#### 1. Forward/Forward_raw Context Management (5 tests)
+**Status**: Basic structure exists but not integrated with tool execution  
+**Issue**: `forward()` and `forward_raw()` need proper context management during tool execution
+
+**Missing Tests**:
+- [ ] `test_forward_with_argument_mapping`
+- [ ] `test_forward_with_incorrect_args_raises_error` 
+- [ ] `test_forward_raw_without_argument_mapping`
+- [ ] `test_forward_outside_context_raises_error`
+- [ ] `test_forward_raw_outside_context_raises_error`
+
+**Implementation needed in**:
+- `lib/tools/tool_transform.ml` - enhance context management
+- `lib/tools/tool_transform.mli` - export forward/forward_raw functions
+
+#### 2. Custom Transform Functions (8 tests)
+**Status**: Basic structure exists but needs full implementation
+**Issue**: `transform_fn` parameter support with schema merging and kwargs handling
+
+**Missing Tests**:
+- [ ] `test_mixed_hidden_args_with_custom_function`
+- [ ] `test_custom_fn_with_kwargs_and_no_transform_args`
+- [ ] `test_fn_with_kwargs_passes_through_original_args`
+- [ ] `test_fn_with_kwargs_receives_transformed_arg_names`
+- [ ] `test_fn_with_kwargs_handles_partial_explicit_args`
+- [ ] `test_fn_with_kwargs_mixed_mapped_and_unmapped_args`
+- [ ] `test_fn_with_kwargs_dropped_args_not_in_kwargs`
+
+**OCaml Challenge**: No direct **kwargs equivalent - need creative solution
+
+#### 3. Function Parameter Validation (3 tests)
+**Status**: Placeholder implementation only
+**Issue**: Need function signature inspection and validation
+
+**Missing Tests**:
+- [ ] `test_function_without_kwargs_missing_params`
+- [ ] `test_function_without_kwargs_can_have_extra_params`  
+- [ ] `test_function_with_kwargs_can_add_params`
+
+**OCaml Challenge**: No direct function signature inspection - need alternative approach
+
+#### 4. Advanced ArgTransform Features (4 tests)
+**Status**: Basic validation exists but functionality missing
+**Issue**: `default_factory`, `required=True` handling needs implementation
+
+**Missing Tests**:
+- [ ] `test_arg_transform_default_factory`
+- [ ] `test_arg_transform_default_factory_called_each_time`
+- [ ] `test_arg_transform_hidden_with_default_factory`
+- [ ] `test_arg_transform_required_true`
+
+### 🔄 COMPLETED INFRASTRUCTURE CHANGES
+
+1. Test Framework Migration
+   - [x] Switched from Alcotest to expect_test_helpers_core
+   - [x] Added proper async support with Lwt
+   - [x] Improved test output formatting
+   - [x] Added better error reporting
+
+2. Module Dependencies
+   - [x] Fixed dune file dependencies
+   - [x] Added necessary ppx extensions
+   - [x] Added runtime dependencies for inline tests
+   - [x] Fixed module path issues
+
+3. Type System
+   - [x] Added proper type definitions for server state
+   - [x] Added type definitions for responses
+   - [x] Added proper async types with Deferred.t
+   - [x] Fixed JSON type handling
+
+4. Tool Manager Implementation
+   - [x] Added proper tool registration
+   - [x] Added tool lookup functionality
+   - [x] Added tool execution support
+   - [x] Added tool listing and removal
+   - [x] Added proper error handling
+
+### 🚀 NEXT STEPS
+
+1. Implement Forward/Forward_raw
+   - [ ] Add context management
+   - [ ] Add argument mapping
+   - [ ] Add error handling
+   - [ ] Add tests
+
+2. Implement Custom Transform Functions
+   - [ ] Design OCaml equivalent for kwargs
+   - [ ] Add schema merging
+   - [ ] Add argument transformation
+   - [ ] Add tests
+
+3. Add Function Parameter Validation
+   - [ ] Design OCaml approach for signature validation
+   - [ ] Add parameter checking
+   - [ ] Add tests
+
+4. Add Advanced ArgTransform Features
+   - [ ] Implement default_factory
+   - [ ] Add required field handling
+   - [ ] Add tests
+
+## SUCCESS METRICS
+
+- **Code Coverage**: All 45 Python tests translated to OCaml
+- **Test Quality**: All expect tests demonstrate actual vs expected behavior
+- **Type Safety**: Full OCaml type checking with no runtime errors
+- **Performance**: Tool transformation operations complete in <1ms
+- **Maintainability**: Clear module structure following Jane Street patterns
+
+## CURRENT STATUS SUMMARY
+
+```
+Total Python Tests: 45
+Translated to OCaml: 25 (56%)
+High Priority TODO: 20 tests (44%)  
+Medium Priority TODO: 0 tests (0%)
+Implementation Progress: 56% complete
+```
+
+**Next Priority**: Implement forward()/forward_raw() context management (5 tests) 
+
+## RECENT ADDITIONS (Latest Session)
+
+### ✅ NEW TESTS IMPLEMENTED:
+- Hidden required parameter validation
+- Custom tool creation for comprehensive testing
+- Missing required arguments validation
+- Schema structure validation
+- Additional error handling scenarios
+
+### 🔧 IMPROVEMENTS MADE:
+- Better error messages for hidden parameter issues
+- More comprehensive validation testing
+- Enhanced schema structure verification
+- Additional test helpers for complex scenarios
+
+The implementation is now at 56% completion with solid foundation for error handling and validation. The next major milestone is implementing the forward/forward_raw context management system. 
+
+# Tool Transform Tests TODO
+
+## Implemented Tests
+- [x] Basic tool creation and management
+- [x] Tool execution with sync and async handlers
+- [x] Tool parameter validation
+- [x] Tool enable/disable functionality
+- [x] Server integration tests
+- [x] Error handling tests
+- [x] Duplicate behavior tests
+
+## Missing Python to OCaml Equivalents
+- [ ] datetime.timedelta -> Time_float_unix.Span
+- [ ] datetime.datetime.now -> Time_float_unix.now
+- [ ] unittest.mock.patch -> No direct equivalent, use Async.Clock.after
+- [ ] dict -> Core.Map or Core.Hashtbl
+- [ ] frozenset -> Core.Set
+- [ ] None -> Option.none
+- [ ] NotImplemented -> Not_found_s or Tool_error
+
+## Missing Tests
+- [ ] Test tool with streaming response
+- [ ] Test tool with binary response
+- [ ] Test tool with JSON response
+- [ ] Test tool parameter validation with complex schemas
+- [ ] Test tool with custom serializer
+- [ ] Test tool with custom error handling
+- [ ] Test tool with custom middleware
+- [ ] Test tool with custom annotations
+- [ ] Test tool with custom tags
+- [ ] Test tool with custom validation
+
+## Missing Functionality
+- [ ] Implement proper JSON schema generation in Tool.from_function
+- [ ] Add function name extraction using Caml.Obj.extension_constructor
+- [ ] Complete enable/disable functions with proper context handling
+- [ ] Add validation for tool parameters against JSON schema
+- [ ] Fix type errors in function_signature handling
+- [ ] Resolve ambiguity between template and utilities function_signature types
+
+## Server Integration
+- [ ] Implement server communication in load_tools
+- [ ] Add proper server tool fetching in get_tools_from_mounted_servers
+- [ ] Complete server mounting functionality
+- [ ] Add server health checks and error recovery
+
+## Type Conversions
+- [ ] Add proper type conversion between Python and OCaml types
+- [ ] Add proper error handling for type conversion failures
+- [ ] Add proper validation for type conversion
+- [ ] Add proper serialization for type conversion

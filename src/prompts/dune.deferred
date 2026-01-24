@@ -1,0 +1,4 @@
+(library
+ (public_name ox-fast-mcp.prompts)
+ (name prompts)
+ (libraries utilities yojson lwt)) 

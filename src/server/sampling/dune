@@ -1,0 +1,6 @@
+(library
+ (name server_sampling)
+ (public_name ox-fast-mcp.server.sampling)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv))
+ (libraries core async ox-fast-mcp.mcp))

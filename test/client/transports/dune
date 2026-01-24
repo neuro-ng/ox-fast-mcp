@@ -1,0 +1,14 @@
+(library
+ (name test_stdio)
+ (libraries
+  core
+  async
+  expect_test_helpers_async
+  ppx_yojson_conv_lib
+  yojson
+  ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.shared
+  ox-fast-mcp.mcp.client.transports)
+ (preprocess
+  (pps ppx_jane ppx_expect ppx_yojson_conv))
+ (inline_tests))

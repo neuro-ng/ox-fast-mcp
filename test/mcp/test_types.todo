@@ -1,0 +1,31 @@
+# Test Types TODO
+
+## COMPLETED
+- [x] Fixed Unbound value progress_token_of_sexp errors
+- [x] Replaced complex sexp-based comparisons with phys_equal checks
+- [x] Fixed yojson function return types (direct types, not Or_error.t wrapped)
+- [x] Fixed require function calls to use proper ~here labels
+- [x] Implemented round-trip JSON serialization/deserialization tests
+
+## TEST COVERAGE
+- [x] progress_token yojson round-trip (String and Int variants)
+- [x] role yojson round-trip (User and Assistant variants)
+- [x] request_id yojson round-trip (String and Int variants)
+- [x] jsonrpc_message yojson round-trip (Request, Notification, Response, Error)
+
+## PYTHON TO OCAML MAPPING
+- Python: `progress_token` → OCaml: `[ `String of string | `Int of int ]`
+- Python: `role` → OCaml: `[ `User | `Assistant ]`
+- Python: `request_id` → OCaml: `[ `Int of int | `String of string ]`
+- Python: JSON serialization → OCaml: `*_to_yojson` and `*_of_yojson` functions
+
+## TECHNICAL NOTES
+- All yojson functions return types directly (not wrapped in Or_error.t)
+- Using phys_equal for round-trip validation instead of sexp comparisons
+- ppx_yojson_conv generates the conversion functions automatically
+- Tests verify JSON representation matches expected format and round-trips correctly
+
+## TESTING APPROACH
+- Print JSON representation for manual verification
+- Test round-trip conversion (original → JSON → back to original)
+- Use phys_equal to verify exact value preservation

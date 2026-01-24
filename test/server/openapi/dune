@@ -1,0 +1,25 @@
+(library
+ (name test_server_openapi)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv ppx_compare ppx_expect))
+ (modules
+  conftest
+  test_basic_functionality
+  test_advanced_behavior
+  test_configuration
+  test_deepobject_style
+  test_description_propagation
+  test_explode_integration
+  test_openapi_compatibility
+  test_openapi_path_parameters
+  test_optional_parameters
+  test_parameter_collisions
+  test_route_map_fn)
+ (libraries
+  core
+  re
+  yojson
+  ppx_yojson_conv_lib
+  expect_test_helpers_core
+  server))

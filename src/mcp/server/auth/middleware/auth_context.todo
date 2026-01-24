@@ -1,0 +1,49 @@
+File Location
+- ML: `src/mcp/server/auth/middleware/auth_context.ml`
+- MLI: `src/mcp/server/auth/middleware/auth_context.mli`
+- TODO: `src/mcp/server/auth/middleware/auth_context.todo`
+
+Translation Status
+- [x] Created/updated OCaml `auth_context.ml` and `auth_context.mli`
+- [x] Implemented `get_access_token` using `Lwt.key`
+- [x] Middleware `handle` updated to accept `auth_result option` and set context
+- [x] Dune libraries confirmed (`core`, `lwt`, `cohttp`, `yojson`)
+- [x] Unit tests added/updated in `test/mcp/test_auth_context.ml`
+- [x] Fixed Lwt.key type to handle auth_user option correctly
+- [x] Verified build stability and all tests passing
+- [x] Resolved module reference issues in tests (Ox_fast_mcp → proper paths)
+- [x] Fixed auth_result double-option type handling in tests
+- [x] Implemented proper access_token validation in tests
+- [ ] Ensure integration with upstream middleware chain
+
+Python to OCaml Mappings
+- `contextvars.ContextVar[AuthenticatedUser|None]` → `Lwt.key`
+- `get_access_token()` → `get_access_token : unit -> Mcp_server_auth.Provider.access_token option Lwt.t`
+- `AuthContextMiddleware.__call__` → `Auth_context_middleware.handle : auth_result option -> Request.t -> (Response.t * Body.t) Lwt.t -> (Response.t * Body.t) Lwt.t`
+- `AuthenticatedUser` → `Bearer_auth.authenticated_user`
+
+Missing ML Equivalents / Concerns
+- Python imports (from-import parity checks):
+  - mcp.server.auth.middleware.bearer_auth.AuthenticatedUser → OCaml: Bearer_auth.authenticated_user (present)
+  - mcp.server.auth.provider.AccessToken → OCaml: Mcp_server_auth.Provider.access_token (present)
+
+Testing Requirements
+- [x] Expect test: returns None when context unset
+- [x] Expect test: returns access token when context set via middleware
+- [ ] Test: context is reset after `next`
+- [ ] Test: no leakage across sequential requests
+- [ ] Test: isolation across concurrent requests
+
+Documentation Requirements
+- [ ] Add module-level docstrings clarifying Lwt key usage and lifecycle
+
+Performance Considerations
+- Lwt key access is O(1); negligible overhead per request
+
+Dependencies Status
+- Jane Street libs in dune (core, async)
+- Lwt, Cohttp, Opium present
+- ppx_jane, ppx_yojson_conv added; no JSON/compare used directly here, but kept consistent
+
+Notes
+- Ensure upstream bearer auth populates `auth_result` consistently; adjust shape handling if changed.

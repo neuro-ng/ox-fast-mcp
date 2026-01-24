@@ -2,6 +2,9 @@
 _build/
 *.install
 
+# OCaml opam
+ox-fast-mcp.opam
+
 # OCaml compiled files
 *.cmo
 *.cmi

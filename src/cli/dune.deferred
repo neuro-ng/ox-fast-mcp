@@ -1,0 +1,4 @@
+(library
+ (public_name ox-fast-mcp.cli)
+ (name cli)
+ (libraries ox-fast-mcp.utilities)) 

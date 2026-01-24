@@ -1,0 +1,24 @@
+(library
+ (name atproto_types)
+ (modules types settings)
+ (libraries core async yojson)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))
+
+(executable
+ (public_name atproto-server)
+ (name atproto_server)
+ (modules atproto_server)
+ (libraries
+  ox_fast_mcp
+  server
+  atproto
+  atproto_types
+  core
+  async
+  cohttp-async
+  yojson
+  re
+  uri)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))

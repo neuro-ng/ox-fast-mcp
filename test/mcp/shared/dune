@@ -1,0 +1,7 @@
+(library
+ (name test_mcp_shared_auth)
+ (modules test_auth)
+ (libraries base core expect_test_helpers_core ox-fast-mcp.mcp.shared)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_expect)))

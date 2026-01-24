@@ -1,0 +1,32 @@
+# Python to OCaml Translation Notes and TODOs
+
+## Python Imports and Their OCaml Equivalents
+
+1. `from collections.abc import Sequence` - Not needed in OCaml as we use Core's built-in types
+2. `from typing import Annotated, Any, TypeVar` - Not needed in OCaml due to its native type system
+3. `from pydantic import BeforeValidator, Field, PrivateAttr` - Handled differently in OCaml:
+   - BeforeValidator -> Handled through optional arguments in create function
+   - Field -> Handled through OCaml record type system
+   - PrivateAttr -> Handled through OCaml module system (private type)
+4. `from typing_extensions import Self` - Not needed in OCaml due to its type system
+5. `from fastmcp.utilities.types import FastMCPBaseModel` - Not needed as we implement directly
+
+## Implementation Notes
+
+1. Python's `_convert_set_default_none` function is not needed in OCaml as we handle this through:
+   - Optional arguments in the create function
+   - String.Set.empty as default value
+
+2. Python's class inheritance from FastMCPBaseModel is replaced with a direct implementation
+   in OCaml using records and module system.
+
+3. Python's pydantic Field decorators are replaced with OCaml's type system and ppx derivers:
+   - [@deriving compare, sexp, yojson] for serialization
+   - [@sexp.option] and [@yojson_drop_default.equal] for optional fields
+
+4. Python's PrivateAttr is implemented using OCaml's module system with the key field
+   being part of the record but marked as optional.
+
+## Missing Functionality
+
+None - All core functionality has been implemented in OCaml with idiomatic patterns. 

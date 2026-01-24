@@ -1,0 +1,18 @@
+(library
+ (name test_server_proxy)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv ppx_compare ppx_expect))
+ (modules
+  conftest
+  test_proxy_client
+  test_proxy_server
+  test_stateful_proxy_client)
+ (libraries
+  core
+  async
+  yojson
+  ppx_yojson_conv_lib
+  expect_test_helpers_core
+  uri
+  server))

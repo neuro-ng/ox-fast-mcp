@@ -1,0 +1,14 @@
+(library
+ (name prompts)
+ (public_name ox-fast-mcp.prompts)
+ (libraries
+  core
+  async
+  logs
+  yojson
+  ox-fast-mcp.utilities
+  ox-fast-mcp.mcp
+  ox_fast_mcp)
+ (modules prompt_types prompt_manager)
+ (preprocess
+  (pps ppx_yojson_conv ppx_sexp_conv ppx_let)))

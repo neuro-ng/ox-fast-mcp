@@ -1,0 +1,16 @@
+(library
+ (name test_client_credentials)
+ (modules test_client_credentials)
+ (libraries
+  base
+  core
+  async
+  logs
+  expect_test_helpers_core
+  yojson
+  mcp_shared
+  mcp_client_auth
+  mcp_client_auth_extensions)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_expect)))

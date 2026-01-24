@@ -1,0 +1,34 @@
+Cache Module Implementation TODOs
+
+Python Module Dependencies:
+- [x] datetime -> Core.Time_float_unix
+- [x] time -> Core.Unix
+- [ ] unittest.mock -> Need equivalent for time mocking in tests
+
+Python-to-OCaml Type Mappings:
+- [x] TimedCache.NOT_FOUND -> Option.t
+- [x] dict -> Core.Map.t
+- [x] datetime.timedelta -> Time_float_unix.Span.t
+- [x] datetime.timezone.utc -> Time_float_unix (UTC handling built-in)
+- [x] typing.Any -> 'a (polymorphic type)
+
+Missing Functionality:
+- [ ] Implement time mocking for tests
+- [ ] Add Async.after for non-blocking sleep
+- [ ] Add Async interface for cache operations
+- [ ] Add polymorphic key support (currently string-only)
+- [ ] Add custom serialization support
+- [ ] Add LRU cache functionality
+
+Test Coverage Needed:
+- [ ] Property-based tests with ppx_quickcheck
+- [ ] Async-based expiration tests
+- [ ] Concurrent access tests
+- [ ] Edge case tests (zero/negative expiration)
+- [ ] Performance tests with large datasets
+
+Documentation:
+- [ ] Add module documentation
+- [ ] Add example usage
+- [ ] Add performance characteristics
+- [ ] Document thread-safety guarantees 

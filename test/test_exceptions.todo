@@ -1,0 +1,163 @@
+# OxFastMCP Exceptions Test Implementation TODO
+
+## File Location: 
+- **test_exceptions.ml** - `/test/test_exceptions.ml`
+- **test_exceptions.todo** - `/test/test_exceptions.todo`
+
+## Test Implementation Status: ✅ COMPLETED
+
+### ✅ COMPLETED Tests:
+- [x] **error_data creation and basic functionality**
+  - Record field access and validation
+  - Basic error_data construction
+  
+- [x] **JSON serialization/deserialization**
+  - yojson_of_error_data and error_data_of_yojson round-trip
+  - JSON format validation
+  - Complex JSON data handling
+  - Edge cases with nested JSON structures
+
+- [x] **Sexp serialization/deserialization**
+  - sexp_of_error_data and error_data_of_sexp round-trip
+  - Sexp format validation
+
+- [x] **All exception types testing**
+  - OxFastMCP_error, Validation_error, Resource_error, Tool_error
+  - Prompt_error, Invalid_signature, Client_error, Not_found_error, Disabled_error
+  - Exception creation and validation for all types
+
+- [x] **Helper functions testing**
+  - All create_*_error functions with default parameters
+  - Optional code parameter testing  
+  - Optional data parameter testing
+  - Combined optional parameters testing
+
+- [x] **Exception utility functions**
+  - is_oxfastmcp_error predicate function
+  - get_error_data extraction function
+  - to_string conversion function
+  - Pattern matching behavior
+
+- [x] **Edge cases and error conditions**
+  - Empty messages
+  - Very long messages (1000+ characters)
+  - Zero and negative error codes
+  - Complex nested JSON data structures
+
+- [x] **Non-OxFastMCP exception handling**
+  - Standard OCaml exceptions (Failure, etc.)
+  - Proper error handling for get_error_data with wrong exception types
+  - is_oxfastmcp_error returns false for standard exceptions
+
+- [x] **String representation consistency**
+  - All exception types produce consistent string format
+  - Error messages are properly included in string output
+
+- [x] **Naming consistency (FastMCP → OxFastMCP)**
+  - Renamed all exception types and function names
+  - Updated all test cases and expected outputs
+  - Fixed module import conflicts and compilation issues
+
+## Python to OCaml Import Mappings
+
+### ✅ IMPLEMENTED Import Mappings:
+- [x] `from oxfastmcp import exceptions` → `open! Ox_fast_mcp.Exceptions`
+- [x] `from mcp import types` → `open Mcp.Types`
+
+### ⚠️ MISSING ML Equivalents / Concerns:
+- ⚠️  **No direct Python unittest equivalent testing**:
+  - Python: Uses unittest.TestCase, setUp, tearDown methods
+  - OCaml: Uses ppx_expect with let%expect_test
+  - Impact: Different testing paradigm but equivalent functionality
+
+- ⚠️  **No Python exception inheritance testing**:
+  - Python: Can test isinstance(ValidationError(), OxFastMCPError)
+  - OCaml: Exception hierarchy is flat with pattern matching
+  - Impact: Tests focus on pattern matching instead of inheritance
+
+- ⚠️  **Limited integration with actual MCP error system**:
+  - Missing tests for interaction with Mcp.Shared.Exceptions.Mcp_error
+  - No tests for converting between OxFastMCP errors and MCP errors
+  - Impact: Integration testing gap
+
+## 📋 PENDING Tests (TODO):
+
+### 🔄 Integration Testing:
+- [ ] **MCP error integration**
+  - Test interaction with Mcp.Shared.Exceptions.Mcp_error
+  - Test conversion between OxFastMCP and MCP error types
+  - Test error propagation through MCP protocol
+
+- [ ] **Real-world usage scenarios**
+  - Test exception usage in oxfastmcp.tools context
+  - Test exception usage in oxfastmcp.client.client context  
+  - Test exception usage in oxfastmcp.utilities.json_schema context
+
+### 🔄 Performance Testing:
+- [ ] **Large-scale exception handling**
+  - Performance with many exceptions
+  - Memory usage with large error_data structures
+  - JSON serialization performance with large data
+
+- [ ] **Concurrent exception handling**
+  - Test exception safety in Async contexts
+  - Test exception handling with Lwt/Async concurrency
+
+### 🔄 Error Recovery Testing:
+- [ ] **Malformed JSON handling**
+  - Test error_data_of_yojson with invalid JSON
+  - Test graceful degradation with corrupted data
+
+- [ ] **Boundary condition testing**
+  - Test with maximum int values for error codes
+  - Test with extremely large JSON data structures
+  - Test with Unicode and special characters in messages
+
+## 🎯 Testing Methodology
+
+### ✅ TDD Approach Used:
+- [x] **Expect-based testing** with ppx_expect
+- [x] **Comprehensive test coverage** for all public functions
+- [x] **Edge case testing** for robustness
+- [x] **Round-trip testing** for serialization
+
+### ✅ Jane Street Testing Patterns:
+- [x] `open! Core`, `open! Async`, `open! Expect_test_helpers_core`
+- [x] `let%expect_test` for test definitions
+- [x] `require` and `require_equal` for assertions
+- [x] `print_s [%sexp ...]` for debugging output
+- [x] `[%expect {...}]` for expected output validation
+- [x] `show_raise` for exception testing
+- [x] `[%here]` for source location in assertions
+
+## 📚 Dependencies Status:
+
+### ✅ AVAILABLE Dependencies:
+- [x] `core` - Jane Street Core library ✅
+- [x] `async` - Jane Street Async library ✅
+- [x] `expect_test_helpers_core` - Jane Street testing framework ✅
+- [x] `ox_fast_mcp` - Main OxFastMCP library ✅
+- [x] `ox-fast-mcp.mcp` - MCP types and functionality ✅
+- [x] `ppx_jane` - Jane Street PPX bundle ✅
+- [x] `ppx_expect` - Expect test framework ✅
+
+## 🚨 Known Issues/Limitations:
+
+### ⚠️ Testing Gaps:
+- **No stress testing** for very large error messages or data
+- **No concurrency testing** for exception safety
+- **Limited integration testing** with other OxFastMCP modules
+- **No property-based testing** (could use qcheck for more thorough testing)
+
+### ⚠️ Python vs OCaml Differences:
+- **Exception inheritance** vs **pattern matching** testing approaches
+- **Dynamic typing** vs **static typing** in error data handling
+- **Python unittest** vs **ppx_expect** testing frameworks
+
+## 📝 Notes:
+- Tests follow Jane Street conventions and idioms
+- Comprehensive coverage of all exception types and utility functions
+- Focus on both happy path and edge case scenarios
+- JSON and Sexp serialization thoroughly tested
+- Exception behavior matches Python OxFastMCP equivalent functionality
+- All tests use expect-test framework for deterministic output validation 

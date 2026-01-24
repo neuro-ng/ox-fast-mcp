@@ -1,0 +1,18 @@
+(library
+ (name mcp_client_transports)
+ (public_name ox-fast-mcp.mcp.client.transports)
+ (libraries
+  core
+  async
+  cohttp
+  cohttp-async
+  ppx_yojson_conv_lib
+  yojson
+  uri
+  logs
+  websocket-async
+  ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.shared)
+ (modules stdio sse sse_protocol streamable_http ws_client)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))

@@ -1,0 +1,197 @@
+(** Experimental task handler protocols for server → client requests.
+
+    This module provides handler types and default handlers for when servers
+    send task-related requests to clients (the reverse of normal client → server
+    flow).
+
+    WARNING: These APIs are experimental and may change without notice.
+
+    NOTE: This module currently has placeholder implementations due to missing
+    task types in Mcp.Types. Full implementation will be available once task
+    types are added to the MCP types module.
+
+    Use cases:
+    - Server sends task-augmented sampling/elicitation request to client
+    - Client creates a local task, spawns background work, returns
+      CreateTaskResult
+    - Server polls client's task status via tasks/get, tasks/result, etc. *)
+
+open Core
+open Async
+module Types = Mcp.Types
+module Context = Mcp_shared.Context
+module Session = Mcp_shared.Session
+
+(* Placeholder types until task types are added to Mcp.Types *)
+type task_metadata = { ttl : int option }
+type create_task_result = { taskId : string }
+type get_task_request_params = { taskId : string }
+type get_task_result = Mcp_shared_experimental_tasks.Polling.get_task_result
+type get_task_payload_request_params = { taskId : string }
+type get_task_payload_result = { result : Yojson.Safe.t }
+type paginated_request_params = { cursor : string option }
+
+type list_tasks_result = {
+  tasks : get_task_result list;
+  nextCursor : string option;
+}
+
+type cancel_task_request_params = { taskId : string }
+type cancel_task_result = get_task_result
+
+type get_task_handler_fn =
+  (unit, unit, unit) Context.t ->
+  get_task_request_params ->
+  (get_task_result, Types.error_data) Result.t Deferred.t
+(** Handler for tasks/get requests from server.
+
+    WARNING: This is experimental and may change without notice. *)
+
+type get_task_result_handler_fn =
+  (unit, unit, unit) Context.t ->
+  get_task_payload_request_params ->
+  (get_task_payload_result, Types.error_data) Result.t Deferred.t
+(** Handler for tasks/result requests from server.
+
+    WARNING: This is experimental and may change without notice. *)
+
+type list_tasks_handler_fn =
+  (unit, unit, unit) Context.t ->
+  paginated_request_params option ->
+  (list_tasks_result, Types.error_data) Result.t Deferred.t
+(** Handler for tasks/list requests from server.
+
+    WARNING: This is experimental and may change without notice. *)
+
+type cancel_task_handler_fn =
+  (unit, unit, unit) Context.t ->
+  cancel_task_request_params ->
+  (cancel_task_result, Types.error_data) Result.t Deferred.t
+(** Handler for tasks/cancel requests from server.
+
+    WARNING: This is experimental and may change without notice. *)
+
+type task_augmented_sampling_fn =
+  (unit, unit, unit) Context.t ->
+  Types.create_message_request_params ->
+  task_metadata ->
+  (create_task_result, Types.error_data) Result.t Deferred.t
+(** Handler for task-augmented sampling/createMessage requests from server.
+
+    When server sends a CreateMessageRequest with task field, this callback is
+    invoked. The callback should create a task, spawn background work, and
+    return CreateTaskResult immediately.
+
+    WARNING: This is experimental and may change without notice. *)
+
+type task_augmented_elicitation_fn =
+  (unit, unit, unit) Context.t ->
+  Types.elicit_request_params ->
+  task_metadata ->
+  (create_task_result, Types.error_data) Result.t Deferred.t
+(** Handler for task-augmented elicitation/create requests from server.
+
+    When server sends an ElicitRequest with task field, this callback is
+    invoked. The callback should create a task, spawn background work, and
+    return CreateTaskResult immediately.
+
+    WARNING: This is experimental and may change without notice. *)
+
+(* Error code constants - TODO: Move to Mcp.Types when available *)
+let method_not_found = -32601 (* JSON-RPC standard error code *)
+let invalid_request = -32600 (* JSON-RPC standard error code *)
+
+(* Default handlers that return METHOD_NOT_FOUND or INVALID_REQUEST *)
+
+let default_get_task_handler _context _params =
+  return
+    (Error
+       {
+         Types.code = method_not_found;
+         message = "tasks/get not supported";
+         data = None;
+       })
+
+let default_get_task_result_handler _context _params =
+  return
+    (Error
+       {
+         Types.code = method_not_found;
+         message = "tasks/result not supported";
+         data = None;
+       })
+
+let default_list_tasks_handler _context _params =
+  return
+    (Error
+       {
+         Types.code = method_not_found;
+         message = "tasks/list not supported";
+         data = None;
+       })
+
+let default_cancel_task_handler _context _params =
+  return
+    (Error
+       {
+         Types.code = method_not_found;
+         message = "tasks/cancel not supported";
+         data = None;
+       })
+
+let default_task_augmented_sampling _context _params _task_metadata =
+  return
+    (Error
+       {
+         Types.code = invalid_request;
+         message = "Task-augmented sampling not supported";
+         data = None;
+       })
+
+let default_task_augmented_elicitation _context _params _task_metadata =
+  return
+    (Error
+       {
+         Types.code = invalid_request;
+         message = "Task-augmented elicitation not supported";
+         data = None;
+       })
+
+(* Container for experimental task handlers *)
+
+type t = {
+  get_task : get_task_handler_fn;
+  get_task_result : get_task_result_handler_fn;
+  list_tasks : list_tasks_handler_fn;
+  cancel_task : cancel_task_handler_fn;
+  augmented_sampling : task_augmented_sampling_fn;
+  augmented_elicitation : task_augmented_elicitation_fn;
+}
+
+let create ?(get_task = default_get_task_handler)
+    ?(get_task_result = default_get_task_result_handler)
+    ?(list_tasks = default_list_tasks_handler)
+    ?(cancel_task = default_cancel_task_handler)
+    ?(augmented_sampling = default_task_augmented_sampling)
+    ?(augmented_elicitation = default_task_augmented_elicitation) () =
+  {
+    get_task;
+    get_task_result;
+    list_tasks;
+    cancel_task;
+    augmented_sampling;
+    augmented_elicitation;
+  }
+
+let build_capability _t =
+  (* TODO: Implement when ClientTasksCapability types are added to Mcp.Types *)
+  None
+
+let handles_request _request =
+  (* TODO: Implement when ServerRequest variants for tasks are added to
+     Mcp.Types *)
+  false
+
+let handle_request _t _ctx _responder =
+  (* TODO: Implement when task request types are added to Mcp.Types *)
+  return ()

@@ -1,0 +1,15 @@
+(library
+ (name client_auth)
+ (public_name ox-fast-mcp.client_auth)
+ (libraries
+  base
+  core
+  async
+  cohttp
+  cohttp-async
+  logs
+  ox-fast-mcp
+  ox-fast-mcp.mcp.shared)
+ (modules bearer oauth oauth_callback)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv ppx_compare)))

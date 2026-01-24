@@ -1,0 +1,75 @@
+# OxFastMCP Types Translation TODO
+
+## File Location: 
+- **types.ml** - `/src/mcp/types.ml`
+- **types.mli** - `/src/mcp/types.mli` (To be created/updated)
+- **types.todo** - `/src/mcp/types.todo`
+
+## Translation Status: ✅ COMPLETE
+- [x] Translated core MCP types into OCaml types and variants
+- [x] Implemented Yojson conversions and compare/sexp
+- [x] Added aggregated JSON-RPC message variants and helpers
+- [x] `types.mli` created and kept in sync
+- [x] Dune dependencies confirmed
+
+## Python to OCaml Mappings
+
+### General Type Mappings:
+- Python classes/dataclasses in `mcp.types` → OCaml record types.
+- Python enums → OCaml polymorphic variants.
+- Python `Optional` types → OCaml `option` types.
+- Python `Union` types → OCaml polymorphic variants.
+- Python `Any` type → OCaml `Yojson.Safe.t` or `unit -> unit` (for `any_function`).
+
+### Specific Mappings (Examples):
+- `mcp.types.RequestParams` → `Request_params.t`
+- `mcp.types.NotificationParams` → `Notification_params.t`
+- `mcp.types.JsonRpcRequest` → `jsonrpc_request`
+- `mcp.types.Resource` → `resource`
+- `mcp.types.Prompt` → `prompt`
+- `mcp.types.Tool` → `tool`
+
+## Additional OCaml Features Added (not in Python)
+- Extensive use of `Base` library.
+- Deriving `yojson`, `compare`, `sexp` for all defined types, providing robust serialization, comparison, and debugging capabilities.
+- Explicit handling of JSON keys with `[@key "python_style_key"]`.
+- Use of `Ppx_yojson_conv_lib.Yojson_conv.Primitives` for direct JSON conversion.
+
+## Missing ML Equivalents / Concerns:
+- any_function: placeholder `unit -> unit` retained (review later if callables are needed)
+- uri fields: kept as `string` (future: consider `Uri.t`)
+
+## Python from-import parity flags (required by rule):
+- mcp.types.* → OCaml `Mcp.Types` (present)
+- JSON-RPC structures: mapped to `jsonrpc_*` and `jsonrpc_message` (present)
+
+## Testing Requirements:
+- [x] Expect tests for `progress_token`, `role`, `request_id`, `jsonrpc_message` in `test/mcp/test_types.ml`
+- [x] Fixed yojson function return types and test patterns
+- [x] Implemented proper round-trip JSON serialization testing
+- [x] Verified all type conversions work correctly without Or_error wrapping
+- [ ] Add more coverage for resource/prompt/tools/logging/sampling modules
+
+## Documentation Requirements:
+- [ ] Add comprehensive module-level documentation to `types.mli` explaining the purpose and structure of the MCP types.
+- [ ] Document each type definition with its purpose and how it maps to the Python equivalent (if applicable).
+- [ ] Provide examples of JSON serialization/deserialization for key types.
+- [ ] Document the usage of `Notification_params.Meta.t` and its empty nature.
+
+## Performance Considerations:
+- ✅ Leveraging OCaml's efficient record types and pattern matching for type safety and performance.
+- ✅ `ppx_yojson_conv` provides efficient JSON serialization/deserialization.
+
+## Dependencies Status:
+- [x] `Base` - Jane Street Base library ✅
+- [x] `Ppx_yojson_conv_lib` - JSON conversion primitives ✅
+- [x] `Yojson` - JSON handling ✅
+- [x] `ppx_yojson_conv` - JSON derivers ✅
+- [x] `ppx_compare` - Comparison derivers ✅
+- [x] `sexplib` (implied by `sexp` deriving) ✅
+
+## Notes:
+- The translation aims to maintain functional equivalence with the Python `mcp.types` while adhering to idiomatic OCaml and Jane Street conventions.
+- The use of polymorphic variants for various message types (`client_request`, `server_result`, etc.) provides a type-safe way to handle different message structures.
+- The `_meta` field is consistently handled as an optional `Yojson.Safe.t` for flexibility.
+- Keep derived `*_to_yojson` values exported where the `.mli` requires them.

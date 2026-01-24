@@ -1,3 +1,22 @@
-(test
- (name run_tests)
- (libraries ox_fast_mcp))
+(library
+ (name test_ox_fmcp)
+ (modules test_client)
+ (libraries
+  core
+  core_unix
+  async
+  expect_test_helpers_core
+  ox_fast_mcp
+  ox-fast-mcp.utilities
+  ox-fast-mcp.mcp
+  ox-fast-mcp.server
+  ox-fast-mcp.server.auth.middleware
+  yojson
+  cohttp
+  lwt
+  uri)
+ (inline_tests)
+ (flags
+  (:standard -alert -unsafe_multidomain))
+ (preprocess
+  (pps ppx_jane ppx_expect)))

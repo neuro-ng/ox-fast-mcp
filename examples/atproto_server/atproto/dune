@@ -1,0 +1,5 @@
+(library
+ (name atproto)
+ (libraries atproto_types core async cohttp-async yojson re uri)
+ (preprocess
+  (pps ppx_jane)))

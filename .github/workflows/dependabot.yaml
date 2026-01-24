@@ -1,0 +1,7 @@
+version: 2
+updates:
+  - package-ecosystem: "opam" # Specifies OCaml opam manager
+    directory: "/"            # Directory where your .opam file resides
+    schedule:
+      interval: "daily"       # Checks for updates daily
+    open-pull-requests-limit: 10

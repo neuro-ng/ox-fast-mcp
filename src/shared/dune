@@ -1,0 +1,7 @@
+(library
+ (name shared)
+ (public_name ox-fast-mcp.shared)
+ (libraries core async yojson re str uri cohttp-async ox-fast-mcp.mcp)
+ (modules template)
+ (preprocess
+  (pps ppx_jane)))

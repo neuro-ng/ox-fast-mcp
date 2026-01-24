@@ -1,0 +1,16 @@
+(library
+ (name mcp_client)
+ (public_name ox-fast-mcp.mcp.client)
+ (libraries
+  core
+  async
+  yojson
+  ppx_yojson_conv_lib
+  uri
+  logs
+  ox-fast-mcp.mcp
+  ox-fast-mcp.mcp.shared
+  ox-fast-mcp.mcp.client.transports)
+ (modules session session_group)
+ (preprocess
+  (pps ppx_yojson_conv ppx_jane)))

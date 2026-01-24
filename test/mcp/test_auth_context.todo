@@ -1,0 +1,29 @@
+# Test Auth Context TODO
+
+## COMPLETED
+- [x] Fixed Unbound module Ox_fast_mcp by using correct module paths
+- [x] Fixed auth_result type mismatch in middleware handle call
+- [x] Fixed access_token comparison using field-by-field validation
+- [x] Updated module references to use Mcp_server_auth.Provider and Mcp_server_auth_middleware
+- [x] Verified test passes with proper auth context lifecycle
+
+## TEST COVERAGE
+- [x] Test: get_access_token returns None when context unset
+- [x] Test: get_access_token returns token when set via middleware handle
+- [x] Test: auth_result double-option type handling (Some (Some (credentials, user)))
+
+## PENDING
+- [ ] Test: context is reset after `next` completes
+- [ ] Test: no leakage across sequential requests
+- [ ] Test: isolation across concurrent requests with different users
+
+## PYTHON TO OCAML MAPPING
+- Python: `contextvars.ContextVar` → OCaml: `Lwt.key`
+- Python: `AuthContextMiddleware.handle` → OCaml: `Auth_context_middleware.handle`
+- Python: `get_access_token()` → OCaml: `get_access_token : unit -> access_token option Lwt.t`
+
+## TECHNICAL NOTES
+- Auth_result is `(auth_credentials * authenticated_user) option`
+- Middleware expects `auth_result option` (double option for Some/None auth state)
+- Tests use field-by-field comparison to avoid missing compare derivations
+- All module paths verified and working with current dune configuration
