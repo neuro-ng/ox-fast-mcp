@@ -127,6 +127,30 @@ type repost_result = {
 
 let repost_result_to_yojson = yojson_of_repost_result
 
+type mute_result = {
+  success : bool;
+  handle : string option;
+  did : string option;
+  uri : string option;
+  error : string option;
+}
+[@@deriving sexp, yojson]
+(** Mute result *)
+
+let mute_result_to_yojson = yojson_of_mute_result
+
+type block_result = {
+  success : bool;
+  handle : string option;
+  did : string option;
+  uri : string option;
+  error : string option;
+}
+[@@deriving sexp, yojson]
+(** Block result *)
+
+let block_result_to_yojson = yojson_of_block_result
+
 type rich_text_link = { text : string; url : string } [@@deriving sexp, yojson]
 (** Rich text link *)
 

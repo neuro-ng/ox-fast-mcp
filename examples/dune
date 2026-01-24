@@ -15,3 +15,10 @@
  (name http_demo)
  (modules http_demo)
  (libraries ox_fast_mcp server core async cohttp-async))
+
+(executable
+ (name test_session)
+ (modules test_session)
+ (libraries core async yojson)
+ (preprocess
+  (pps ppx_jane)))
