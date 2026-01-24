@@ -20,7 +20,6 @@ module SlidingWindowRateLimiter : sig
   val is_allowed : t -> (bool * int) Deferred.t
 end
 
-(** Rate limiting configuration *)
 type rate_limit_config = {
   max_requests_per_second : float;
   burst_capacity : int;
@@ -29,6 +28,7 @@ type rate_limit_config = {
   limiters : (string, TokenBucketRateLimiter.t) Hashtbl.t;
   global_limiter : TokenBucketRateLimiter.t option;
 }
+(** Rate limiting configuration *)
 
 val create :
   ?max_requests_per_second:float ->
@@ -38,12 +38,15 @@ val create :
   unit ->
   rate_limit_config
 (** Create a new rate limiting configuration.
-    
-    @param max_requests_per_second Maximum requests per second per client (default: 10.0)
-    @param burst_capacity Maximum burst size (default: 2x max_requests_per_second)
-    @param get_client_id Function to extract client ID from context (default: None -> "global")
-    @param global_limit Apply rate limit globally instead of per-client (default: false)
-*)
+
+    @param max_requests_per_second
+      Maximum requests per second per client (default: 10.0)
+    @param burst_capacity
+      Maximum burst size (default: 2x max_requests_per_second)
+    @param get_client_id
+      Function to extract client ID from context (default: None -> "global")
+    @param global_limit
+      Apply rate limit globally instead of per-client (default: false) *)
 
 val create_rate_limit_error :
   message:string -> retry_after_seconds:float -> unit -> exn
@@ -54,11 +57,11 @@ val calculate_retry_after : tokens:float -> refill_rate:float -> float
 
 val check_rate_limit :
   rate_limit_config -> context -> (bool * float * float) Deferred.t
-(** Check if request is allowed under rate limit.
-    Returns (allowed, current_tokens, refill_rate) *)
+(** Check if request is allowed under rate limit. Returns (allowed,
+    current_tokens, refill_rate) *)
 
 val on_message : rate_limit_config -> context -> 'a call_next -> 'a Deferred.t
 (** Apply rate limiting to any message *)
 
-(** Rate limiting middleware module implementing Middleware.S *)
 module RateLimiting : Middleware.S
+(** Rate limiting middleware module implementing Middleware.S *)

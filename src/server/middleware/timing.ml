@@ -8,7 +8,7 @@ open Logging
 type timing_config = {
   logger : Logger.t;
   log_level : Logs.level;
-  detailed : bool; (** Enable detailed operation logging *)
+  detailed : bool;  (** Enable detailed operation logging *)
 }
 
 let create ?(logger = Logger.get_logger "OxFastMCP.Timing")
@@ -72,28 +72,46 @@ let time_operation config context call_next =
          (Exn.to_string exn));
     raise exn
 
-let on_message config context call_next = time_operation config context call_next
+let on_message config context call_next =
+  time_operation config context call_next
 
 (** Middleware module implementing the Middleware.S interface *)
 module Timing : Middleware.S = struct
   type t = timing_config
 
   let create () =
-    { logger = Logger.get_logger "OxFastMCP.Timing"; log_level = Logs.Info; detailed = false }
+    {
+      logger = Logger.get_logger "OxFastMCP.Timing";
+      log_level = Logs.Info;
+      detailed = false;
+    }
 
   let on_message = on_message
   let on_request config context call_next = on_message config context call_next
-  let on_notification config context call_next = on_message config context call_next
-  let on_call_tool config context call_next = on_message config context call_next
-  let on_read_resource config context call_next = on_message config context call_next
-  let on_get_prompt config context call_next = on_message config context call_next
-  let on_list_tools config context call_next = on_message config context call_next
-  let on_list_resources config context call_next = on_message config context call_next
+
+  let on_notification config context call_next =
+    on_message config context call_next
+
+  let on_call_tool config context call_next =
+    on_message config context call_next
+
+  let on_read_resource config context call_next =
+    on_message config context call_next
+
+  let on_get_prompt config context call_next =
+    on_message config context call_next
+
+  let on_list_tools config context call_next =
+    on_message config context call_next
+
+  let on_list_resources config context call_next =
+    on_message config context call_next
 
   let on_list_resource_templates config context call_next =
     on_message config context call_next
 
-  let on_list_prompts config context call_next = on_message config context call_next
+  let on_list_prompts config context call_next =
+    on_message config context call_next
 
   let dispatch_handler _config _context call_next =
     (* Just return the call_next as is, timing happens in on_message *)

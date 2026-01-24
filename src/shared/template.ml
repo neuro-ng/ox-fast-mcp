@@ -8,19 +8,17 @@ open Async
     - Query parameters: {?var1,var2}
 *)
 
-(** Extract query parameter names from RFC 6570 {?param1,param2} syntax *)
+(** Extract query parameter names from RFC 6570 [{?param1,param2}] syntax *)
 let extract_query_params uri_template =
   let re = Re.Perl.compile_pat "\\{\\?([^}]+)\\}" in
   match Re.exec_opt re uri_template with
   | None -> String.Set.empty
-  | Some group ->
-    (match Re.Group.get_opt group 1 with
-     | None -> String.Set.empty
-     | Some params_str ->
-       params_str
-       |> String.split ~on:','
-       |> List.map ~f:String.strip
-       |> String.Set.of_list)
+  | Some group -> (
+    match Re.Group.get_opt group 1 with
+    | None -> String.Set.empty
+    | Some params_str ->
+      params_str |> String.split ~on:',' |> List.map ~f:String.strip
+      |> String.Set.of_list)
 
 (** Build regex pattern for URI template and return parameter names in order *)
 let build_regex_with_names template =
@@ -28,39 +26,38 @@ let build_regex_with_names template =
   let template_without_query =
     Re.replace_string (Re.Perl.compile_pat "\\{\\?[^}]+\\}") ~by:"" template
   in
-  
+
   (* Extract parameter names *)
   let param_names = ref [] in
-  
+
   (* Split on parameter placeholders *)
   let re_split = Re.Perl.compile_pat "(\\{[^}]+\\})" in
   let parts = Re.split_full re_split template_without_query in
-  
+
   let pattern_parts =
     List.map parts ~f:(fun part ->
         match part with
         | `Delim group ->
           let param_str = Re.Group.get group 0 in
           (* Remove { and } *)
-          let name = String.sub param_str ~pos:1 ~len:(String.length param_str - 2) in
+          let name =
+            String.sub param_str ~pos:1 ~len:(String.length param_str - 2)
+          in
           let clean_name, is_wildcard =
             if String.is_suffix name ~suffix:"*" then
               (String.drop_suffix name 1, true)
-            else
-              (name, false)
+            else (name, false)
           in
           param_names := clean_name :: !param_names;
-          if is_wildcard then
-            (* Wildcard: match multiple segments *)
+          if is_wildcard then (* Wildcard: match multiple segments *)
             "(.+)"
-          else
-            (* Simple: match single segment *)
+          else (* Simple: match single segment *)
             "([^/]+)"
         | `Text text ->
           (* Escape special regex characters *)
           Str.quote text)
   in
-  
+
   let pattern = String.concat pattern_parts in
   let regex = Re.Perl.compile_pat (sprintf "^%s$" pattern) in
   (regex, List.rev !param_names)
@@ -73,7 +70,7 @@ let match_uri_template uri uri_template =
     | Some (path, query) -> (path, Some query)
     | None -> (uri, None)
   in
-  
+
   (* Match path parameters *)
   let regex, param_names = build_regex_with_names uri_template in
   match Re.exec_opt regex uri_path with
@@ -89,7 +86,7 @@ let match_uri_template uri uri_template =
             Map.set acc ~key:name ~data:decoded
           with _ -> acc)
     in
-    
+
     (* Extract query parameters if present *)
     let params_with_query =
       match query_string with
@@ -97,7 +94,7 @@ let match_uri_template uri uri_template =
       | Some query ->
         let query_param_names = extract_query_params uri_template in
         let parsed_query = Uri.query_of_encoded query in
-        
+
         Set.fold query_param_names ~init:params ~f:(fun acc name ->
             match List.Assoc.find parsed_query ~equal:String.equal name with
             | Some (first_value :: _) ->
@@ -105,10 +102,9 @@ let match_uri_template uri uri_template =
               Map.set acc ~key:name ~data:first_value
             | _ -> acc)
     in
-    
+
     Some params_with_query
 
-(** Resource template configuration *)
 type template_config = {
   uri_template : string;
   name : string;
@@ -116,6 +112,7 @@ type template_config = {
   mime_type : string; [@default "text/plain"]
 }
 [@@deriving sexp_of]
+(** Resource template configuration *)
 
 (** Resource template for dynamic resource creation *)
 module ResourceTemplate = struct
@@ -125,8 +122,8 @@ module ResourceTemplate = struct
     list_fn : (string String.Map.t -> Mcp.Types.resource list Deferred.t) option;
   }
 
-  let create ~uri_template ~name ?description ?(mime_type = "text/plain") ~read_fn
-      ?list_fn () =
+  let create ~uri_template ~name ?description ?(mime_type = "text/plain")
+      ~read_fn ?list_fn () =
     {
       config = { uri_template; name; description; mime_type };
       read_fn;
@@ -147,14 +144,12 @@ module ResourceTemplate = struct
   (** List resources using the template's list function *)
   let list t uri =
     match t.list_fn with
-    | None ->
-      Deferred.Or_error.error_string "Template does not support listing"
+    | None -> Deferred.Or_error.error_string "Template does not support listing"
     | Some list_fn -> (
       match matches t uri with
       | None ->
         Deferred.Or_error.error_string
-          (sprintf "URI %s does not match template %s" uri
-             t.config.uri_template)
+          (sprintf "URI %s does not match template %s" uri t.config.uri_template)
       | Some params -> list_fn params >>| Result.return)
 
   (** Convert to MCP resource template type *)
@@ -176,31 +171,28 @@ let text_resource_template ~uri_template ~name ?description
     ~(read_fn : string String.Map.t -> string Deferred.t) ?list_fn () =
   let read_fn params =
     let%map content = read_fn params in
-    Mcp.Types.{
-      text = content;
-      resource_contents = {
-        uri = uri_template;
-        mime_type = Some "text/plain";
-        meta = None;
-      };
-    }
+    Mcp.Types.
+      {
+        text = content;
+        resource_contents =
+          { uri = uri_template; mime_type = Some "text/plain"; meta = None };
+      }
   in
-  ResourceTemplate.create ~uri_template ~name ?description ~mime_type:"text/plain"
-    ~read_fn ?list_fn ()
+  ResourceTemplate.create ~uri_template ~name ?description
+    ~mime_type:"text/plain" ~read_fn ?list_fn ()
 
 (** Create a binary resource template *)
-let binary_resource_template ~uri_template ~name ?description ?(mime_type = "application/octet-stream")
+let binary_resource_template ~uri_template ~name ?description
+    ?(mime_type = "application/octet-stream")
     ~(read_fn : string String.Map.t -> string Deferred.t) ?list_fn () =
   let read_fn params =
     let%map content = read_fn params in
-    Mcp.Types.{
-      blob = content;
-      resource_contents = {
-        uri = uri_template;
-        mime_type = Some mime_type;
-        meta = None;
-      };
-    }
+    Mcp.Types.
+      {
+        blob = content;
+        resource_contents =
+          { uri = uri_template; mime_type = Some mime_type; meta = None };
+      }
   in
   ResourceTemplate.create ~uri_template ~name ?description ~mime_type ~read_fn
     ?list_fn ()

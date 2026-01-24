@@ -31,8 +31,7 @@ let parse_json_rpc content =
     | exception exn ->
       Error
         (Error.create_s
-           [%message
-             "Failed to parse JSON-RPC" (content : string) (exn : exn)])
+           [%message "Failed to parse JSON-RPC" (content : string) (exn : exn)])
   with exn -> Error (Error.of_exn exn)
 
 (** Serialize JSON-RPC message to string *)
@@ -58,9 +57,7 @@ let connect config =
 
   (* Parse URI and extract host/port *)
   let uri = Uri.of_string config.url in
-  let host =
-    Uri.host uri |> Option.value ~default:"localhost"
-  in
+  let host = Uri.host uri |> Option.value ~default:"localhost" in
   let port =
     match Uri.port uri with
     | Some p -> p
@@ -108,34 +105,36 @@ let connect config =
            t.is_connected <- true;
            Logs.info (fun m -> m "WebSocket connected successfully");
 
-           (* Reader: ws_to_app -> read_stream (WebSocket frames to JSON-RPC messages) *)
+           (* Reader: ws_to_app -> read_stream (WebSocket frames to JSON-RPC
+              messages) *)
            don't_wait_for
-             (Pipe.iter ws_to_app_r ~f:(fun frame ->
-                  let open Ws_frame in
-                  match frame.opcode with
-                  | Opcode.Text -> (
-                    match parse_json_rpc frame.content with
-                    | Ok msg -> Pipe.write read_writer (`Message msg)
-                    | Error e -> Pipe.write read_writer (`Error e))
-                  | Opcode.Close ->
-                    Logs.info (fun m -> m "WebSocket close frame received");
-                    Pipe.close_read ws_to_app_r;
-                    return ()
-                  | Opcode.Binary ->
-                    Pipe.write read_writer
-                      (`Error
-                        (Error.of_string
-                           "Received binary frame (expected text)"))
-                  | _ ->
-                    Logs.debug (fun m ->
-                        m "Ignoring WebSocket frame with opcode: %s"
-                          (Opcode.to_string frame.opcode));
-                    return ())
-              >>| fun () ->
-              Pipe.close read_writer;
-              Pipe.close_read ws_to_app_r);
+             ( Pipe.iter ws_to_app_r ~f:(fun frame ->
+                   let open Ws_frame in
+                   match frame.opcode with
+                   | Opcode.Text -> (
+                     match parse_json_rpc frame.content with
+                     | Ok msg -> Pipe.write read_writer (`Message msg)
+                     | Error e -> Pipe.write read_writer (`Error e))
+                   | Opcode.Close ->
+                     Logs.info (fun m -> m "WebSocket close frame received");
+                     Pipe.close_read ws_to_app_r;
+                     return ()
+                   | Opcode.Binary ->
+                     Pipe.write read_writer
+                       (`Error
+                         (Error.of_string
+                            "Received binary frame (expected text)"))
+                   | _ ->
+                     Logs.debug (fun m ->
+                         m "Ignoring WebSocket frame with opcode: %s"
+                           (Opcode.to_string frame.opcode));
+                     return ())
+             >>| fun () ->
+               Pipe.close read_writer;
+               Pipe.close_read ws_to_app_r );
 
-           (* Writer: write_stream -> app_to_ws (JSON-RPC messages to WebSocket frames) *)
+           (* Writer: write_stream -> app_to_ws (JSON-RPC messages to WebSocket
+              frames) *)
            let%bind _close_reason =
              Deferred.choose
                [

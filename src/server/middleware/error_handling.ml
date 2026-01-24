@@ -110,7 +110,7 @@ let transform_error t error =
       (create_error_data ~code:(-32001)
          ~message:(sprintf "Resource not found: %s" sexp_str)
          ~error_type:"Not_found_s" ~original_error:sexp_str ())
-  |  Core_unix.Unix_error (Core_unix.ENOENT, _, path) ->
+  | Core_unix.Unix_error (Core_unix.ENOENT, _, path) ->
     (* FileNotFoundError equivalent -> Resource not found *)
     Mcp_shared.Exceptions.Mcp_error
       (create_error_data ~code:(-32001)

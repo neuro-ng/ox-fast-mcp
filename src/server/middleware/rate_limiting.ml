@@ -17,13 +17,17 @@ module TokenBucketRateLimiter = struct
       capacity;
       refill_rate;
       tokens = Float.of_int capacity;
-      last_refill = Time_ns.to_span_since_epoch (Time_ns.now ()) |> Time_ns.Span.to_sec;
+      last_refill =
+        Time_ns.to_span_since_epoch (Time_ns.now ()) |> Time_ns.Span.to_sec;
     }
 
   let consume ?(amount = 1) t =
-    (* Note: Using mutable state without locking for simplicity.
-       In production, consider using Async_kernel.Throttle or Mvar for true concurrency safety *)
-    let now = Time_ns.to_span_since_epoch (Time_ns.now ()) |> Time_ns.Span.to_sec in
+    (* Note: Using mutable state without locking for simplicity. In production,
+       consider using Async_kernel.Throttle or Mvar for true concurrency
+       safety *)
+    let now =
+      Time_ns.to_span_since_epoch (Time_ns.now ()) |> Time_ns.Span.to_sec
+    in
     let elapsed = now -. t.last_refill in
 
     (* Add tokens based on elapsed time *)
@@ -34,7 +38,7 @@ module TokenBucketRateLimiter = struct
 
     let allowed = Float.(t.tokens >= Float.of_int amount) in
     if allowed then t.tokens <- t.tokens -. Float.of_int amount;
-    
+
     return (allowed, t.tokens)
 end
 
@@ -47,14 +51,12 @@ module SlidingWindowRateLimiter = struct
   }
 
   let create ~max_requests ~window_seconds =
-    {
-      max_requests;
-      window_seconds;
-      requests = Queue.create ();
-    }
+    { max_requests; window_seconds; requests = Queue.create () }
 
   let is_allowed t =
-    let now = Time_ns.to_span_since_epoch (Time_ns.now ()) |> Time_ns.Span.to_sec in
+    let now =
+      Time_ns.to_span_since_epoch (Time_ns.now ()) |> Time_ns.Span.to_sec
+    in
     let cutoff = now -. Float.of_int t.window_seconds in
 
     (* Remove old requests outside the window *)
@@ -68,7 +70,7 @@ module SlidingWindowRateLimiter = struct
     let current_count = Queue.length t.requests in
     let allowed = current_count < t.max_requests in
     if allowed then Queue.enqueue t.requests now;
-    
+
     return (allowed, current_count)
 end
 
@@ -81,14 +83,12 @@ let create_rate_limit_error ~message ~retry_after_seconds () =
         ("error_type", `String "RateLimitExceeded");
       ]
   in
-  Mcp_shared.Exceptions.Mcp_error
-    { code = -32000; message; data = Some data }
+  Mcp_shared.Exceptions.Mcp_error { code = -32000; message; data = Some data }
 
 (** Calculate retry-after time based on current token count *)
 let calculate_retry_after ~tokens ~refill_rate =
   if Float.(tokens >= 1.0) then 0.0
-  else
-    (* Time needed to refill 1 token *)
+  else (* Time needed to refill 1 token *)
     (1.0 -. tokens) /. refill_rate
 
 (* Rate limiting middleware using general middleware pattern *)
@@ -149,7 +149,9 @@ let on_message config context call_next =
   if allowed then call_next context
   else
     let retry_after = calculate_retry_after ~tokens ~refill_rate in
-    let message = sprintf "Rate limit exceeded. Retry after %.2f seconds" retry_after in
+    let message =
+      sprintf "Rate limit exceeded. Retry after %.2f seconds" retry_after
+    in
     raise (create_rate_limit_error ~message ~retry_after_seconds:retry_after ())
 
 (** Rate limiting middleware module implementing Middleware.S *)
@@ -168,20 +170,32 @@ module RateLimiting : Middleware.S = struct
 
   let on_message = on_message
   let on_request config context call_next = on_message config context call_next
-  let on_notification config context call_next = on_message config context call_next
-  let on_call_tool config context call_next = on_message config context call_next
-  let on_read_resource config context call_next = on_message config context call_next
-  let on_get_prompt config context call_next = on_message config context call_next
-  let on_list_tools config context call_next = on_message config context call_next
-  let on_list_resources config context call_next = on_message config context call_next
+
+  let on_notification config context call_next =
+    on_message config context call_next
+
+  let on_call_tool config context call_next =
+    on_message config context call_next
+
+  let on_read_resource config context call_next =
+    on_message config context call_next
+
+  let on_get_prompt config context call_next =
+    on_message config context call_next
+
+  let on_list_tools config context call_next =
+    on_message config context call_next
+
+  let on_list_resources config context call_next =
+    on_message config context call_next
 
   let on_list_resource_templates config context call_next =
     on_message config context call_next
 
-  let on_list_prompts config context call_next = on_message config context call_next
+  let on_list_prompts config context call_next =
+    on_message config context call_next
 
-  let dispatch_handler _config _context call_next =
-    return call_next
+  let dispatch_handler _config _context call_next = return call_next
 
   let call config context call_next =
     let%bind handler = dispatch_handler config context call_next in

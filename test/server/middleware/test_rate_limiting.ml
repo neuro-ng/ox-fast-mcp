@@ -14,7 +14,7 @@ let%expect_test "TokenBucketRateLimiter - initialization" =
   [%expect {| limiter created: true |}]
 
 (* =============================================================================
-   Tests  for SlidingWindowRateLimiter
+   Tests for SlidingWindowRateLimiter
    ============================================================================= *)
 
 let%expect_test "SlidingWindowRateLimiter - initialization" =
@@ -35,8 +35,8 @@ let%expect_test "create - default initialization" =
 
 let%expect_test "create - custom configuration" =
   let config =
-    create ~max_requests_per_second:5.0
-      ~burst_capacity:(Some 10) ~global_limit:true ()
+    create ~max_requests_per_second:5.0 ~burst_capacity:(Some 10)
+      ~global_limit:true ()
   in
   printf "Custom config created: %b\n" (phys_equal config config);
   [%expect {| Custom config created: true |}]
@@ -47,7 +47,8 @@ let%expect_test "create - custom configuration" =
 
 let%expect_test "RateLimiting module - create" =
   let middleware = RateLimiting.create () in
-  printf "RateLimiting middleware created: %b\n" (phys_equal middleware middleware);
+  printf "RateLimiting middleware created: %b\n"
+    (phys_equal middleware middleware);
   [%expect {| RateLimiting middleware created: true |}]
 
 (* =============================================================================
@@ -55,14 +56,18 @@ let%expect_test "RateLimiting module - create" =
    ============================================================================= *)
 
 let%expect_test "create_rate_limit_error - message and retry_after" =
-  let error = create_rate_limit_error ~message:"Too many requests" ~retry_after_seconds:1.5 ()  in
+  let error =
+    create_rate_limit_error ~message:"Too many requests"
+      ~retry_after_seconds:1.5 ()
+  in
   (match error with
   | Mcp_shared.Exceptions.Mcp_error { code; message; data } ->
     printf "error code: %d\n" code;
     printf "error message: %s\n" message;
-    printf "has retry_after data: %b\n" (Option.is_some data);
+    printf "has retry_after data: %b\n" (Option.is_some data)
   | _ -> printf "unexpected error type\n");
-  [%expect {|
+  [%expect
+    {|
     error code: -32000
     error message: Too many requests
     has retry_after data: true

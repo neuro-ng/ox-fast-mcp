@@ -72,7 +72,7 @@ let%expect_test "duration formatting - milliseconds" =
   [%expect {| completed in 123.46ms |}]
 
 let%expect_test "duration formatting - fast operation" =
-  let duration_ms =  0.5 in
+  let duration_ms = 0.5 in
   printf "completed in %.2fms\n" duration_ms;
   [%expect {| completed in 0.50ms |}]
 

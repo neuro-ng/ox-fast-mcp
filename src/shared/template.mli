@@ -8,14 +8,13 @@ open Async
     - Query parameters: {?var1,var2}
 *)
 
-(** Extract query parameter names from RFC 6570 {?param1,param2} syntax *)
 val extract_query_params : string -> String.Set.t
+(** Extract query parameter names from RFC 6570 [{?param1,param2}] syntax *)
 
+val match_uri_template : string -> string -> string String.Map.t option
 (** Match URI against template and extract both path and query parameters.
     Returns None if URI doesn't match template, Some param_map otherwise *)
-val match_uri_template : string -> string -> string String.Map.t option
 
-(** Resource template configuration *)
 type template_config = {
   uri_template : string;
   name : string;
@@ -23,6 +22,7 @@ type template_config = {
   mime_type : string;
 }
 [@@deriving sexp_of]
+(** Resource template configuration *)
 
 (** Resource template for dynamic resource creation *)
 module ResourceTemplate : sig
@@ -44,7 +44,6 @@ module ResourceTemplate : sig
   val to_mcp : 'a t -> Mcp.Types.resource_template
 end
 
-(** Create a text resource template *)
 val text_resource_template :
   uri_template:string ->
   name:string ->
@@ -53,8 +52,8 @@ val text_resource_template :
   ?list_fn:(string String.Map.t -> Mcp.Types.resource list Deferred.t) ->
   unit ->
   Mcp.Types.text_resource_contents ResourceTemplate.t
+(** Create a text resource template *)
 
-(** Create a binary resource template *)
 val binary_resource_template :
   uri_template:string ->
   name:string ->
@@ -64,4 +63,4 @@ val binary_resource_template :
   ?list_fn:(string String.Map.t -> Mcp.Types.resource list Deferred.t) ->
   unit ->
   Mcp.Types.blob_resource_contents ResourceTemplate.t
-
+(** Create a binary resource template *)

@@ -174,14 +174,14 @@ end
 val get_arguments_str : Yojson.Safe.t option -> string
 (** Get a string representation of the arguments for cache key. *)
 
-(** Response caching middleware instance *)
 type response_caching_middleware
+(** Response caching middleware instance *)
 
 val create_middleware :
   ?config:Response_caching_config.t -> unit -> response_caching_middleware
 
-(** ResponseCachingMiddleware implementing Middleware.S *)
 module ResponseCachingMiddleware : Middleware.S
+(** ResponseCachingMiddleware implementing Middleware.S *)
 
 val clear_all_caches : response_caching_middleware -> unit
 (** Clear all caches in the middleware instance *)
