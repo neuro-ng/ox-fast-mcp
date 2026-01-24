@@ -2,13 +2,11 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
     branches:
       - main
 
 jobs:
-  create-release:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -27,21 +25,34 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Set working directory
       run: |
         mkdir -p /workspace
         cp -r . /workspace/
+        (cd /workspace && sudo chown -R ocaml-user:ocaml-user .) || true
         cd /workspace
 
     - name: Extract version from dune-project
       id: get_version
       working-directory: /workspace
       run: |
-        # Extract version like (version 0.1.0) -> 0.1.0
         VERSION=$(grep '(version ' dune-project | head -n 1 | awk '{print $2}' | tr -d ')')
         echo "Detected version: $VERSION"
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Force Tag Version
+      working-directory: /workspace
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global --add safe.directory /workspace
+        TAG="v${{ steps.get_version.outputs.VERSION }}"
+        echo "Tagging release $TAG"
+        git tag -fa $TAG -m "Release $TAG"
+        git push origin $TAG --force
 
     - name: Build release
       working-directory: /workspace
@@ -66,9 +77,8 @@ jobs:
         name: Release v${{ steps.get_version.outputs.VERSION }}
         body: |
           Release v${{ steps.get_version.outputs.VERSION }} of ox-fast-mcp
-          
-          Triggered by PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}
         files: /workspace/ox-fast-mcp-ubuntu.tar.gz
         draft: false
         prerelease: false
         generate_release_notes: true
+
