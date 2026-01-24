@@ -304,7 +304,7 @@ dune build examples --verbose
 
 - Read the [MCP Specification](https://modelcontextprotocol.io)
 - Explore the [OxFastMCP source code](../src/)
-- Check out [test files](../test/) for more examples
+- Check out [test files](../test/) for more examples (over 100 test modules)
 - Join the OxFastMCP community for support
 
 ---
