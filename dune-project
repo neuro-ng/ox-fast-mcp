@@ -83,6 +83,8 @@
   mirage-crypto-pk
   jose
   re
+  (websocket-async
+   (>= 2.16))
   (alcotest :with-test)
   (ounit2 :with-test)
   (expect_test_helpers_core :with-test)
