@@ -327,6 +327,80 @@ let main () =
       return (Types.delete_result_to_yojson result))
     server;
 
+  Server.Ox_fast_mcp.add_simple_tool ~name:"mute"
+    ~description:"Mute a user by handle"
+    ~handler:(fun params ->
+      let handle =
+        Yojson.Safe.Util.member "handle" params
+        |> Yojson.Safe.Util.to_string_option |> Option.value ~default:""
+      in
+      let%bind result = Atproto.Social.mute_user handle in
+      return (Types.mute_result_to_yojson result))
+    server;
+
+  Server.Ox_fast_mcp.add_simple_tool ~name:"unmute"
+    ~description:"Unmute a user by handle or DID"
+    ~handler:(fun params ->
+      let actor =
+        Yojson.Safe.Util.member "actor" params
+        |> Yojson.Safe.Util.to_string_option |> Option.value ~default:""
+      in
+      (* Resolve handle to DID if needed *)
+      let%bind did =
+        if String.is_prefix actor ~prefix:"did:" then return actor
+        else
+          let settings = Settings.get_settings () in
+          let%bind client = Atproto.Client.get_client settings in
+          let resolve_endpoint =
+            sprintf "com.atproto.identity.resolveHandle?handle=%s" actor
+          in
+          let%bind did_json =
+            Atproto.Client.api_get client ~endpoint:resolve_endpoint
+          in
+          let json = Yojson.Safe.from_string did_json in
+          return Yojson.Safe.Util.(member "did" json |> to_string)
+      in
+      let%bind result = Atproto.Social.unmute_user did in
+      return (Types.delete_result_to_yojson result))
+    server;
+
+  Server.Ox_fast_mcp.add_simple_tool ~name:"block"
+    ~description:"Block a user by handle"
+    ~handler:(fun params ->
+      let handle =
+        Yojson.Safe.Util.member "handle" params
+        |> Yojson.Safe.Util.to_string_option |> Option.value ~default:""
+      in
+      let%bind result = Atproto.Social.block_user handle in
+      return (Types.block_result_to_yojson result))
+    server;
+
+  Server.Ox_fast_mcp.add_simple_tool ~name:"unblock"
+    ~description:"Unblock a user by handle or DID"
+    ~handler:(fun params ->
+      let actor =
+        Yojson.Safe.Util.member "actor" params
+        |> Yojson.Safe.Util.to_string_option |> Option.value ~default:""
+      in
+      (* Resolve handle to DID if needed *)
+      let%bind did =
+        if String.is_prefix actor ~prefix:"did:" then return actor
+        else
+          let settings = Settings.get_settings () in
+          let%bind client = Atproto.Client.get_client settings in
+          let resolve_endpoint =
+            sprintf "com.atproto.identity.resolveHandle?handle=%s" actor
+          in
+          let%bind did_json =
+            Atproto.Client.api_get client ~endpoint:resolve_endpoint
+          in
+          let json = Yojson.Safe.from_string did_json in
+          return Yojson.Safe.Util.(member "did" json |> to_string)
+      in
+      let%bind result = Atproto.Social.unblock_user did in
+      return (Types.delete_result_to_yojson result))
+    server;
+
   Server.Ox_fast_mcp.add_simple_tool ~name:"create_thread"
     ~description:"Create a thread of posts"
     ~handler:(fun params ->

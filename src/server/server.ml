@@ -1416,7 +1416,20 @@ module Ox_fast_mcp = struct
         with
         | Some (`String name), Some arguments ->
           let%bind result = call_tool t ~name ~arguments in
-          return (`Assoc [ ("content", result) ])
+          let content =
+            match result with
+            | `List _ -> result
+            | _ ->
+              `List
+                [
+                  `Assoc
+                    [
+                      ("type", `String "text");
+                      ("text", `String (Yojson.Safe.to_string result));
+                    ];
+                ]
+          in
+          return (`Assoc [ ("content", content) ])
         | _ -> raise_s [%message "Invalid call_tool params"])
       | _ -> raise_s [%message "Expected object for call_tool params"]
     in
@@ -1546,6 +1559,8 @@ module Ox_fast_mcp = struct
           return (`Assoc response_fields))
       | _ ->
         (* Invalid request format *)
+        Logging.Global.error
+          (sprintf "Invalid request format: %s" (Yojson.Safe.to_string message));
         let error =
           `Assoc
             [
@@ -1652,7 +1667,8 @@ module Ox_fast_mcp = struct
             let response = handle_initialize_message t id in
             let%bind () = write_stdio_message writer response in
             process_loop ()
-          | Some (`String "initialized"), _ ->
+          | Some (`String "initialized"), _
+          | Some (`String "notifications/initialized"), _ ->
             (* Initialized notification - just acknowledge *)
             process_loop ()
           | Some (`String _method_name), _id_opt ->

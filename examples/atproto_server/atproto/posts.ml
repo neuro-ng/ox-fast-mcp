@@ -38,9 +38,47 @@ let detect_url_facets text =
               ] );
         ])
 
-(** Build facets for links and mentions *)
+(** Detect hashtags in text and create facets *)
+let detect_hashtag_facets text =
+  (* Hashtag regex pattern - match leading space/start but capture only the
+     tag *)
+  let hashtag_pattern = "(?:^|\\s)(#[a-zA-Z0-9]+)" in
+  let hashtag_regex = Re.Pcre.regexp hashtag_pattern in
+
+  (* Find all matches *)
+  let matches = Re.all hashtag_regex text in
+
+  List.map matches ~f:(fun group ->
+      let tag_with_hash = Re.Group.get group 1 in
+      let tag = String.drop_prefix tag_with_hash 1 in
+      (* Remove '#' *)
+      let start_pos = Re.Group.start group 1 in
+      let end_pos = Re.Group.stop group 1 in
+
+      (* Calculate UTF-8 byte positions *)
+      let byte_start = String.sub text ~pos:0 ~len:start_pos |> String.length in
+      let byte_end = String.sub text ~pos:0 ~len:end_pos |> String.length in
+
+      `Assoc
+        [
+          ( "index",
+            `Assoc
+              [ ("byteStart", `Int byte_start); ("byteEnd", `Int byte_end) ] );
+          ( "features",
+            `List
+              [
+                `Assoc
+                  [
+                    ("$type", `String "app.bsky.richtext.facet#tag");
+                    ("tag", `String tag);
+                  ];
+              ] );
+        ])
+
+(** Build facets for links, mentions, and hashtags *)
 let build_facets ~text ~links ~mentions =
   let url_facets = detect_url_facets text in
+  let hashtag_facets = detect_hashtag_facets text in
 
   (* Add manual links *)
   let link_facets =
@@ -112,7 +150,7 @@ let build_facets ~text ~links ~mentions =
                 ]))
   in
 
-  let all_facets = url_facets @ link_facets @ mention_facets in
+  let all_facets = url_facets @ hashtag_facets @ link_facets @ mention_facets in
   if List.is_empty all_facets then None else Some (`List all_facets)
 
 (** Create a basic text post **)

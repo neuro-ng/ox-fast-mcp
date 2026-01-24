@@ -20,9 +20,24 @@ let main () =
       ~instructions:"A simple calculator with basic arithmetic operations" ()
   in
 
+  (* Define common schema for binary arithmetic operations *)
+  let binary_op_schema =
+    `Assoc
+      [
+        ("type", `String "object");
+        ( "properties",
+          `Assoc
+            [
+              ("a", `Assoc [ ("type", `String "number") ]);
+              ("b", `Assoc [ ("type", `String "number") ]);
+            ] );
+        ("required", `List [ `String "a"; `String "b" ]);
+      ]
+  in
+
   (* Add arithmetic operation tools *)
   Server.Ox_fast_mcp.add_simple_tool ~name:"add"
-    ~description:"Add two numbers together"
+    ~description:"Add two numbers together" ~parameters:binary_op_schema
     ~handler:(fun params ->
       match params with
       | `Assoc fields ->
@@ -44,7 +59,7 @@ let main () =
     server;
 
   Server.Ox_fast_mcp.add_simple_tool ~name:"subtract"
-    ~description:"Subtract b from a"
+    ~description:"Subtract b from a" ~parameters:binary_op_schema
     ~handler:(fun params ->
       match params with
       | `Assoc fields ->
@@ -63,7 +78,7 @@ let main () =
     server;
 
   Server.Ox_fast_mcp.add_simple_tool ~name:"multiply"
-    ~description:"Multiply two numbers"
+    ~description:"Multiply two numbers" ~parameters:binary_op_schema
     ~handler:(fun params ->
       match params with
       | `Assoc fields ->
@@ -83,6 +98,7 @@ let main () =
 
   Server.Ox_fast_mcp.add_simple_tool ~name:"divide"
     ~description:"Divide a by b (returns error if b is zero)"
+    ~parameters:binary_op_schema
     ~handler:(fun params ->
       match params with
       | `Assoc fields ->

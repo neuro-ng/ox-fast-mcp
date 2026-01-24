@@ -18,3 +18,6 @@ val create_post :
 val create_thread : Types.thread_post list -> Types.thread_result Deferred.t
 (** Create a thread of posts. Currently creates posts sequentially without
     proper reply chaining. Full reply implementation pending. *)
+
+val detect_hashtag_facets : string -> Yojson.Safe.t list
+(** Detect hashtags in text and create facets for them *)
