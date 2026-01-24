@@ -145,3 +145,86 @@ let search_posts ~query ~limit : Types.search_result Deferred.t =
         posts = [];
         error = Some (Exn.to_string exn);
       }
+
+(** Fetch author feed *)
+let fetch_author_feed ~actor ~limit : Types.author_feed_result Deferred.t =
+  let open Deferred.Let_syntax in
+  Monitor.try_with (fun () ->
+      let settings = Settings.get_settings () in
+      let%bind client = Client.get_client settings in
+
+      let endpoint =
+        sprintf "app.bsky.feed.getAuthorFeed?actor=%s&limit=%d" actor limit
+      in
+      let%bind json_str = Client.api_get client ~endpoint in
+
+      let json = Yojson.Safe.from_string json_str in
+      let feed = Yojson.Safe.Util.(member "feed" json |> to_list) in
+
+      let posts =
+        List.map feed ~f:(fun item ->
+            let post = Yojson.Safe.Util.member "post" item in
+            parse_post post)
+      in
+
+      return
+        Types.{ success = true; count = List.length posts; posts; error = None })
+  >>| function
+  | Ok result -> result
+  | Error exn ->
+    Types.
+      {
+        success = false;
+        count = 0;
+        posts = [];
+        error = Some (Exn.to_string exn);
+      }
+
+(** Parse thread view recursively *)
+let rec parse_thread_view json : Types.thread_view_post option =
+  let open Yojson.Safe.Util in
+  try
+    let type_ = member "$type" json |> to_string_option in
+    match type_ with
+    | Some "app.bsky.feed.defs#threadViewPost" ->
+      let post_json = member "post" json in
+      let post = parse_post post_json in
+
+      let parent =
+        match member "parent" json with
+        | `Null -> None
+        | parent_json -> parse_thread_view parent_json
+      in
+
+      let replies =
+        match member "replies" json with
+        | `List replies_json ->
+          Some (List.filter_map replies_json ~f:parse_thread_view)
+        | _ -> None
+      in
+
+      Some Types.{ post; parent; replies }
+    | _ -> None (* Skip blocked/not-found posts which have different types *)
+  with _ -> None
+
+(** Fetch post thread *)
+let fetch_post_thread ~uri : Types.post_thread_result Deferred.t =
+  let open Deferred.Let_syntax in
+  Monitor.try_with (fun () ->
+      let settings = Settings.get_settings () in
+      let%bind client = Client.get_client settings in
+
+      (* Encoding URI for query param *)
+      let encoded_uri = Uri.pct_encode uri in
+      let endpoint = sprintf "app.bsky.feed.getPostThread?uri=%s" encoded_uri in
+      let%bind json_str = Client.api_get client ~endpoint in
+
+      let json = Yojson.Safe.from_string json_str in
+      let thread_json = Yojson.Safe.Util.member "thread" json in
+      let thread = parse_thread_view thread_json in
+
+      return Types.{ success = true; thread; error = None })
+  >>| function
+  | Ok result -> result
+  | Error exn ->
+    Types.{ success = false; thread = None; error = Some (Exn.to_string exn) }

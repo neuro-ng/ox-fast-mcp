@@ -272,6 +272,7 @@ type profile_query_result = {
 
 let profile_query_result_to_yojson = yojson_of_profile_query_result
 
+(* Re-inserting delete_result *)
 type delete_result = {
   success : bool;
   record_key : string option; [@yojson.option]
@@ -281,3 +282,32 @@ type delete_result = {
 (** Delete operation result **)
 
 let delete_result_to_yojson = yojson_of_delete_result
+
+type reply_ref_view = { root : post; parent : post } [@@deriving sexp, yojson]
+(** Reply reference including full post details *)
+
+(* Recursive type for thread view *)
+type thread_view_post = {
+  post : post;
+  parent : thread_view_post option; [@yojson.option]
+  replies : thread_view_post list option; [@yojson.option]
+}
+[@@deriving sexp, yojson]
+(** Full thread view with recursive replies *)
+
+let thread_view_post_to_yojson = yojson_of_thread_view_post
+
+type post_thread_result = {
+  success : bool;
+  thread : thread_view_post option; [@yojson.option]
+  error : string option; [@yojson.option]
+}
+[@@deriving sexp, yojson]
+(** Post thread fetch result *)
+
+let post_thread_result_to_yojson = yojson_of_post_thread_result
+
+type author_feed_result = timeline_result [@@deriving sexp, yojson]
+(** Author feed fetch result (same structure as timeline) *)
+
+let author_feed_result_to_yojson = yojson_of_author_feed_result

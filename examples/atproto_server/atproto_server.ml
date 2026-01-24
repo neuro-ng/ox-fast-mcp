@@ -204,6 +204,33 @@ let main () =
       return (Types.search_result_to_yojson result))
     server;
 
+  Server.Ox_fast_mcp.add_simple_tool ~name:"get_author_feed"
+    ~description:"Get posts by a specific user (handle or DID)"
+    ~handler:(fun params ->
+      let actor =
+        Yojson.Safe.Util.member "actor" params
+        |> Yojson.Safe.Util.to_string_option |> Option.value ~default:""
+      in
+      let limit =
+        Yojson.Safe.Util.member "limit" params
+        |> Yojson.Safe.Util.to_int_option
+        |> Option.value ~default:settings.timeline_default_limit
+      in
+      let%bind result = Atproto.Read.fetch_author_feed ~actor ~limit in
+      return (Types.author_feed_result_to_yojson result))
+    server;
+
+  Server.Ox_fast_mcp.add_simple_tool ~name:"get_post_thread"
+    ~description:"Get the full conversation thread for a post"
+    ~handler:(fun params ->
+      let uri =
+        Yojson.Safe.Util.member "uri" params
+        |> Yojson.Safe.Util.to_string_option |> Option.value ~default:""
+      in
+      let%bind result = Atproto.Read.fetch_post_thread ~uri in
+      return (Types.post_thread_result_to_yojson result))
+    server;
+
   Server.Ox_fast_mcp.add_simple_tool ~name:"follow"
     ~description:"Follow a user by their handle"
     ~handler:(fun params ->
