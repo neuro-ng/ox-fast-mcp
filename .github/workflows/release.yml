@@ -12,37 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Extract version from tag
-      id: get_version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.get_version.outputs.VERSION }}
-        release_name: Release ${{ steps.get_version.outputs.VERSION }}
-        body: |
-          Release ${{ steps.get_version.outputs.VERSION }} of ox-fast-mcp
-          
-          ## Changes
-          See [CHANGELOG.md](CHANGELOG.md) for details.
-          
-        draft: false
-        prerelease: false
-
-  build-release:
-    needs: create-release
-    runs-on: ubuntu-latest
     container:
       image: ghcr.io/neuro-ng/oxcaml-ubuntu:latest
       options: --user ocaml-user --workdir /workspace
@@ -54,16 +23,25 @@ jobs:
       OPAMROOT: /home/ocaml-user/.opam
       OPAMSWITCH: 5.2.0+ox
       OPAMYES: 1
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Set working directory
       run: |
         mkdir -p /workspace
         cp -r . /workspace/
         cd /workspace
+
+    - name: Extract version from dune-project
+      id: get_version
+      working-directory: /workspace
+      run: |
+        # Extract version like (version 0.1.0) -> 0.1.0
+        VERSION=$(grep '(version ' dune-project | head -n 1 | awk '{print $2}' | tr -d ')')
+        echo "Detected version: $VERSION"
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Build release
       working-directory: /workspace
@@ -79,11 +57,18 @@ jobs:
         cp -r _build/install/default/* release-ubuntu/
         tar -czf ox-fast-mcp-ubuntu.tar.gz release-ubuntu/
 
-    - name: Upload Release Asset
+    - name: Create Release and Upload Asset
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
+        tag_name: v${{ steps.get_version.outputs.VERSION }}
+        name: Release v${{ steps.get_version.outputs.VERSION }}
+        body: |
+          Release v${{ steps.get_version.outputs.VERSION }} of ox-fast-mcp
+          
+          Triggered by PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}
         files: /workspace/ox-fast-mcp-ubuntu.tar.gz
+        draft: false
+        prerelease: false
         generate_release_notes: true

@@ -6,6 +6,7 @@
 
 (package
  (name ox-fast-mcp)
+ (version 0.1.0)
  (synopsis "Fast, functional way to build MCP servers and clients in OCaml")
  (description
   "\n\n\nAn OCaml implementation of FastMCP inspired by the Python library, providing \na high-level, type-safe interface for building Model Context Protocol (MCP) \nservers and clients using functional programming principles.\n\nFeatures:\n- Fast: High-level interface with minimal boilerplate\n- Type-Safe: Leverages OCaml's strong type system  \n- Functional: Built with functional programming principles\n- TDD: Developed using Test-Driven Development\n- Complete: Full MCP protocol implementation for servers and clients\n- Interoperable: Compatible with other MCP implementations\n")
