@@ -2,14 +2,90 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
     branches:
       - main
 
 jobs:
-  create-release:
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    container:
+      image: ghcr.io/neuro-ng/oxcaml-ubuntu:latest
+      options: --user ocaml-user --workdir /workspace
+    env:
+      USER: ocaml-user
+      HOME: /home/ocaml-user
+      SHELL: /bin/bash
+      PATH: /home/ocaml-user/.opam/5.2.0+ox/bin:/home/ocaml-user/.opam/5.2.0+ox/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+      OPAMROOT: /home/ocaml-user/.opam
+      OPAMSWITCH: 5.2.0+ox
+      OPAMYES: 1
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set working directory
+      run: |
+        mkdir -p /workspace
+        cp -r . /workspace/
+        # Ensure ocaml-user owns the workspace files
+        (cd /workspace && sudo chown -R ocaml-user:ocaml-user .) || true
+        cd /workspace
+
+    - name: Extract version from dune-project
+      id: get_version
+      working-directory: /workspace
+      run: |
+        VERSION=$(grep '(version ' dune-project | head -n 1 | awk '{print $2}' | tr -d ')')
+        echo "Detected version: $VERSION"
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Force Tag Version
+      working-directory: /workspace
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global --add safe.directory /workspace
+        TAG="v${{ steps.get_version.outputs.VERSION }}"
+        
+        # Check if tag already points to HEAD to avoid unnecessary force push?
+        # But user requested "force tag", implying moving it if needed.
+        echo "Tagging release $TAG"
+        git tag -fa $TAG -m "Release $TAG"
+        git push origin $TAG --force
+
+    - name: Build release
+      working-directory: /workspace
+      run: |
+        eval $(opam env)
+        dune build
+        dune build @install
+
+    - name: Create release archive
+      working-directory: /workspace
+      run: |
+        mkdir -p release-ubuntu
+        cp -r _build/install/default/* release-ubuntu/
+        tar -czf ox-fast-mcp-ubuntu.tar.gz release-ubuntu/
+
+    - name: Create Release and Upload Asset
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.get_version.outputs.VERSION }}
+        name: Release v${{ steps.get_version.outputs.VERSION }}
+        body: |
+          Release v${{ steps.get_version.outputs.VERSION }} of ox-fast-mcp
+        files: /workspace/ox-fast-mcp-ubuntu.tar.gz
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+
     permissions:
       contents: write
     outputs:
