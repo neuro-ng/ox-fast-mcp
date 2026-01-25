@@ -1,0 +1,36 @@
+(library
+ (name smart_home_lib)
+ (libraries
+  core
+  async
+  ox_fast_mcp
+  server
+  yojson
+  ppx_yojson_conv_lib
+  cohttp-async)
+ (modules lights config thermostat phue)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))
+
+(executable
+ (name hub)
+ (public_name smart_home_hub)
+ (libraries
+  core
+  async
+  ox_fast_mcp
+  server
+  yojson
+  ppx_yojson_conv_lib
+  smart_home_lib)
+ (modules hub)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))
+
+(library
+ (name test_smart_home)
+ (modules test_smart_home)
+ (libraries core async smart_home_lib yojson ppx_yojson_conv_lib)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))

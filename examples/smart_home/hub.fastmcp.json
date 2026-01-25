@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/neuro-ng/ox-fast-mcp/main/schemas/fastmcp.v1.json",
+  "command": "dune",
+  "args": [
+    "exec",
+    "examples/smart_home/hub.exe"
+  ],
+  "environment": {
+    "env": {
+      "HUE_BRIDGE_IP": "127.0.0.1",
+      "HUE_BRIDGE_USERNAME": "102030405060708090a0b0c0d0e0f000"
+    }
+  }
+}
