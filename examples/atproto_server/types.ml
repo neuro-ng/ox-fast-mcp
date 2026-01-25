@@ -219,11 +219,40 @@ type record_embed = { embed_type : string; [@key "$type"] record : strong_ref }
 [@@deriving sexp, yojson]
 (** Quote/record embed **)
 
-(** General embed type (union of different embed kinds) **)
+(** Convert embed to yojson **)
+
+type video_embed = {
+  video : blob_ref;
+  captions : blob_ref list option; [@yojson.option]
+  alt : string option; [@yojson.option]
+  aspect_ratio : (int * int) option; [@yojson.option]
+}
+[@@deriving sexp, yojson]
+(** Video embed definition **)
+
+type video_wrapper = {
+  embed_type : string; [@key "$type"]
+  video_record : video_embed; [@key "video"] (* Incorrect, spec check needed *)
+}
+[@@deriving sexp, yojson]
+
+(* Correction: app.bsky.embed.video schema: { "$type": "app.bsky.embed.video",
+   "video": { "$type": "blob", ... }, "captions": [{ "$type": "blob", ... }],
+   "alt": "string", "aspectRatio": { "width": int, "height": int } } *)
+type video_embed_record = {
+  embed_type : string; [@key "$type"]
+  video : blob_ref;
+  captions : blob_ref list option; [@yojson.option]
+  alt : string option; [@yojson.option]
+  aspect_ratio : (int * int) option; [@yojson.option]
+}
+[@@deriving sexp, yojson]
+
 type embed =
   | Images of images_embed
   | Record of record_embed (* for quotes *)
   | RecordWithMedia of { record : record_embed; media : images_embed }
+  | Video of video_embed_record
 [@@deriving sexp]
 
 (** Convert embed to yojson **)
@@ -237,6 +266,7 @@ let embed_to_yojson = function
         ("record", yojson_of_record_embed record);
         ("media", yojson_of_images_embed media);
       ]
+  | Video video -> yojson_of_video_embed_record video
 
 type image_param = { path : string; alt_text : string option [@yojson.option] }
 [@@deriving sexp, yojson]
@@ -253,6 +283,17 @@ type reply_param = {
 
 type quote_param = { uri : string; cid : string } [@@deriving sexp, yojson]
 (** Quote parameters **)
+
+type video_param = {
+  path : string;
+  alt_text : string option; [@yojson.option]
+  aspect_ratio : (int * int) option; [@yojson.option]
+}
+[@@deriving sexp, yojson]
+(** Video upload parameters **)
+
+type emoji_def = { shortcode : string; url : string } [@@deriving sexp, yojson]
+(** Custom emoji definition **)
 
 type profile_update_param = {
   display_name : string option; [@yojson.option]

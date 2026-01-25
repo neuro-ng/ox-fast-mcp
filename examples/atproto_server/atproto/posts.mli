@@ -6,6 +6,8 @@ open Atproto_types
 val create_post :
   text:string ->
   ?images:Types.image_param list ->
+  ?video:Types.video_param ->
+  ?emojis:Types.emoji_def list ->
   ?links:Types.rich_text_link list ->
   ?mentions:Types.rich_text_mention list ->
   ?reply_to:Types.reply_param ->

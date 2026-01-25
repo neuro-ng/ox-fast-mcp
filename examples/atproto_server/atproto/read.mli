@@ -16,5 +16,12 @@ val fetch_author_feed :
   actor:string -> limit:int -> Types.author_feed_result Deferred.t
 (** Fetch posts by a specific user *)
 
+val fetch_custom_feed :
+  feed_uri:string -> limit:int -> Types.timeline_result Deferred.t
+(** Fetch a custom feed by AT URI (app.bsky.feed.getFeed) *)
+
 val fetch_post_thread : uri:string -> Types.post_thread_result Deferred.t
 (** Fetch full conversation thread for a post *)
+
+val get_post : uri:string -> Types.post_result Deferred.t
+(** Get a single post (wrapper around fetch_post_thread) *)

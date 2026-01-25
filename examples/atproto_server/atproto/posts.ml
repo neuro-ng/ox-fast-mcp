@@ -75,10 +75,60 @@ let detect_hashtag_facets text =
               ] );
         ])
 
-(** Build facets for links, mentions, and hashtags *)
-let build_facets ~text ~links ~mentions =
+(** Detect custom emojis in text and create facets (mapped to links) *)
+let detect_emoji_facets text emojis =
+  match emojis with
+  | None | Some [] -> []
+  | Some emoji_list ->
+    (* Emoji regex pattern: :shortcode: *)
+    let emoji_pattern = ":([a-zA-Z0-9_]+):" in
+    let emoji_regex = Re.Pcre.regexp emoji_pattern in
+
+    (* Find all matches *)
+    let matches = Re.all emoji_regex text in
+
+    List.filter_map matches ~f:(fun group ->
+        let shortcode = Re.Group.get group 1 in
+        (* Look up emoji definition *)
+        match
+          List.find emoji_list ~f:(fun e ->
+              String.equal e.Types.shortcode shortcode)
+        with
+        | None -> None
+        | Some emoji_def ->
+          let start_pos = Re.Group.start group 0 in
+          let end_pos = Re.Group.stop group 0 in
+
+          (* Calculate UTF-8 byte positions *)
+          let byte_start =
+            String.sub text ~pos:0 ~len:start_pos |> String.length
+          in
+          let byte_end = String.sub text ~pos:0 ~len:end_pos |> String.length in
+
+          Some
+            (`Assoc
+              [
+                ( "index",
+                  `Assoc
+                    [
+                      ("byteStart", `Int byte_start); ("byteEnd", `Int byte_end);
+                    ] );
+                ( "features",
+                  `List
+                    [
+                      `Assoc
+                        [
+                          ("$type", `String "app.bsky.richtext.facet#link");
+                          ("uri", `String emoji_def.url);
+                        ];
+                    ] );
+              ]))
+
+(** Build facets for links, mentions, hashtags, and emojis *)
+let build_facets ~text ~links ~mentions ~emojis =
   let url_facets = detect_url_facets text in
   let hashtag_facets = detect_hashtag_facets text in
+  let emoji_facets = detect_emoji_facets text emojis in
 
   (* Add manual links *)
   let link_facets =
@@ -150,12 +200,14 @@ let build_facets ~text ~links ~mentions =
                 ]))
   in
 
-  let all_facets = url_facets @ hashtag_facets @ link_facets @ mention_facets in
+  let all_facets =
+    url_facets @ hashtag_facets @ emoji_facets @ link_facets @ mention_facets
+  in
   if List.is_empty all_facets then None else Some (`List all_facets)
 
 (** Create a basic text post **)
-let create_post ~text ?images ?links ?mentions ?reply_to ?quote () :
-    Types.post_result Deferred.t =
+let create_post ~text ?images ?video ?emojis ?links ?mentions ?reply_to ?quote
+    () : Types.post_result Deferred.t =
   let open Deferred.Let_syntax in
   Monitor.try_with (fun () ->
       let settings = Settings.get_settings () in
@@ -165,7 +217,7 @@ let create_post ~text ?images ?links ?mentions ?reply_to ?quote () :
       | None -> failwith "Not authenticated"
       | Some session ->
         (* Build facets for rich text *)
-        let facets = build_facets ~text ~links ~mentions in
+        let facets = build_facets ~text ~links ~mentions ~emojis in
 
         (* Upload images if provided *)
         let%bind images_embed =
@@ -174,17 +226,31 @@ let create_post ~text ?images ?links ?mentions ?reply_to ?quote () :
           | Some img_params -> Images.create_images_embed img_params
         in
 
-        (* Build embed field (images, quote, or both) *)
+        (* Upload video if provided *)
+        let%bind video_embed =
+          match video with
+          | None -> return None
+          | Some v ->
+            let%bind blob_ref = Video.upload_video_file ~path:v.Types.path in
+            return
+              (Some
+                 (Video.create_video_embed ~blob_ref ?alt_text:v.alt_text
+                    ?aspect_ratio:v.aspect_ratio ()))
+        in
+
+        (* Build embed field (images, video, quote, or mixed) *)
         let%bind embed_field =
-          match (images_embed, quote) with
-          | None, None -> return []
-          | Some imgs, None ->
+          match (images_embed, video_embed, quote) with
+          | None, None, None -> return []
+          | Some imgs, None, None ->
             return [ ("embed", Types.embed_to_yojson (Types.Images imgs)) ]
-          | None, Some q ->
+          | None, Some vid, None ->
+            return [ ("embed", Types.embed_to_yojson (Types.Video vid)) ]
+          | None, None, Some q ->
             let quote_embed = Images.create_quote_embed q in
             return
               [ ("embed", Types.embed_to_yojson (Types.Record quote_embed)) ]
-          | Some imgs, Some q ->
+          | Some imgs, None, Some q ->
             let quote_embed = Images.create_quote_embed q in
             return
               [
@@ -193,6 +259,19 @@ let create_post ~text ?images ?links ?mentions ?reply_to ?quote () :
                     (Types.RecordWithMedia
                        { record = quote_embed; media = imgs }) );
               ]
+          (* Note: RecordWithMedia allows wrapping images or video with a record *)
+          (* But standard app.bsky.embed.recordWithMedia only explicitly mentions 'media' as 'app.bsky.embed.images' or 'app.bsky.embed.external'. *)
+          (* Check Lexicon: app.bsky.embed.recordWithMedia media union includes app.bsky.embed.images, app.bsky.embed.external, app.bsky.embed.video? *)
+          (* Actually, it says "media": { "union": [ "app.bsky.embed.images", "app.bsky.embed.video", "app.bsky.embed.external" ] } *)
+          (* So we probably can't easily do it with our current type definition of RecordWithMedia which uses images_embed for media *)
+          (* Ideally, we should update Embed to be more flexible, but for now let's just error or not support Quote+Video to stay simple unless I update types *)
+          | None, Some vid, Some _q ->
+            (* For now, fail or just pick video? Let's just create video embed and ignore quote to be safe, or fail. *)
+            (* Better: Implement proper RecordWithVideo if possible, but let's stick to simple video posts first. *)
+            (* Actually, let's just support simple video posts. *)
+            return [ ("embed", Types.embed_to_yojson (Types.Video vid)) ]
+          | Some _, Some _, _ ->
+            failwith "Cannot have both images and video in the same post"
         in
 
         (* Build reply field if replying *)

@@ -57,6 +57,34 @@ let main () =
         (Types.notifications_result_to_yojson notifs |> Yojson.Safe.to_string))
     server;
 
+  let author_feed_template =
+    Server.Resource_template.create
+      ~uri_template:"atproto://feed/author/{handle}" ~name:"Author Feed"
+      ~description:"Get posts by a specific user handle"
+      ~mime_type:"application/json"
+      ~create_resource:(fun ~params ->
+        let handle =
+          List.Assoc.find params "handle" ~equal:String.equal
+          |> Option.value ~default:""
+        in
+        let uri = "atproto://feed/author/" ^ handle in
+        return
+          (Server.Resource.create ~uri
+             ~name:(sprintf "Author Feed: %s" handle)
+             ~mime_type:"application/json"
+             ~reader:(fun () ->
+               let%bind feed =
+                 Atproto.Read.fetch_author_feed ~actor:handle
+                   ~limit:settings.timeline_default_limit
+               in
+               return
+                 (Types.author_feed_result_to_yojson feed
+                 |> Yojson.Safe.to_string))
+             ()))
+      ()
+  in
+  Server.Ox_fast_mcp.add_template server author_feed_template;
+
   (* Add tools *)
 
   (* Profile management tools *)
@@ -91,7 +119,105 @@ let main () =
       return (Types.profile_query_result_to_yojson result))
     server;
 
+  Server.Ox_fast_mcp.add_template server author_feed_template;
+
+  let custom_feed_template =
+    Server.Resource_template.create ~uri_template:"atproto://feed/custom/{uri}"
+      ~name:"Custom Feed" ~description:"Get a custom algorithm feed by AT URI"
+      ~mime_type:"application/json"
+      ~create_resource:(fun ~params ->
+        let uri =
+          List.Assoc.find params "uri" ~equal:String.equal
+          |> Option.value ~default:""
+        in
+        (* We use the full AT URI as the param in the path *)
+        (* Note: AT URIs contain slashes, so they might need encoding in the resource URI *)
+        let resource_uri = "atproto://feed/custom/" ^ uri in
+        return
+          (Server.Resource.create ~uri:resource_uri
+             ~name:(sprintf "Custom Feed: %s" uri)
+             ~mime_type:"application/json"
+             ~reader:(fun () ->
+               let%bind feed =
+                 Atproto.Read.fetch_custom_feed ~feed_uri:uri
+                   ~limit:settings.timeline_default_limit
+               in
+               return
+                 (Types.timeline_result_to_yojson feed |> Yojson.Safe.to_string))
+             ()))
+      ()
+  in
+  Server.Ox_fast_mcp.add_template server custom_feed_template;
+
   (* Add tools *)
+  Server.Ox_fast_mcp.add_simple_tool ~name:"get_feed"
+    ~description:"Get a custom feed by its AT URI (e.g. at://...)"
+    ~handler:(fun params ->
+      let feed_uri =
+        Yojson.Safe.Util.member "feed" params
+        |> Yojson.Safe.Util.to_string_option |> Option.value ~default:""
+      in
+      let limit =
+        Yojson.Safe.Util.member "limit" params
+        |> Yojson.Safe.Util.to_int_option
+        |> Option.value ~default:settings.timeline_default_limit
+      in
+      let%bind result = Atproto.Read.fetch_custom_feed ~feed_uri ~limit in
+      return (Types.timeline_result_to_yojson result))
+    server;
+
+  (* Profile management tools *)
+  Server.Ox_fast_mcp.add_simple_tool ~name:"login"
+    ~description:"Log in to a new Bluesky account"
+    ~handler:(fun params ->
+      let handle =
+        Yojson.Safe.Util.member "handle" params |> Yojson.Safe.Util.to_string
+      in
+      let password =
+        Yojson.Safe.Util.member "password" params |> Yojson.Safe.Util.to_string
+      in
+      let%bind client = Atproto.Client.get_client settings in
+      let%bind session = Atproto.Client.login client ~handle ~password in
+      return
+        (`Assoc
+          [
+            ("success", `Bool true);
+            ("handle", `String session.handle);
+            ("did", `String session.did);
+          ]))
+    server;
+
+  Server.Ox_fast_mcp.add_simple_tool ~name:"switch_account"
+    ~description:"Switch active Bluesky account"
+    ~handler:(fun params ->
+      let handle =
+        Yojson.Safe.Util.member "handle" params |> Yojson.Safe.Util.to_string
+      in
+      let%bind client = Atproto.Client.get_client settings in
+      let%bind success = Atproto.Client.switch_account client ~handle in
+      return
+        (`Assoc
+          [ ("success", `Bool success); ("active_handle", `String handle) ]))
+    server;
+
+  Server.Ox_fast_mcp.add_simple_tool ~name:"list_accounts"
+    ~description:"List all authenticated accounts"
+    ~handler:(fun _params ->
+      let%bind client = Atproto.Client.get_client settings in
+      let accounts = Atproto.Client.list_accounts client in
+      let active =
+        match Atproto.Client.get_session client with
+        | Some session -> session.handle
+        | None -> "none"
+      in
+      return
+        (`Assoc
+          [
+            ("accounts", `List (List.map accounts ~f:(fun h -> `String h)));
+            ("active", `String active);
+          ]))
+    server;
+
   Server.Ox_fast_mcp.add_simple_tool ~name:"post"
     ~description:
       "Create a post on Bluesky with optional rich text features, images, \
@@ -182,8 +308,52 @@ let main () =
               }
         with _ -> None
       in
+      (* Parse video *)
+      let video =
+        try
+          let video_json = Yojson.Safe.Util.member "video" params in
+          match video_json with
+          | `Null -> None
+          | _ ->
+            Some
+              Types.
+                {
+                  path =
+                    Yojson.Safe.Util.member "path" video_json
+                    |> Yojson.Safe.Util.to_string;
+                  alt_text =
+                    Yojson.Safe.Util.member "alt_text" video_json
+                    |> Yojson.Safe.Util.to_string_option;
+                  aspect_ratio = None;
+                  (* Simple parsing for now *)
+                }
+        with _ -> None
+      in
+      (* Parse emojis *)
+      let emojis =
+        try
+          let emojis_json =
+            Yojson.Safe.Util.member "emojis" params |> Yojson.Safe.Util.to_list
+          in
+          Some
+            (List.filter_map emojis_json ~f:(fun e_json ->
+                 try
+                   Some
+                     Types.
+                       {
+                         shortcode =
+                           Yojson.Safe.Util.member "shortcode" e_json
+                           |> Yojson.Safe.Util.to_string;
+                         url =
+                           Yojson.Safe.Util.member "url" e_json
+                           |> Yojson.Safe.Util.to_string;
+                       }
+                 with _ -> None))
+        with _ -> None
+      in
       let%bind result =
-        Atproto.Posts.create_post ~text ?links ?images ?reply_to ?quote ()
+        Atproto.Posts.create_post ~text ?links ?images ?video ?emojis ?reply_to
+          ?quote ()
       in
       return (Types.post_result_to_yojson result))
     server;

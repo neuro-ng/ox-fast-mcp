@@ -22,6 +22,12 @@ val create : base_url:string -> t
 val login : t -> handle:string -> password:string -> session Deferred.t
 (** Authenticate and create a session *)
 
+val switch_account : t -> handle:string -> bool Deferred.t
+(** Switch the active account by handle. Returns true if successful. *)
+
+val list_accounts : t -> string list
+(** List all authenticated account handles *)
+
 val api_get : t -> endpoint:string -> string Deferred.t
 (** Make an authenticated GET request to an AT Protocol endpoint *)
 
