@@ -2,6 +2,7 @@ open! Core
 open! Async
 open Cohttp_async
 open Fastmcp_config_lib
+
 [@@@alert "-unsafe_multidomain"]
 
 let config_json =
