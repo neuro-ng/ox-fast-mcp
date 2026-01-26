@@ -1,0 +1,22 @@
+(library
+ (name complex_inputs_lib)
+ (libraries core async ox_fast_mcp server yojson ppx_yojson_conv_lib)
+ (modules shrimp_server)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))
+
+(executable
+ (name main)
+ (public_name complex_inputs_demo)
+ (libraries core async complex_inputs_lib)
+ (modules main)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))
+
+(library
+ (name test_complex_inputs)
+ (modules test_complex_inputs)
+ (libraries core async complex_inputs_lib ox_fast_mcp server yojson)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv ppx_expect)))

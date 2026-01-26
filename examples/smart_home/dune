@@ -27,10 +27,31 @@
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))
 
-(library
+(executable
  (name test_smart_home)
  (modules test_smart_home)
- (libraries core async smart_home_lib yojson ppx_yojson_conv_lib)
- (inline_tests)
+ (libraries
+  core
+  async
+  smart_home_lib
+  yojson
+  ppx_yojson_conv_lib
+  ppx_inline_test.runner.lib)
  (preprocess
-  (pps ppx_jane ppx_yojson_conv)))
+  (pps
+   ppx_jane
+   ppx_yojson_conv
+   ppx_expect
+   --
+   -inline-test-lib
+   test_smart_home)))
+
+(rule
+ (alias runtest)
+ (deps test_config.json)
+ (action
+  (run
+   ./run_with_docker.sh
+   %{exe:test_smart_home.exe}
+   inline-test-runner
+   test_smart_home)))

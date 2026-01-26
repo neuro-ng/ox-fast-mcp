@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/neuro-ng/ox-fast-mcp/main/schemas/fastmcp.v1.json",
+  "command": "dune",
+  "args": [
+    "exec",
+    "examples/fastmcp_config/main.exe"
+  ],
+  "deployment": {
+    "transport": "stdio"
+  }
+}

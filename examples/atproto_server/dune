@@ -22,3 +22,21 @@
   uri)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))
+
+(executable
+ (name test_atproto_types)
+ (modules test_atproto_types)
+ (libraries core atproto_types yojson ppx_inline_test.runner.lib)
+ (preprocess
+  (pps
+   ppx_jane
+   ppx_yojson_conv
+   ppx_expect
+   --
+   -inline-test-lib
+   test_atproto_types)))
+
+(rule
+ (alias runtest)
+ (action
+  (run %{exe:test_atproto_types.exe} inline-test-runner test_atproto_types)))

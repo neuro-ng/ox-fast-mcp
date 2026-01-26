@@ -1,0 +1,7 @@
+(executable
+ (name main)
+ (public_name fastmcp_config_demo)
+ (package ox-fast-mcp)
+ (libraries core async re ox-fast-mcp ox-fast-mcp.server fastmcp_config_lib)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))

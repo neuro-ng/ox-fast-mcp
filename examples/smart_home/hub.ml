@@ -11,10 +11,13 @@ let hub_mcp = FastMCP.create ~name:"Smart Home Hub (phue2)" ()
 
 (* Mount the lights service under the 'hue' prefix *)
 let () =
-  FastMCP.import_server hub_mcp ~server:Smart_home_lib.Lights.lights_mcp ~prefix:"hue" ()
+  FastMCP.import_server hub_mcp ~server:Smart_home_lib.Lights.lights_mcp
+    ~prefix:"hue" ()
 
 (* Mount the thermostat service under the 'thermo' prefix *)
-let () = FastMCP.import_server hub_mcp ~server:Smart_home_lib.Thermostat.thermostat_mcp ~prefix:"thermo" ()
+let () =
+  FastMCP.import_server hub_mcp ~server:Smart_home_lib.Thermostat.thermostat_mcp
+    ~prefix:"thermo" ()
 
 (* Tool: hub_status *)
 let () =
@@ -23,7 +26,8 @@ let () =
     ~handler:(fun _ ->
       try
         let client =
-          Smart_home_lib.Phue.create ~ip:Smart_home_lib.Config.config.hue_bridge_ip
+          Smart_home_lib.Phue.create
+            ~ip:Smart_home_lib.Config.config.hue_bridge_ip
             ~username:Smart_home_lib.Config.config.hue_bridge_username
         in
         (* Try to get simple resource to verify connection *)

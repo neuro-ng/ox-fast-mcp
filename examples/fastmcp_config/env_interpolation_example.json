@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/neuro-ng/ox-fast-mcp/main/schemas/fastmcp.v1.json",
+  "command": "dune",
+  "args": [
+    "exec",
+    "examples/fastmcp_config/main.exe"
+  ],
+  "deployment": {
+    "transport": "http",
+    "host": "0.0.0.0",
+    "port": 8000,
+    "env": {
+      "API_BASE_URL": "https://api.${ENVIRONMENT}.example.com",
+      "DATABASE_URL": "postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}",
+      "CACHE_PREFIX": "myapp_${ENVIRONMENT}_v1",
+      "LOG_LEVEL": "${LOG_LEVEL}",
+      "FEATURE_FLAGS": "${FEATURE_FLAGS}"
+    }
+  }
+}
