@@ -1,0 +1,15 @@
+(executables
+ (names authkit_server authkit_client)
+ (libraries
+  ox-fast-mcp.server
+  ox-fast-mcp.client
+  ox-fast-mcp.server.auth.providers
+  core
+  async
+  lwt
+  cohttp-async
+  jose
+  uri
+  yojson)
+ (preprocess
+  (pps ppx_jane)))

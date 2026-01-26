@@ -5,7 +5,7 @@ open Async
 (* Hub MCP                                                                    *)
 (* -------------------------------------------------------------------------- *)
 
-module FastMCP = Server.Ox_fast_mcp
+module FastMCP = Ox_fast_mcp_server.Server.Ox_fast_mcp
 
 let hub_mcp = FastMCP.create ~name:"Smart Home Hub (phue2)" ()
 
@@ -47,16 +47,16 @@ let () =
 let () =
   let transport =
     match Sys.getenv "FASTMCP_TRANSPORT" with
-    | Some "http" -> Server.Transport.Http
-    | Some "sse" -> Server.Transport.Sse
-    | _ -> Server.Transport.Stdio
+    | Some "http" -> Ox_fast_mcp_server.Server.Transport.Http
+    | Some "sse" -> Ox_fast_mcp_server.Server.Transport.Sse
+    | _ -> Ox_fast_mcp_server.Server.Transport.Stdio
   in
   let port =
     match Sys.getenv "FASTMCP_PORT" with
     | Some p -> Int.of_string p
     | None -> 8000
   in
-  Server.Ox_fast_mcp.run_async ~transport ~port hub_mcp ~log_level:"INFO"
-    () (* Optional: add logging for visibility *)
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.run_async ~transport ~port hub_mcp
+    ~log_level:"INFO" () (* Optional: add logging for visibility *)
   |> don't_wait_for;
   never_returns (Scheduler.go ())

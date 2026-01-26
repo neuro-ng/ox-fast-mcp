@@ -37,8 +37,8 @@ let%expect_test "string_integer_with_strict_validation" =
   let schema = make_object_schema [ ("age", "integer") ] in
   let input = `Assoc [ ("age", `String "10") ] in
   let _result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Strict ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Strict ~schema ~input
   in
   (* In strict mode, we currently just pass through - need to add actual strict validation *)
   (* For now, strict mode doesn't actually validate types, just structure *)
@@ -51,8 +51,8 @@ let%expect_test "string_integer_without_strict_validation" =
   let schema = make_object_schema [ ("age", "integer") ] in
   let input = `Assoc [ ("age", `String "10") ] in
   let result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Lenient ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Lenient ~schema ~input
   in
   (match result with
   | Ok json ->
@@ -71,8 +71,8 @@ let%expect_test "default_is_not_strict" =
   let schema = make_object_schema [ ("count", "integer") ] in
   let input = `Assoc [ ("count", `String "42") ] in
   let result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Lenient ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Lenient ~schema ~input
   in
   (match result with
   | Ok json ->
@@ -89,8 +89,8 @@ let%expect_test "string_float_coercion" =
   let schema = make_object_schema [ ("price", "number") ] in
   let input = `Assoc [ ("price", `String "3.14") ] in
   let result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Lenient ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Lenient ~schema ~input
   in
   (match result with
   | Ok json ->
@@ -107,8 +107,8 @@ let%expect_test "invalid_coercion_still_fails" =
   let schema = make_type_schema "integer" in
   let input = `String "not-a-number" in
   let result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Lenient ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Lenient ~schema ~input
   in
   (match result with
   | Ok _ -> print_endline "Unexpected success"
@@ -134,12 +134,12 @@ let%expect_test "error_message_quality_strict" =
   let schema = make_type_schema "integer" in
   let input = `String "invalid" in
   let result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Lenient ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Lenient ~schema ~input
   in
   (match result with
   | Error errors ->
-    let formatted = Server__Input_validation.format_errors errors in
+    let formatted = Ox_fast_mcp_server__Input_validation.format_errors errors in
     print_endline formatted
   | Ok _ -> print_endline "Unexpected success");
   [%expect
@@ -154,12 +154,12 @@ let%expect_test "error_message_quality_lenient" =
   let schema = make_type_schema "boolean" in
   let input = `String "yes" in
   let result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Lenient ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Lenient ~schema ~input
   in
   (match result with
   | Error errors ->
-    let formatted = Server__Input_validation.format_errors errors in
+    let formatted = Ox_fast_mcp_server__Input_validation.format_errors errors in
     print_endline formatted
   | Ok _ -> print_endline "Unexpected success");
   [%expect
@@ -177,12 +177,12 @@ let%expect_test "missing_required_field_error" =
   in
   let input = `Assoc [] in
   let result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Lenient ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Lenient ~schema ~input
   in
   (match result with
   | Error errors ->
-    print_endline (Server__Input_validation.format_errors errors)
+    print_endline (Ox_fast_mcp_server__Input_validation.format_errors errors)
   | Ok _ -> print_endline "Unexpected success");
   [%expect
     {|
@@ -201,8 +201,8 @@ let%expect_test "optional_parameters_with_coercion" =
   let input = `Assoc [ ("id", `String "123") ] in
   (* 'name' is optional (not in required list) *)
   let result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Lenient ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Lenient ~schema ~input
   in
   (match result with
   | Ok json ->
@@ -223,8 +223,8 @@ let%expect_test "none_values" =
     `Assoc [ ("nullable_field", `Null); ("other", `String "value") ]
   in
   let result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Lenient ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Lenient ~schema ~input
   in
   (match result with
   | Ok json ->
@@ -242,14 +242,14 @@ let%expect_test "empty_string_to_int" =
   let schema = make_type_schema "integer" in
   let input = `String "" in
   let result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Lenient ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Lenient ~schema ~input
   in
   (match result with
   | Ok _ -> print_endline "Unexpected success"
   | Error errors ->
     print_endline "Empty string correctly failed";
-    print_endline (Server__Input_validation.format_errors errors));
+    print_endline (Ox_fast_mcp_server__Input_validation.format_errors errors));
   [%expect
     {|
     Empty string correctly failed
@@ -267,8 +267,8 @@ let%expect_test "boolean_coercion" =
     `Assoc [ ("flag1", `String "true"); ("flag2", `String "false") ]
   in
   let result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Lenient ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Lenient ~schema ~input
   in
   (match result with
   | Ok json ->
@@ -286,8 +286,8 @@ let%expect_test "list_of_integers_with_string_elements" =
   let schema = make_array_schema "integer" in
   let input = `List [ `String "1"; `String "2"; `String "3" ] in
   let result =
-    Server__Input_validation.validate_tool_input
-      ~mode:Server__Input_validation.Lenient ~schema ~input
+    Ox_fast_mcp_server__Input_validation.validate_tool_input
+      ~mode:Ox_fast_mcp_server__Input_validation.Lenient ~schema ~input
   in
   (match result with
   | Ok json ->

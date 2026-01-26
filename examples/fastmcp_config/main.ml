@@ -6,11 +6,14 @@ let main () =
   let open Deferred.Let_syntax in
   (* Create the FastMCP server instance *)
   (* Python: mcp = FastMCP("Config Example Server") *)
-  let server = Server.Ox_fast_mcp.create ~name:"Config Example Server" () in
+  let server =
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.create ~name:"Config Example Server"
+      ()
+  in
 
   (* Python: @mcp.tool def echo(text: str) -> str: """Echo the provided text
      back to the user.""" return f"You said: {text}" *)
-  Server.Ox_fast_mcp.add_simple_tool ~name:"echo"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"echo"
     ~description:"Echo the provided text back to the user."
     ~parameters:
       (`Assoc
@@ -47,7 +50,7 @@ let main () =
 
   (* Python: @mcp.tool def add(a: int, b: int) -> int: """Add two numbers
      together.""" return a + b *)
-  Server.Ox_fast_mcp.add_simple_tool ~name:"add"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"add"
     ~description:"Add two numbers together."
     ~parameters:
       (`Assoc
@@ -112,11 +115,11 @@ let main () =
     | None -> "Failed to load configuration or no configuration found."
   in
   let resource =
-    Server.Resource.create ~uri:"config://example" ~name:"example_config"
-      ~description:"Return an example configuration." ~mime_type:"text/plain"
-      ~reader ()
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"config://example"
+      ~name:"example_config" ~description:"Return an example configuration."
+      ~mime_type:"text/plain" ~reader ()
   in
-  Server.Ox_fast_mcp.add_resource server resource;
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_resource server resource;
 
   (* Load and apply config to process *)
   let%bind config = Config.load ~path:"env_interpolation_example.json" () in
@@ -126,7 +129,7 @@ let main () =
 
   (* Run with STDIO transport *)
   (* Python: asyncio.run(mcp.run_async()) *)
-  Server.Ox_fast_mcp.run_async server ~transport:Stdio ()
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.run_async server ~transport:Stdio ()
 
 let () =
   Command.async ~summary:"Config Example Server" (Command.Param.return main)

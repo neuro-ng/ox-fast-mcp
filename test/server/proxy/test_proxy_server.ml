@@ -46,7 +46,9 @@ let%expect_test "Proxy_tool.from_mcp_tool - parses basic tool" =
             ] );
       ]
   in
-  let tool = Server__Proxy.Proxy_tool.from_mcp_tool ~client:() mcp_tool in
+  let tool =
+    Ox_fast_mcp_server__Proxy.Proxy_tool.from_mcp_tool ~client:() mcp_tool
+  in
   printf "name: %s\n" tool.name;
   printf "description: %s\n" (Option.value tool.description ~default:"none");
   printf "has_parameters: %b\n"
@@ -70,7 +72,9 @@ let%expect_test "Proxy_tool.from_mcp_tool - parses tool without description" =
         ("inputSchema", `Assoc [ ("type", `String "object") ]);
       ]
   in
-  let tool = Server__Proxy.Proxy_tool.from_mcp_tool ~client:() mcp_tool in
+  let tool =
+    Ox_fast_mcp_server__Proxy.Proxy_tool.from_mcp_tool ~client:() mcp_tool
+  in
   printf "name: %s\n" tool.name;
   printf "has_description: %b\n" (Option.is_some tool.description);
   [%expect
@@ -91,7 +95,9 @@ let%expect_test "Proxy_tool.from_mcp_tool - parses tool with tags in meta" =
             [ ("_fastmcp", `Assoc [ ("tags", `List [ `String "greet" ]) ]) ] );
       ]
   in
-  let tool = Server__Proxy.Proxy_tool.from_mcp_tool ~client:() mcp_tool in
+  let tool =
+    Ox_fast_mcp_server__Proxy.Proxy_tool.from_mcp_tool ~client:() mcp_tool
+  in
   printf "name: %s\n" tool.name;
   printf "tag_count: %d\n" (List.length tool.tags);
   printf "has_greet_tag: %b\n" (List.mem tool.tags "greet" ~equal:String.equal);
@@ -109,7 +115,9 @@ let%expect_test "Proxy_tool.from_mcp_tool - meta structure preserved" =
     `Assoc
       [ ("name", `String "greet"); ("inputSchema", `Assoc []); ("meta", meta) ]
   in
-  let tool = Server__Proxy.Proxy_tool.from_mcp_tool ~client:() mcp_tool in
+  let tool =
+    Ox_fast_mcp_server__Proxy.Proxy_tool.from_mcp_tool ~client:() mcp_tool
+  in
   printf "has_meta: %b\n" (Option.is_some tool.meta);
   (match tool.meta with
   | Some m -> printf "meta_matches: %b\n" (Yojson.Safe.equal m meta)
@@ -128,7 +136,9 @@ let%expect_test "Proxy_tool.from_mcp_tool - parses annotations" =
         ("annotations", `Assoc [ ("deprecated", `Bool true) ]);
       ]
   in
-  let tool = Server__Proxy.Proxy_tool.from_mcp_tool ~client:() mcp_tool in
+  let tool =
+    Ox_fast_mcp_server__Proxy.Proxy_tool.from_mcp_tool ~client:() mcp_tool
+  in
   printf "has_annotations: %b\n" (Option.is_some tool.annotations);
   [%expect {| has_annotations: true |}]
 
@@ -141,7 +151,9 @@ let%expect_test "Proxy_tool.from_mcp_tool - parses output_schema" =
         ("outputSchema", `Assoc [ ("type", `String "string") ]);
       ]
   in
-  let tool = Server__Proxy.Proxy_tool.from_mcp_tool ~client:() mcp_tool in
+  let tool =
+    Ox_fast_mcp_server__Proxy.Proxy_tool.from_mcp_tool ~client:() mcp_tool
+  in
   printf "has_output_schema: %b\n" (Option.is_some tool.output_schema);
   [%expect {| has_output_schema: true |}]
 
@@ -151,7 +163,7 @@ let%expect_test "Proxy_tool.from_mcp_tool - parses output_schema" =
 
 let%expect_test "Proxy_tool.create - with all options" =
   let tool =
-    Server__Proxy.Proxy_tool.create ~client:() ~name:"my_tool"
+    Ox_fast_mcp_server__Proxy.Proxy_tool.create ~client:() ~name:"my_tool"
       ~description:"A test tool"
       ~parameters:(`Assoc [ ("type", `String "object") ])
       ~annotations:(`Assoc [ ("experimental", `Bool true) ])
@@ -186,7 +198,8 @@ let%expect_test "Proxy_resource.from_mcp_resource - parses basic resource" =
       ]
   in
   let resource =
-    Server__Proxy.Proxy_resource.from_mcp_resource ~client:() mcp_resource
+    Ox_fast_mcp_server__Proxy.Proxy_resource.from_mcp_resource ~client:()
+      mcp_resource
   in
   printf "uri: %s\n" resource.uri;
   printf "name: %s\n" resource.name;
@@ -207,7 +220,8 @@ let%expect_test "Proxy_resource.from_mcp_resource - default mime type" =
     `Assoc [ ("uri", `String "resource://test"); ("name", `String "test") ]
   in
   let resource =
-    Server__Proxy.Proxy_resource.from_mcp_resource ~client:() mcp_resource
+    Ox_fast_mcp_server__Proxy.Proxy_resource.from_mcp_resource ~client:()
+      mcp_resource
   in
   printf "mime_type: %s\n" resource.mime_type;
   [%expect {| mime_type: text/plain |}]
@@ -224,7 +238,8 @@ let%expect_test "Proxy_resource.from_mcp_resource - parses tags from meta" =
       ]
   in
   let resource =
-    Server__Proxy.Proxy_resource.from_mcp_resource ~client:() mcp_resource
+    Ox_fast_mcp_server__Proxy.Proxy_resource.from_mcp_resource ~client:()
+      mcp_resource
   in
   printf "tag_count: %d\n" (List.length resource.tags);
   printf "has_wave_tag: %b\n"
@@ -249,7 +264,8 @@ let%expect_test "Proxy_template.from_mcp_template - parses template" =
       ]
   in
   let template =
-    Server__Proxy.Proxy_template.from_mcp_template ~client:() mcp_template
+    Ox_fast_mcp_server__Proxy.Proxy_template.from_mcp_template ~client:()
+      mcp_template
   in
   printf "uri_template: %s\n" template.uri_template;
   printf "name: %s\n" template.name;
@@ -277,7 +293,8 @@ let%expect_test "Proxy_template.from_mcp_template - parses tags from meta" =
       ]
   in
   let template =
-    Server__Proxy.Proxy_template.from_mcp_template ~client:() mcp_template
+    Ox_fast_mcp_server__Proxy.Proxy_template.from_mcp_template ~client:()
+      mcp_template
   in
   printf "tag_count: %d\n" (List.length template.tags);
   printf "has_users_tag: %b\n"
@@ -310,7 +327,7 @@ let%expect_test "Proxy_prompt.from_mcp_prompt - parses prompt" =
       ]
   in
   let prompt =
-    Server__Proxy.Proxy_prompt.from_mcp_prompt ~client:() mcp_prompt
+    Ox_fast_mcp_server__Proxy.Proxy_prompt.from_mcp_prompt ~client:() mcp_prompt
   in
   printf "name: %s\n" prompt.name;
   printf "description: %s\n" (Option.value prompt.description ~default:"none");
@@ -348,7 +365,7 @@ let%expect_test "Proxy_prompt.from_mcp_prompt - parses argument details" =
       ]
   in
   let prompt =
-    Server__Proxy.Proxy_prompt.from_mcp_prompt ~client:() mcp_prompt
+    Ox_fast_mcp_server__Proxy.Proxy_prompt.from_mcp_prompt ~client:() mcp_prompt
   in
   printf "argument_count: %d\n" (List.length prompt.arguments);
   List.iter prompt.arguments ~f:(fun arg ->
@@ -372,7 +389,7 @@ let%expect_test "Proxy_prompt.from_mcp_prompt - parses tags from meta" =
       ]
   in
   let prompt =
-    Server__Proxy.Proxy_prompt.from_mcp_prompt ~client:() mcp_prompt
+    Ox_fast_mcp_server__Proxy.Proxy_prompt.from_mcp_prompt ~client:() mcp_prompt
   in
   printf "tag_count: %d\n" (List.length prompt.tags);
   printf "has_welcome_tag: %b\n"
@@ -389,7 +406,8 @@ let%expect_test "Proxy_prompt.from_mcp_prompt - parses tags from meta" =
 let%expect_test "Ox_fast_mcp_proxy.create - creates proxy server" =
   let client_factory () = Async.return () in
   let proxy =
-    Server__Proxy.Ox_fast_mcp_proxy.create ~name:"TestProxy" ~client_factory ()
+    Ox_fast_mcp_server__Proxy.Ox_fast_mcp_proxy.create ~name:"TestProxy"
+      ~client_factory ()
   in
   printf "name: %s\n" proxy.name;
   [%expect {| name: TestProxy |}]
@@ -402,8 +420,8 @@ let%expect_test "Ox_fast_mcp_proxy.create - with transformations" =
     | x -> x
   in
   let proxy =
-    Server__Proxy.Ox_fast_mcp_proxy.create ~name:"TestProxy" ~client_factory
-      ~transformations:[ transform ] ()
+    Ox_fast_mcp_server__Proxy.Ox_fast_mcp_proxy.create ~name:"TestProxy"
+      ~client_factory ~transformations:[ transform ] ()
   in
   printf "proxy_created: true\n";
   let _ = proxy in
@@ -415,7 +433,9 @@ let%expect_test "Ox_fast_mcp_proxy.create - with transformations" =
 
 let%expect_test "Proxy_tool_manager.create - initializes manager" =
   let client_factory () = Async.return () in
-  let manager = Server__Proxy.Proxy_tool_manager.create ~client_factory () in
+  let manager =
+    Ox_fast_mcp_server__Proxy.Proxy_tool_manager.create ~client_factory ()
+  in
   printf "manager_created: true\n";
   let _ = manager in
   [%expect {| manager_created: true |}]
@@ -423,7 +443,7 @@ let%expect_test "Proxy_tool_manager.create - initializes manager" =
 let%expect_test "Proxy_resource_manager.create - initializes manager" =
   let client_factory () = Async.return () in
   let manager =
-    Server__Proxy.Proxy_resource_manager.create ~client_factory ()
+    Ox_fast_mcp_server__Proxy.Proxy_resource_manager.create ~client_factory ()
   in
   printf "manager_created: true\n";
   let _ = manager in
@@ -431,7 +451,9 @@ let%expect_test "Proxy_resource_manager.create - initializes manager" =
 
 let%expect_test "Proxy_prompt_manager.create - initializes manager" =
   let client_factory () = Async.return () in
-  let manager = Server__Proxy.Proxy_prompt_manager.create ~client_factory () in
+  let manager =
+    Ox_fast_mcp_server__Proxy.Proxy_prompt_manager.create ~client_factory ()
+  in
   printf "manager_created: true\n";
   let _ = manager in
   [%expect {| manager_created: true |}]

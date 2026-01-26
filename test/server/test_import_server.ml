@@ -5,13 +5,14 @@ open Async
 
 let%expect_test "import_basic_functionality" =
   (* Test that import_server properly imports tools, resources, and prompts *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let sub_server = create ~name:"sub" () in
 
   (* Add a tool to sub_server *)
   let sub_tool =
-    Server.Tool.create ~name:"test_tool" ~description:"A test tool"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"test_tool"
+      ~description:"A test tool"
       ~handler:(fun _args -> return (`String "tool result"))
       ()
   in
@@ -19,7 +20,8 @@ let%expect_test "import_basic_functionality" =
 
   (* Add a resource to sub_server *)
   let sub_resource =
-    Server.Resource.create ~uri:"file://test.txt" ~name:"Test Resource"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"file://test.txt"
+      ~name:"Test Resource"
       ~reader:(fun () -> return "resource content")
       ()
   in
@@ -27,7 +29,8 @@ let%expect_test "import_basic_functionality" =
 
   (* Add a prompt to sub_server *)
   let sub_prompt =
-    Server.Prompt.create ~name:"test_prompt" ~description:"A test prompt"
+    Ox_fast_mcp_server.Server.Prompt.create ~name:"test_prompt"
+      ~description:"A test prompt"
       ~render:(fun _args -> return (`Assoc [ ("prompt", `String "rendered") ]))
       ()
   in
@@ -63,14 +66,14 @@ let%expect_test "import_basic_functionality" =
 
 let%expect_test "import_multiple_apps" =
   (* Test importing multiple apps to a main app *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_app = create ~name:"main" () in
   let weather_app = create ~name:"weather" () in
   let news_app = create ~name:"news" () in
 
   (* Add tool to weather_app *)
   let weather_tool =
-    Server.Tool.create ~name:"get_forecast"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"get_forecast"
       ~handler:(fun _args -> return (`String "Weather forecast"))
       ()
   in
@@ -78,7 +81,7 @@ let%expect_test "import_multiple_apps" =
 
   (* Add tool to news_app *)
   let news_tool =
-    Server.Tool.create ~name:"get_headlines"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"get_headlines"
       ~handler:(fun _args -> return (`String "News headlines"))
       ()
   in
@@ -103,14 +106,14 @@ let%expect_test "import_multiple_apps" =
 
 let%expect_test "import_combines_tools" =
   (* Test that importing multiple servers combines their tools *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let server1 = create ~name:"server1" () in
   let server2 = create ~name:"server2" () in
 
   (* Add tool to main server *)
   let main_tool =
-    Server.Tool.create ~name:"main_tool"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"main_tool"
       ~handler:(fun _args -> return (`String "Main tool"))
       ()
   in
@@ -118,7 +121,7 @@ let%expect_test "import_combines_tools" =
 
   (* Add tool to server1 *)
   let tool1 =
-    Server.Tool.create ~name:"tool1"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"tool1"
       ~handler:(fun _args -> return (`String "Tool 1"))
       ()
   in
@@ -126,7 +129,7 @@ let%expect_test "import_combines_tools" =
 
   (* Add tool to server2 *)
   let tool2 =
-    Server.Tool.create ~name:"tool2"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"tool2"
       ~handler:(fun _args -> return (`String "Tool 2"))
       ()
   in
@@ -159,20 +162,21 @@ let%expect_test "import_combines_tools" =
 
 let%expect_test "import_with_resources" =
   (* Test that importing properly handles resources with URI prefixing *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let sub_server = create ~name:"sub" () in
 
   (* Add resources to sub_server with different URI schemes *)
   let file_resource =
-    Server.Resource.create ~uri:"file:///data.txt" ~name:"File Resource"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"file:///data.txt"
+      ~name:"File Resource"
       ~reader:(fun () -> return "file data")
       ()
   in
   add_resource sub_server file_resource;
 
   let http_resource =
-    Server.Resource.create ~uri:"http://api.example.com/data"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"http://api.example.com/data"
       ~name:"HTTP Resource"
       ~reader:(fun () -> return "http data")
       ()
@@ -195,18 +199,18 @@ let%expect_test "import_with_resources" =
 let%expect_test "import_with_resource_templates" =
   (* Test that importing properly handles resource templates with URI
      prefixing *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let sub_server = create ~name:"sub" () in
 
   (* Add template to sub_server *)
   let template =
-    Server.Resource_template.create ~uri_template:"file:///{path}"
-      ~name:"Dynamic File"
+    Ox_fast_mcp_server.Server.Resource_template.create
+      ~uri_template:"file:///{path}" ~name:"Dynamic File"
       ~create_resource:(fun ~params ->
         let path = List.Assoc.find_exn params ~equal:String.equal "path" in
         return
-          (Server.Resource.create
+          (Ox_fast_mcp_server.Server.Resource.create
              ~uri:(sprintf "file:///%s" path)
              ~name:path
              ~reader:(fun () -> return (sprintf "Content of %s" path))
@@ -229,20 +233,20 @@ let%expect_test "import_with_resource_templates" =
 
 let%expect_test "import_with_prompts" =
   (* Test that importing properly handles prompts with name prefixing *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let sub_server = create ~name:"sub" () in
 
   (* Add prompts to sub_server *)
   let greeting_prompt =
-    Server.Prompt.create ~name:"greeting"
+    Ox_fast_mcp_server.Server.Prompt.create ~name:"greeting"
       ~render:(fun _args -> return (`Assoc [ ("message", `String "Hello!") ]))
       ()
   in
   add_prompt sub_server greeting_prompt;
 
   let farewell_prompt =
-    Server.Prompt.create ~name:"farewell"
+    Ox_fast_mcp_server.Server.Prompt.create ~name:"farewell"
       ~render:(fun _args -> return (`Assoc [ ("message", `String "Goodbye!") ]))
       ()
   in
@@ -267,19 +271,19 @@ let%expect_test "import_with_prompts" =
 
 let%expect_test "import_multiple_resource_templates" =
   (* Test importing multiple apps with resource templates *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let files_server = create ~name:"files" () in
   let api_server = create ~name:"api" () in
 
   (* Add template to files_server *)
   let files_template =
-    Server.Resource_template.create ~uri_template:"file:///{filepath}"
-      ~name:"File Access"
+    Ox_fast_mcp_server.Server.Resource_template.create
+      ~uri_template:"file:///{filepath}" ~name:"File Access"
       ~create_resource:(fun ~params ->
         let path = List.Assoc.find_exn params ~equal:String.equal "filepath" in
         return
-          (Server.Resource.create
+          (Ox_fast_mcp_server.Server.Resource.create
              ~uri:(sprintf "file:///%s" path)
              ~name:path
              ~reader:(fun () -> return "file content")
@@ -290,14 +294,14 @@ let%expect_test "import_multiple_resource_templates" =
 
   (* Add template to api_server *)
   let api_template =
-    Server.Resource_template.create ~uri_template:"http://api/{endpoint}"
-      ~name:"API Access"
+    Ox_fast_mcp_server.Server.Resource_template.create
+      ~uri_template:"http://api/{endpoint}" ~name:"API Access"
       ~create_resource:(fun ~params ->
         let endpoint =
           List.Assoc.find_exn params ~equal:String.equal "endpoint"
         in
         return
-          (Server.Resource.create
+          (Ox_fast_mcp_server.Server.Resource.create
              ~uri:(sprintf "http://api/%s" endpoint)
              ~name:endpoint
              ~reader:(fun () -> return "api response")
@@ -322,14 +326,14 @@ let%expect_test "import_multiple_resource_templates" =
 
 let%expect_test "import_multiple_prompts" =
   (* Test importing multiple apps with prompts *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let creative_server = create ~name:"creative" () in
   let business_server = create ~name:"business" () in
 
   (* Add prompts to creative_server *)
   let story_prompt =
-    Server.Prompt.create ~name:"write_story"
+    Ox_fast_mcp_server.Server.Prompt.create ~name:"write_story"
       ~render:(fun _args -> return (`Assoc [ ("type", `String "creative") ]))
       ()
   in
@@ -337,7 +341,7 @@ let%expect_test "import_multiple_prompts" =
 
   (* Add prompts to business_server *)
   let email_prompt =
-    Server.Prompt.create ~name:"write_email"
+    Ox_fast_mcp_server.Server.Prompt.create ~name:"write_email"
       ~render:(fun _args -> return (`Assoc [ ("type", `String "business") ]))
       ()
   in
@@ -361,7 +365,7 @@ let%expect_test "import_multiple_prompts" =
 
 let%expect_test "tool_custom_name_preserved_when_imported" =
   (* Test that a tool's custom name is preserved when imported *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let sub_server = create ~name:"sub" () in
 
@@ -369,7 +373,7 @@ let%expect_test "tool_custom_name_preserved_when_imported" =
   (* Note: In current implementation, tool key equals name, so this tests
      that imported tools preserve their original names *)
   let custom_tool =
-    Server.Tool.create ~name:"custom_tool_name"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"custom_tool_name"
       ~description:"Tool with custom naming"
       ~handler:(fun _args -> return (`String "Custom tool result"))
       ()
@@ -392,13 +396,13 @@ let%expect_test "tool_custom_name_preserved_when_imported" =
 
 let%expect_test "call_imported_custom_named_tool" =
   (* Test calling an imported tool with the correct prefixed name *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let sub_server = create ~name:"sub" () in
 
   (* Add tool to sub server *)
   let greet_tool =
-    Server.Tool.create ~name:"greet"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"greet"
       ~handler:(fun args ->
         match args with
         | `Assoc [ ("name", `String name) ] ->
@@ -428,13 +432,14 @@ let%expect_test "call_imported_custom_named_tool" =
 
 let%expect_test "first_level_importing_with_custom_name" =
   (* Test that custom tool names work correctly at first import level *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let sub_server = create ~name:"sub" () in
 
   (* Add tool with specific name *)
   let my_tool =
-    Server.Tool.create ~name:"my_function" ~description:"Custom named function"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"my_function"
+      ~description:"Custom named function"
       ~handler:(fun _args -> return (`String "custom result"))
       ()
   in
@@ -458,14 +463,14 @@ let%expect_test "first_level_importing_with_custom_name" =
 
 let%expect_test "nested_importing_preserves_prefixes" =
   (* Test that importing a previously imported app preserves prefix chains *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let level1 = create ~name:"level1" () in
   let level2 = create ~name:"level2" () in
   let level3 = create ~name:"level3" () in
 
   (* Add tool to level3 *)
   let deep_tool =
-    Server.Tool.create ~name:"deep_tool"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"deep_tool"
       ~handler:(fun _args -> return (`String "Deep tool result"))
       ()
   in
@@ -490,14 +495,14 @@ let%expect_test "nested_importing_preserves_prefixes" =
 
 let%expect_test "call_nested_imported_tool" =
   (* Test calling a tool through multiple levels of importing *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let level1 = create ~name:"level1" () in
   let level2 = create ~name:"level2" () in
   let level3 = create ~name:"level3" () in
 
   (* Add tool to level3 *)
   let echo_tool =
-    Server.Tool.create ~name:"echo"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"echo"
       ~handler:(fun args ->
         match args with
         | `Assoc [ ("msg", `String s) ] -> return (`String ("Echo: " ^ s))
@@ -529,14 +534,15 @@ let%expect_test "call_nested_imported_tool" =
 let%expect_test "import_with_proxy_tools" =
   (* Test importing tools - proxy functionality may differ, testing basic
      import *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let proxy_server = create ~name:"proxy" () in
 
   (* Add tool to proxy server - in full implementation this might be
      delegated *)
   let delegated_tool =
-    Server.Tool.create ~name:"delegated" ~description:"Delegated tool"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"delegated"
+      ~description:"Delegated tool"
       ~handler:(fun _args -> return (`String "delegated result"))
       ()
   in
@@ -558,13 +564,13 @@ let%expect_test "import_with_proxy_tools" =
 
 let%expect_test "import_with_proxy_prompts" =
   (* Test importing prompts - verifying basic import functionality *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let proxy_server = create ~name:"proxy" () in
 
   (* Add prompt to proxy server *)
   let delegated_prompt =
-    Server.Prompt.create ~name:"delegated_prompt"
+    Ox_fast_mcp_server.Server.Prompt.create ~name:"delegated_prompt"
       ~description:"Delegated prompt"
       ~render:(fun _args -> return (`String "delegated prompt"))
       ()
@@ -606,27 +612,28 @@ let%expect_test "import_with_proxy_resource_templates" =
 
 let%expect_test "import_with_no_prefix" =
   (* Test importing a server without providing a prefix *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let sub_server = create ~name:"sub" () in
 
   (* Add components to sub_server *)
   let sub_tool =
-    Server.Tool.create ~name:"sub_tool"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"sub_tool"
       ~handler:(fun _args -> return (`String "Sub tool result"))
       ()
   in
   add_tool sub_server sub_tool;
 
   let sub_resource =
-    Server.Resource.create ~uri:"data://config" ~name:"Config"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"data://config"
+      ~name:"Config"
       ~reader:(fun () -> return "Sub resource data")
       ()
   in
   add_resource sub_server sub_resource;
 
   let sub_prompt =
-    Server.Prompt.create ~name:"sub_prompt"
+    Ox_fast_mcp_server.Server.Prompt.create ~name:"sub_prompt"
       ~render:(fun _args -> return (`String "Sub prompt content"))
       ()
   in
@@ -661,21 +668,23 @@ let%expect_test "import_with_no_prefix" =
 let%expect_test "import_conflict_resolution_tools" =
   (* Test that later imported tools overwrite earlier ones when names
      conflict *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_app = create ~name:"main" () in
   let first_app = create ~name:"first" () in
   let second_app = create ~name:"second" () in
 
   (* Add same-named tool to both apps *)
   let first_tool =
-    Server.Tool.create ~name:"shared_tool" ~description:"First app tool"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"shared_tool"
+      ~description:"First app tool"
       ~handler:(fun _args -> return (`String "First app tool"))
       ()
   in
   add_tool first_app first_tool;
 
   let second_tool =
-    Server.Tool.create ~name:"shared_tool" ~description:"Second app tool"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"shared_tool"
+      ~description:"Second app tool"
       ~handler:(fun _args -> return (`String "Second app tool"))
       ()
   in
@@ -690,7 +699,7 @@ let%expect_test "import_conflict_resolution_tools" =
   let%bind tool = get_tool main_app ~key:"shared_tool" in
 
   let count = Hashtbl.length tools in
-  let description = tool.Server.Tool.description in
+  let description = tool.Ox_fast_mcp_server.Server.Tool.description in
 
   print_s
     [%message "Conflict resolution" (count : int) (description : string option)];
@@ -702,23 +711,23 @@ let%expect_test "import_conflict_resolution_tools" =
 let%expect_test "import_conflict_resolution_resources" =
   (* Test that later imported resources overwrite earlier ones when URIs
      conflict *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let first_server = create ~name:"first" () in
   let second_server = create ~name:"second" () in
 
   (* Add same URI resource to both servers *)
   let first_resource =
-    Server.Resource.create ~uri:"config://settings" ~name:"First Config"
-      ~description:"First server config"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"config://settings"
+      ~name:"First Config" ~description:"First server config"
       ~reader:(fun () -> return "first config")
       ()
   in
   add_resource first_server first_resource;
 
   let second_resource =
-    Server.Resource.create ~uri:"config://settings" ~name:"Second Config"
-      ~description:"Second server config"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"config://settings"
+      ~name:"Second Config" ~description:"Second server config"
       ~reader:(fun () -> return "second config")
       ()
   in
@@ -753,19 +762,21 @@ let%expect_test "import_conflict_resolution_resources" =
 let%expect_test "import_conflict_resolution_templates" =
   (* Test that later imported templates overwrite earlier ones when URI
      templates conflict *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let first_server = create ~name:"first" () in
   let second_server = create ~name:"second" () in
 
   (* Add same URI template to both servers *)
   let first_template =
-    Server.Resource_template.create ~uri_template:"data:///{id}"
-      ~name:"First Data" ~description:"First template"
+    Ox_fast_mcp_server.Server.Resource_template.create
+      ~uri_template:"data:///{id}" ~name:"First Data"
+      ~description:"First template"
       ~create_resource:(fun ~params ->
         let id = List.Assoc.find_exn params ~equal:String.equal "id" in
         return
-          (Server.Resource.create ~uri:(sprintf "data:///%s" id) ~name:id
+          (Ox_fast_mcp_server.Server.Resource.create
+             ~uri:(sprintf "data:///%s" id) ~name:id
              ~reader:(fun () -> return "first data")
              ()))
       ()
@@ -773,12 +784,14 @@ let%expect_test "import_conflict_resolution_templates" =
   add_template first_server first_template;
 
   let second_template =
-    Server.Resource_template.create ~uri_template:"data:///{id}"
-      ~name:"Second Data" ~description:"Second template"
+    Ox_fast_mcp_server.Server.Resource_template.create
+      ~uri_template:"data:///{id}" ~name:"Second Data"
+      ~description:"Second template"
       ~create_resource:(fun ~params ->
         let id = List.Assoc.find_exn params ~equal:String.equal "id" in
         return
-          (Server.Resource.create ~uri:(sprintf "data:///%s" id) ~name:id
+          (Ox_fast_mcp_server.Server.Resource.create
+             ~uri:(sprintf "data:///%s" id) ~name:id
              ~reader:(fun () -> return "second data")
              ()))
       ()
@@ -793,7 +806,9 @@ let%expect_test "import_conflict_resolution_templates" =
   let templates = get_templates main_server in
   let count = Hashtbl.length templates in
   let%bind template = get_template main_server ~key:"data:///{id}" in
-  let description = template.Server.Resource_template.description in
+  let description =
+    template.Ox_fast_mcp_server.Server.Resource_template.description
+  in
 
   print_s
     [%message "Template conflict" (count : int) (description : string option)];
@@ -805,21 +820,23 @@ let%expect_test "import_conflict_resolution_templates" =
 let%expect_test "import_conflict_resolution_prompts" =
   (* Test that later imported prompts overwrite earlier ones when names
      conflict *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let first_server = create ~name:"first" () in
   let second_server = create ~name:"second" () in
 
   (* Add same-named prompt to both servers *)
   let first_prompt =
-    Server.Prompt.create ~name:"generate" ~description:"First generator"
+    Ox_fast_mcp_server.Server.Prompt.create ~name:"generate"
+      ~description:"First generator"
       ~render:(fun _args -> return (`Assoc [ ("source", `String "first") ]))
       ()
   in
   add_prompt first_server first_prompt;
 
   let second_prompt =
-    Server.Prompt.create ~name:"generate" ~description:"Second generator"
+    Ox_fast_mcp_server.Server.Prompt.create ~name:"generate"
+      ~description:"Second generator"
       ~render:(fun _args -> return (`Assoc [ ("source", `String "second") ]))
       ()
   in
@@ -833,7 +850,7 @@ let%expect_test "import_conflict_resolution_prompts" =
   let prompts = get_prompts main_server in
   let count = Hashtbl.length prompts in
   let%bind prompt = get_prompt_component main_server ~key:"generate" in
-  let description = prompt.Server.Prompt.description in
+  let description = prompt.Ox_fast_mcp_server.Server.Prompt.description in
 
   print_s
     [%message "Prompt conflict" (count : int) (description : string option)];
@@ -844,21 +861,23 @@ let%expect_test "import_conflict_resolution_prompts" =
 
 let%expect_test "import_conflict_resolution_with_prefix" =
   (* Test conflict when imported components have same prefixed name *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let server1 = create ~name:"server1" () in
   let server2 = create ~name:"server2" () in
 
   (* Add tools with names that will conflict after prefixing *)
   let tool1 =
-    Server.Tool.create ~name:"action" ~description:"Server 1 action"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"action"
+      ~description:"Server 1 action"
       ~handler:(fun _args -> return (`String "action1"))
       ()
   in
   add_tool server1 tool1;
 
   let tool2 =
-    Server.Tool.create ~name:"action" ~description:"Server 2 action"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"action"
+      ~description:"Server 2 action"
       ~handler:(fun _args -> return (`String "action2"))
       ()
   in
@@ -872,7 +891,7 @@ let%expect_test "import_conflict_resolution_with_prefix" =
   let tools = get_tools main_server in
   let has_tool = Hashtbl.mem tools "api_action" in
   let%bind tool = get_tool main_server ~key:"api_action" in
-  let description = tool.Server.Tool.description in
+  let description = tool.Ox_fast_mcp_server.Server.Tool.description in
 
   print_s
     [%message "Prefix conflict" (has_tool : bool) (description : string option)];
@@ -885,13 +904,14 @@ let%expect_test "import_conflict_resolution_with_prefix" =
 
 let%expect_test "import_server_resource_name_prefixing" =
   (* Test that resource names (not just URIs) can be verified after import *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let sub_server = create ~name:"sub" () in
 
   (* Add resource with specific name *)
   let my_resource =
-    Server.Resource.create ~uri:"data://mydata" ~name:"My Resource"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"data://mydata"
+      ~name:"My Resource"
       ~reader:(fun () -> return "data")
       ()
   in
@@ -920,18 +940,18 @@ let%expect_test "import_server_resource_name_prefixing" =
 
 let%expect_test "import_server_resource_template_name_prefixing" =
   (* Test that template names are preserved after import *)
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let main_server = create ~name:"main" () in
   let sub_server = create ~name:"sub" () in
 
   (* Add template with specific name *)
   let my_template =
-    Server.Resource_template.create ~uri_template:"file:///{path}"
-      ~name:"File Template"
+    Ox_fast_mcp_server.Server.Resource_template.create
+      ~uri_template:"file:///{path}" ~name:"File Template"
       ~create_resource:(fun ~params ->
         let path = List.Assoc.find_exn params ~equal:String.equal "path" in
         return
-          (Server.Resource.create
+          (Ox_fast_mcp_server.Server.Resource.create
              ~uri:(sprintf "file:///%s" path)
              ~name:path
              ~reader:(fun () -> return "content")

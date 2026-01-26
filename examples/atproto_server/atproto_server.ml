@@ -22,13 +22,14 @@ let main () =
 
   (* Create MCP server *)
   let server =
-    Server.Ox_fast_mcp.create ~name:"atproto-mcp-server" ~version:"0.2.0"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.create ~name:"atproto-mcp-server"
+      ~version:"0.2.0"
       ~instructions:"ATProto MCP Server for Bluesky interactions" ()
   in
 
   (* Add resources *)
-  Server.Ox_fast_mcp.add_simple_resource ~uri:"atproto://profile/status"
-    ~name:"Profile Status"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_resource
+    ~uri:"atproto://profile/status" ~name:"Profile Status"
     ~description:"Check ATProto connection and current user profile"
     ~mime_type:"application/json"
     ~reader:(fun () ->
@@ -36,8 +37,9 @@ let main () =
       return (Types.profile_info_to_yojson profile |> Yojson.Safe.to_string))
     server;
 
-  Server.Ox_fast_mcp.add_simple_resource ~uri:"atproto://timeline"
-    ~name:"Timeline Feed" ~description:"Get authenticated user's timeline feed"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_resource
+    ~uri:"atproto://timeline" ~name:"Timeline Feed"
+    ~description:"Get authenticated user's timeline feed"
     ~mime_type:"application/json"
     ~reader:(fun () ->
       let%bind timeline =
@@ -46,9 +48,9 @@ let main () =
       return (Types.timeline_result_to_yojson timeline |> Yojson.Safe.to_string))
     server;
 
-  Server.Ox_fast_mcp.add_simple_resource ~uri:"atproto://notifications"
-    ~name:"Notifications" ~description:"Get recent notifications"
-    ~mime_type:"application/json"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_resource
+    ~uri:"atproto://notifications" ~name:"Notifications"
+    ~description:"Get recent notifications" ~mime_type:"application/json"
     ~reader:(fun () ->
       let%bind notifs =
         Atproto.Read.fetch_notifications settings.notifications_default_limit
@@ -58,7 +60,7 @@ let main () =
     server;
 
   let author_feed_template =
-    Server.Resource_template.create
+    Ox_fast_mcp_server.Server.Resource_template.create
       ~uri_template:"atproto://feed/author/{handle}" ~name:"Author Feed"
       ~description:"Get posts by a specific user handle"
       ~mime_type:"application/json"
@@ -69,7 +71,7 @@ let main () =
         in
         let uri = "atproto://feed/author/" ^ handle in
         return
-          (Server.Resource.create ~uri
+          (Ox_fast_mcp_server.Server.Resource.create ~uri
              ~name:(sprintf "Author Feed: %s" handle)
              ~mime_type:"application/json"
              ~reader:(fun () ->
@@ -83,12 +85,12 @@ let main () =
              ()))
       ()
   in
-  Server.Ox_fast_mcp.add_template server author_feed_template;
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_template server author_feed_template;
 
   (* Add tools *)
 
   (* Profile management tools *)
-  Server.Ox_fast_mcp.add_simple_tool ~name:"update_profile"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"update_profile"
     ~description:"Update your Bluesky profile (display name, bio, avatar)"
     ~handler:(fun params ->
       let display_name =
@@ -108,7 +110,7 @@ let main () =
       return (Types.profile_update_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"get_profile"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"get_profile"
     ~description:"Get detailed profile information by handle or DID"
     ~handler:(fun params ->
       let actor =
@@ -119,11 +121,12 @@ let main () =
       return (Types.profile_query_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_template server author_feed_template;
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_template server author_feed_template;
 
   let custom_feed_template =
-    Server.Resource_template.create ~uri_template:"atproto://feed/custom/{uri}"
-      ~name:"Custom Feed" ~description:"Get a custom algorithm feed by AT URI"
+    Ox_fast_mcp_server.Server.Resource_template.create
+      ~uri_template:"atproto://feed/custom/{uri}" ~name:"Custom Feed"
+      ~description:"Get a custom algorithm feed by AT URI"
       ~mime_type:"application/json"
       ~create_resource:(fun ~params ->
         let uri =
@@ -134,7 +137,7 @@ let main () =
         (* Note: AT URIs contain slashes, so they might need encoding in the resource URI *)
         let resource_uri = "atproto://feed/custom/" ^ uri in
         return
-          (Server.Resource.create ~uri:resource_uri
+          (Ox_fast_mcp_server.Server.Resource.create ~uri:resource_uri
              ~name:(sprintf "Custom Feed: %s" uri)
              ~mime_type:"application/json"
              ~reader:(fun () ->
@@ -147,10 +150,10 @@ let main () =
              ()))
       ()
   in
-  Server.Ox_fast_mcp.add_template server custom_feed_template;
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_template server custom_feed_template;
 
   (* Add tools *)
-  Server.Ox_fast_mcp.add_simple_tool ~name:"get_feed"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"get_feed"
     ~description:"Get a custom feed by its AT URI (e.g. at://...)"
     ~handler:(fun params ->
       let feed_uri =
@@ -167,7 +170,7 @@ let main () =
     server;
 
   (* Profile management tools *)
-  Server.Ox_fast_mcp.add_simple_tool ~name:"login"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"login"
     ~description:"Log in to a new Bluesky account"
     ~handler:(fun params ->
       let handle =
@@ -187,7 +190,7 @@ let main () =
           ]))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"switch_account"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"switch_account"
     ~description:"Switch active Bluesky account"
     ~handler:(fun params ->
       let handle =
@@ -200,7 +203,7 @@ let main () =
           [ ("success", `Bool success); ("active_handle", `String handle) ]))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"list_accounts"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"list_accounts"
     ~description:"List all authenticated accounts"
     ~handler:(fun _params ->
       let%bind client = Atproto.Client.get_client settings in
@@ -218,7 +221,7 @@ let main () =
           ]))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"post"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"post"
     ~description:
       "Create a post on Bluesky with optional rich text features, images, \
        replies, and quotes"
@@ -358,7 +361,7 @@ let main () =
       return (Types.post_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"search"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"search"
     ~description:"Search for posts on Bluesky"
     ~handler:(fun params ->
       let query =
@@ -374,7 +377,7 @@ let main () =
       return (Types.search_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"get_author_feed"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"get_author_feed"
     ~description:"Get posts by a specific user (handle or DID)"
     ~handler:(fun params ->
       let actor =
@@ -390,7 +393,7 @@ let main () =
       return (Types.author_feed_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"get_post_thread"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"get_post_thread"
     ~description:"Get the full conversation thread for a post"
     ~handler:(fun params ->
       let uri =
@@ -401,7 +404,7 @@ let main () =
       return (Types.post_thread_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"follow"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"follow"
     ~description:"Follow a user by their handle"
     ~handler:(fun params ->
       let handle =
@@ -412,7 +415,8 @@ let main () =
       return (Types.follow_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"like" ~description:"Like a post"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"like"
+    ~description:"Like a post"
     ~handler:(fun params ->
       let uri =
         Yojson.Safe.Util.member "uri" params
@@ -426,7 +430,8 @@ let main () =
       return (Types.like_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"repost" ~description:"Repost a post"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"repost"
+    ~description:"Repost a post"
     ~handler:(fun params ->
       let uri =
         Yojson.Safe.Util.member "uri" params
@@ -441,7 +446,7 @@ let main () =
     server;
 
   (* Reverse social actions *)
-  Server.Ox_fast_mcp.add_simple_tool ~name:"unfollow"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"unfollow"
     ~description:"Unfollow a user by handle or DID"
     ~handler:(fun params ->
       let actor =
@@ -467,7 +472,7 @@ let main () =
       return (Types.delete_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"unlike"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"unlike"
     ~description:"Remove a like from a post"
     ~handler:(fun params ->
       let uri =
@@ -482,7 +487,7 @@ let main () =
       return (Types.delete_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"unrepost"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"unrepost"
     ~description:"Remove a repost"
     ~handler:(fun params ->
       let uri =
@@ -497,7 +502,7 @@ let main () =
       return (Types.delete_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"mute"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"mute"
     ~description:"Mute a user by handle"
     ~handler:(fun params ->
       let handle =
@@ -508,7 +513,7 @@ let main () =
       return (Types.mute_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"unmute"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"unmute"
     ~description:"Unmute a user by handle or DID"
     ~handler:(fun params ->
       let actor =
@@ -534,7 +539,7 @@ let main () =
       return (Types.delete_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"block"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"block"
     ~description:"Block a user by handle"
     ~handler:(fun params ->
       let handle =
@@ -545,7 +550,7 @@ let main () =
       return (Types.block_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"unblock"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"unblock"
     ~description:"Unblock a user by handle or DID"
     ~handler:(fun params ->
       let actor =
@@ -571,7 +576,7 @@ let main () =
       return (Types.delete_result_to_yojson result))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"create_thread"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"create_thread"
     ~description:"Create a thread of posts"
     ~handler:(fun params ->
       let posts_json =
@@ -590,7 +595,7 @@ let main () =
   Log.Global.info "Authenticating with Bluesky as %s" settings.atproto_handle;
 
   (* Run server *)
-  Server.Ox_fast_mcp.run_async server ~transport:Stdio ()
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.run_async server ~transport:Stdio ()
 
 let () =
   Command.async ~summary:"ATProto MCP server for Bluesky interactions"

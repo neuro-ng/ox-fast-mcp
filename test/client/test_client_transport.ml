@@ -134,7 +134,7 @@ module Transport_tests = struct
     return ()
 
   let test_fastmcp_transport_inference switch () =
-    let server = Server.create ~name:"TestServer" () in
+    let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
     let transport = Transports.infer_transport server in
     check bool "is FastMCP transport" true
       (match transport with
@@ -144,7 +144,7 @@ module Transport_tests = struct
 
   (* Test FastMCP v1 server compatibility *)
   let test_fastmcp_v1_server_compatibility switch () =
-    let server = Server.create_v1 ~name:"TestServer" () in
+    let server = Ox_fast_mcp_server.Server.create_v1 ~name:"TestServer" () in
     let transport = Transports.infer_transport server in
     check bool "is FastMCP transport" true
       (match transport with

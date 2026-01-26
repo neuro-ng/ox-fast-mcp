@@ -9,7 +9,7 @@ let%expect_test "default config" =
 
   (* Check status *)
   let%bind status =
-    Server.Ox_fast_mcp.call_tool server ~name:"get_status"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.call_tool server ~name:"get_status"
       ~arguments:(`Assoc [])
   in
   print_s [%sexp (status : json)];
@@ -18,7 +18,7 @@ let%expect_test "default config" =
 
   (* Check echo *)
   let%bind echo =
-    Server.Ox_fast_mcp.call_tool server ~name:"echo_message"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.call_tool server ~name:"echo_message"
       ~arguments:(`Assoc [ ("message", `String "Hello") ])
   in
   (match echo with
@@ -32,7 +32,7 @@ let%expect_test "debug config" =
 
   (* Check status *)
   let%bind status =
-    Server.Ox_fast_mcp.call_tool server ~name:"get_status"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.call_tool server ~name:"get_status"
       ~arguments:(`Assoc [])
   in
   (* Verify server name changed *)
@@ -45,7 +45,7 @@ let%expect_test "debug config" =
 
   (* Check echo *)
   let%bind echo =
-    Server.Ox_fast_mcp.call_tool server ~name:"echo_message"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.call_tool server ~name:"echo_message"
       ~arguments:(`Assoc [ ("message", `String "Hello") ])
   in
   (match echo with

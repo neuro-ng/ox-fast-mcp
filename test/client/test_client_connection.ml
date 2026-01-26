@@ -4,7 +4,7 @@ open Alcotest_async
 
 (* Test client connection idempotency *)
 let test_client_connection switch () =
-  let server = Server.create ~name:"TestServer" () in
+  let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
   let client = Client.create (Transports.FastMCP_transport server) in
 
   let%bind () =
@@ -18,7 +18,7 @@ let test_client_connection switch () =
 
 (* Test initialize called once *)
 let test_initialize_called_once switch () =
-  let server = Server.create ~name:"TestServer" () in
+  let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
   let initialize_count = ref 0 in
   let mock_initialize _session =
     initialize_count := !initialize_count + 1;
@@ -42,7 +42,7 @@ let test_initialize_called_once switch () =
 
 (* Test initialize_result behavior *)
 let test_initialize_result switch () =
-  let server = Server.create ~name:"TestServer" () in
+  let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
   let client = Client.create (Transports.FastMCP_transport server) in
 
   (* Should raise before connection *)
@@ -67,7 +67,8 @@ let test_initialize_result switch () =
 let test_server_info_custom_version switch () =
   (* Test with custom version *)
   let server_with_version =
-    Server.create ~name:"CustomVersionServer" ~version:"1.2.3" ()
+    Ox_fast_mcp_server.Server.create ~name:"CustomVersionServer"
+      ~version:"1.2.3" ()
   in
   let client =
     Client.create (Transports.FastMCP_transport server_with_version)
@@ -84,7 +85,9 @@ let test_server_info_custom_version switch () =
   in
 
   (* Test without version *)
-  let server_without_version = Server.create ~name:"DefaultVersionServer" () in
+  let server_without_version =
+    Ox_fast_mcp_server.Server.create ~name:"DefaultVersionServer" ()
+  in
   let client =
     Client.create (Transports.FastMCP_transport server_without_version)
   in
@@ -104,7 +107,7 @@ let test_server_info_custom_version switch () =
 
 (* Test nested context managers *)
 let test_client_nested_context_manager switch () =
-  let server = Server.create ~name:"TestServer" () in
+  let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
   let client = Client.create (Transports.FastMCP_transport server) in
 
   (* Before connection *)
@@ -146,7 +149,7 @@ let test_client_nested_context_manager switch () =
 
 (* Test concurrent client usage *)
 let test_concurrent_client_context_managers switch () =
-  let server = Server.create ~name:"TestServer" () in
+  let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
 
   (* Add a tool *)
   let echo_tool =
@@ -157,7 +160,7 @@ let test_concurrent_client_context_managers switch () =
         in
         return [ Content_block.text text ])
   in
-  Server.add_tool server echo_tool;
+  Ox_fast_mcp_server.Server.add_tool server echo_tool;
 
   let client = Client.create (Transports.FastMCP_transport server) in
 
@@ -195,7 +198,7 @@ let test_concurrent_client_context_managers switch () =
 
 (* Test timeout tool call overrides client timeout *)
 let test_timeout_tool_call_overrides_client_timeout switch () =
-  let server = Server.create ~name:"TestServer" () in
+  let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
 
   (* Add a sleep tool *)
   let sleep_tool =
@@ -207,7 +210,7 @@ let test_timeout_tool_call_overrides_client_timeout switch () =
         let%bind () = Clock.after (Time.Span.of_sec seconds) in
         return [ Content_block.text (sprintf "Slept for %f seconds" seconds) ])
   in
-  Server.add_tool server sleep_tool;
+  Ox_fast_mcp_server.Server.add_tool server sleep_tool;
 
   let client =
     Client.create ~timeout:(Time.Span.of_sec 2.0)
@@ -233,7 +236,7 @@ let test_timeout_tool_call_overrides_client_timeout switch () =
 
 (* Test timeout tool call overrides client timeout even if lower *)
 let test_timeout_tool_call_overrides_client_timeout_even_if_lower switch () =
-  let server = Server.create ~name:"TestServer" () in
+  let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
 
   (* Add a sleep tool *)
   let sleep_tool =
@@ -245,7 +248,7 @@ let test_timeout_tool_call_overrides_client_timeout_even_if_lower switch () =
         let%bind () = Clock.after (Time.Span.of_sec seconds) in
         return [ Content_block.text (sprintf "Slept for %f seconds" seconds) ])
   in
-  Server.add_tool server sleep_tool;
+  Ox_fast_mcp_server.Server.add_tool server sleep_tool;
 
   let client =
     Client.create ~timeout:(Time.Span.of_sec 0.01)

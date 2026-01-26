@@ -22,4 +22,4 @@
   yojson
   ppx_yojson_conv_lib
   expect_test_helpers_core
-  server))
+  ox-fast-mcp.server))

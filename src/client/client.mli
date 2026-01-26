@@ -8,33 +8,36 @@ module Types = Mcp.Types
 
 (** Roots configuration *)
 module Roots : sig
-  type t
+  include module type of Roots
+
+  type t = [ `Static of roots_list list | `Handler of roots_handler ]
 end
 
 (** Sampling handler *)
 module Sampling : sig
-  type handler
+  include module type of Sampling
+
+  type handler = sampling_handler
 end
 
 (** Logging handler *)
 module Logging : sig
-  type handler
+  include module type of Logging
+
+  type handler = log_handler
 end
 
 (** Message handler *)
 module Messages : sig
-  type handler
+  include module type of Messages
+
+  type handler = t
 end
 
+module Progress : module type of Progress
 (** Progress handler *)
-module Progress : sig
-  type handler
-end
 
 (** Content block *)
-module Content_block : sig
-  type t = Mcp.Types.content
-end
 
 exception Tool_error of string
 (** Exception raised when a tool call fails *)
@@ -52,57 +55,61 @@ val create :
   ?roots:Roots.t ->
   ?sampling_handler:Sampling.handler ->
   ?log_handler:Logging.handler ->
-  ?message_handler:Messages.handler ->
+  ?message_handler:Mcp_client.Session.message_handler ->
   ?progress_handler:Progress.handler ->
   ?timeout:Time_ns.Span.t ->
   ?init_timeout:Time_ns.Span.t ->
   ?client_info:Types.implementation ->
   ?auth:string ->
-  'transport ->
-  'transport t
+  Transports.t ->
+  Transports.t t
 (** Create a new client *)
 
-val session : 'transport t -> Types.client_session
+val session : Transports.t t -> Mcp_client.Session.t
 (** Get the current active session. Raises if not connected *)
 
-val initialize_result : 'transport t -> Types.initialize_result
+val initialize_result : Transports.t t -> Types.initialize_result
 (** Get the result of the initialization request *)
 
-val set_roots : 'transport t -> Roots.t -> unit
+val set_roots : Transports.t t -> Roots.t -> unit
 (** Set the roots for the client *)
 
-val set_sampling_callback : 'transport t -> Sampling.handler -> unit
+val set_sampling_callback : Transports.t t -> Sampling.handler -> unit
 (** Set the sampling callback *)
 
-val is_connected : 'transport t -> bool
+val is_connected : Transports.t t -> bool
 (** Check if client is connected *)
 
-val connect : 'transport t -> unit Deferred.t
+val connect : Transports.t t -> unit Deferred.t
 (** Connect to the server *)
 
-val disconnect : 'transport t -> force:bool -> unit Deferred.t
+val disconnect : ?force:bool -> Transports.t t -> unit Deferred.t
 (** Disconnect from the server *)
 
-val close : 'transport t -> unit Deferred.t
+val close : Transports.t t -> unit Deferred.t
 (** Close the client *)
 
-val with_client : 'transport t -> (unit -> 'a Deferred.t) -> 'a Deferred.t
+val with_client : Transports.t t -> (unit -> 'a Deferred.t) -> 'a Deferred.t
 (** Execute a function with a connected client, handling cleanup *)
 
 val with_error_handling :
-  'transport t -> (unit -> 'a Deferred.t) -> 'a Deferred.t
+  Transports.t t -> (unit -> 'a Deferred.t) -> 'a Deferred.t
 (** Execute a function with error handling *)
 
-val ping : 'transport t -> bool Deferred.t
+val ping : Transports.t t -> bool Deferred.t
 (** Send a ping request *)
 
 val cancel :
-  'transport t -> request_id:string -> ?reason:string -> unit -> unit Deferred.t
+  Transports.t t ->
+  request_id:Types.request_id ->
+  ?reason:string ->
+  unit ->
+  unit Deferred.t
 (** Send a cancellation notification *)
 
 val progress :
-  'transport t ->
-  progress_token:string ->
+  Transports.t t ->
+  progress_token:Types.progress_token ->
   progress:float ->
   ?total:float ->
   ?message:string ->
@@ -110,45 +117,48 @@ val progress :
   unit Deferred.t
 (** Send a progress notification *)
 
-val set_logging_level : 'transport t -> Types.logging_level -> unit Deferred.t
+val set_logging_level : Transports.t t -> Types.logging_level -> unit Deferred.t
 (** Set logging level *)
 
-val send_roots_list_changed : 'transport t -> unit Deferred.t
+val send_roots_list_changed : Transports.t t -> unit Deferred.t
 (** Send roots list changed notification *)
 
-val list_resources_mcp : 'transport t -> Types.list_resources_result Deferred.t
+val list_resources_mcp :
+  Transports.t t -> Types.list_resources_result Deferred.t
 (** List resources and return full MCP protocol result *)
 
-val list_resources : 'transport t -> Types.resource list Deferred.t
+val list_resources : Transports.t t -> Types.resource list Deferred.t
 (** List resources *)
 
 val list_resource_templates_mcp :
-  'transport t -> Types.list_resource_templates_result Deferred.t
+  Transports.t t -> Types.list_resource_templates_result Deferred.t
 (** List resource templates and return full MCP protocol result *)
 
 val list_resource_templates :
-  'transport t -> Types.resource_template list Deferred.t
+  Transports.t t -> Types.resource_template list Deferred.t
 (** List resource templates *)
 
 val read_resource_mcp :
-  'transport t -> uri:string -> Types.read_resource_result Deferred.t
+  Transports.t t -> uri:string -> Types.read_resource_result Deferred.t
 (** Read resource and return full MCP protocol result *)
 
 val read_resource :
-  'transport t ->
+  Transports.t t ->
   uri:string ->
-  (Types.text_resource_contents, Types.blob_resource_contents) Either.t list
+  [ `Text of Types.text_resource_contents
+  | `Blob of Types.blob_resource_contents ]
+  list
   Deferred.t
 (** Read resource *)
 
-val list_prompts_mcp : 'transport t -> Types.list_prompts_result Deferred.t
+val list_prompts_mcp : Transports.t t -> Types.list_prompts_result Deferred.t
 (** List prompts and return full MCP protocol result *)
 
-val list_prompts : 'transport t -> Types.prompt list Deferred.t
+val list_prompts : Transports.t t -> Types.prompt list Deferred.t
 (** List prompts *)
 
 val get_prompt_mcp :
-  'transport t ->
+  Transports.t t ->
   name:string ->
   ?arguments:(string * Yojson.Safe.t) list ->
   unit ->
@@ -156,21 +166,21 @@ val get_prompt_mcp :
 (** Get prompt and return full MCP protocol result *)
 
 val get_prompt :
-  'transport t ->
+  Transports.t t ->
   name:string ->
   ?arguments:(string * Yojson.Safe.t) list ->
   unit ->
   Types.get_prompt_result Deferred.t
 (** Get prompt *)
 
-val list_tools_mcp : 'transport t -> Types.list_tools_result Deferred.t
+val list_tools_mcp : Transports.t t -> Types.list_tools_result Deferred.t
 (** List tools and return full MCP protocol result *)
 
-val list_tools : 'transport t -> Types.tool list Deferred.t
+val list_tools : Transports.t t -> Types.tool list Deferred.t
 (** List tools *)
 
 val call_tool_mcp :
-  'transport t ->
+  Transports.t t ->
   name:string ->
   ?arguments:(string * Yojson.Safe.t) list ->
   ?timeout:Time_ns.Span.t ->
@@ -180,47 +190,49 @@ val call_tool_mcp :
 (** Call tool and return full MCP protocol result *)
 
 val call_tool :
-  'transport t ->
+  Transports.t t ->
   name:string ->
   ?arguments:(string * Yojson.Safe.t) list ->
-  ?timeout:Time.Span.t ->
+  ?timeout:Time_ns.Span.t ->
   ?progress_handler:Progress.handler ->
   unit ->
-  Content_block.t list Deferred.t
+  Types.content_block list Deferred.t
 (** Call tool *)
 
+type reference =
+  [ `Resource of Types.resource_template_reference
+  | `Prompt of Types.prompt_reference ]
+
 val complete_mcp :
-  'transport t ->
-  ref:Types.reference ->
+  Transports.t t ->
+  ref:reference ->
   argument:(string * string) list ->
   Types.complete_result Deferred.t
 (** Complete and return full MCP protocol result *)
 
 val complete :
-  'transport t ->
-  ref:Types.reference ->
+  Transports.t t ->
+  ref:reference ->
   argument:(string * string) list ->
   Types.completion Deferred.t
 (** Complete *)
 
-val create_resource_reference : uri:string -> Types.reference
+val create_resource_reference : uri:string -> reference
 (** Create a resource reference *)
 
 val create_prompt_reference :
-  name:string ->
-  arguments:(string * Yojson.Safe.t) list option ->
-  Types.reference
+  name:string -> arguments:(string * Yojson.Safe.t) list option -> reference
 (** Create a prompt reference *)
 
 val complete_resource :
-  'transport t ->
+  Transports.t t ->
   uri:string ->
   argument:(string * string) list ->
   Types.completion Deferred.t
 (** Complete with resource *)
 
 val complete_prompt :
-  'transport t ->
+  Transports.t t ->
   name:string ->
   ?arguments:(string * Yojson.Safe.t) list ->
   argument:(string * string) list ->
@@ -228,8 +240,8 @@ val complete_prompt :
   Types.completion Deferred.t
 (** Complete with prompt *)
 
-val subscribe_resource : 'transport t -> uri:string -> unit Deferred.t
+val subscribe_resource : Transports.t t -> uri:string -> unit Deferred.t
 (** Subscribe to resource updates *)
 
-val unsubscribe_resource : 'transport t -> uri:string -> unit Deferred.t
+val unsubscribe_resource : Transports.t t -> uri:string -> unit Deferred.t
 (** Unsubscribe from resource updates *)

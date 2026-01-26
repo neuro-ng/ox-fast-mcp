@@ -4,55 +4,55 @@ open Alcotest_async
 
 module Error_test_server = struct
   let create_with_error_tool () =
-    let server = Server.create ~name:"TestServer" () in
+    let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
 
     (* Add a tool that raises an error *)
     let error_tool =
       Tool.create ~name:"error_tool" ~f:(fun _args ->
           raise (Failure "This is a test error (abc)"))
     in
-    Server.add_tool server error_tool;
+    Ox_fast_mcp_server.Server.add_tool server error_tool;
 
     server
 
   let create_with_custom_error_tool () =
-    let server = Server.create ~name:"TestServer" () in
+    let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
 
     (* Add a tool that raises a custom error *)
     let custom_error_tool =
       Tool.create ~name:"custom_error_tool" ~f:(fun _args ->
           raise (Tool_error.Tool_error "This is a test error (abc)"))
     in
-    Server.add_tool server custom_error_tool;
+    Ox_fast_mcp_server.Server.add_tool server custom_error_tool;
 
     server
 
   let create_with_error_resource () =
-    let server = Server.create ~name:"TestServer" () in
+    let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
 
     (* Add a resource that raises an error *)
     let error_resource =
       Resource.create ~uri:"exception://resource" ~f:(fun () ->
           raise (Failure "This is an internal error (sensitive)"))
     in
-    Server.add_resource server error_resource;
+    Ox_fast_mcp_server.Server.add_resource server error_resource;
 
     server
 
   let create_with_custom_error_resource () =
-    let server = Server.create ~name:"TestServer" () in
+    let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
 
     (* Add a resource that raises a custom error *)
     let error_resource =
       Resource.create ~uri:"error://resource" ~f:(fun () ->
           raise (Resource_error.Resource_error "This is a resource error (xyz)"))
     in
-    Server.add_resource server error_resource;
+    Ox_fast_mcp_server.Server.add_resource server error_resource;
 
     server
 
   let create_with_error_template () =
-    let server = Server.create ~name:"TestServer" () in
+    let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
 
     (* Add a template that raises an error *)
     let error_template =
@@ -60,12 +60,12 @@ module Error_test_server = struct
         ~f:(fun ~id:_ ->
           raise (Failure "This is an internal error (sensitive)"))
     in
-    Server.add_resource_template server error_template;
+    Ox_fast_mcp_server.Server.add_resource_template server error_template;
 
     server
 
   let create_with_custom_error_template () =
-    let server = Server.create ~name:"TestServer" () in
+    let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
 
     (* Add a template that raises a custom error *)
     let error_template =
@@ -73,7 +73,7 @@ module Error_test_server = struct
         ~f:(fun ~id:_ ->
           raise (Resource_error.Resource_error "This is a resource error (xyz)"))
     in
-    Server.add_resource_template server error_template;
+    Ox_fast_mcp_server.Server.add_resource_template server error_template;
 
     server
 end
@@ -206,14 +206,17 @@ let test_custom_template_errors switch () =
 
 (* Test general tool exceptions are masked when enabled *)
 let test_general_tool_exceptions_are_masked_when_enabled switch () =
-  let server = Server.create ~name:"TestServer" ~mask_error_details:true () in
+  let server =
+    Ox_fast_mcp_server.Server.create ~name:"TestServer" ~mask_error_details:true
+      ()
+  in
 
   (* Add a tool that raises an error *)
   let error_tool =
     Tool.create ~name:"error_tool" ~f:(fun _args ->
         raise (Failure "This is a test error (abc)"))
   in
-  Server.add_tool server error_tool;
+  Ox_fast_mcp_server.Server.add_tool server error_tool;
 
   let client = Client.create (Transports.FastMCP_transport server) in
 
@@ -235,14 +238,17 @@ let test_general_tool_exceptions_are_masked_when_enabled switch () =
 
 (* Test general resource exceptions are masked when enabled *)
 let test_general_resource_exceptions_are_masked_when_enabled switch () =
-  let server = Server.create ~name:"TestServer" ~mask_error_details:true () in
+  let server =
+    Ox_fast_mcp_server.Server.create ~name:"TestServer" ~mask_error_details:true
+      ()
+  in
 
   (* Add a resource that raises an error *)
   let error_resource =
     Resource.create ~uri:"exception://resource" ~f:(fun () ->
         raise (Failure "This is an internal error (sensitive)"))
   in
-  Server.add_resource server error_resource;
+  Ox_fast_mcp_server.Server.add_resource server error_resource;
 
   let client = Client.create (Transports.FastMCP_transport server) in
 
@@ -268,14 +274,17 @@ let test_general_resource_exceptions_are_masked_when_enabled switch () =
 
 (* Test general template exceptions are masked when enabled *)
 let test_general_template_exceptions_are_masked_when_enabled switch () =
-  let server = Server.create ~name:"TestServer" ~mask_error_details:true () in
+  let server =
+    Ox_fast_mcp_server.Server.create ~name:"TestServer" ~mask_error_details:true
+      ()
+  in
 
   (* Add a template that raises an error *)
   let error_template =
     Resource_template.create ~uri_template:"exception://resource/{id}"
       ~f:(fun ~id:_ -> raise (Failure "This is an internal error (sensitive)"))
   in
-  Server.add_resource_template server error_template;
+  Ox_fast_mcp_server.Server.add_resource_template server error_template;
 
   let client = Client.create (Transports.FastMCP_transport server) in
 
@@ -301,7 +310,7 @@ let test_general_template_exceptions_are_masked_when_enabled switch () =
 
 (* Test timeout *)
 let test_timeout switch () =
-  let server = Server.create ~name:"TestServer" () in
+  let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
 
   (* Add a sleep tool *)
   let sleep_tool =
@@ -313,7 +322,7 @@ let test_timeout switch () =
         let%bind () = Clock.after (Time.Span.of_sec seconds) in
         return [ Content_block.text (sprintf "Slept for %f seconds" seconds) ])
   in
-  Server.add_tool server sleep_tool;
+  Ox_fast_mcp_server.Server.add_tool server sleep_tool;
 
   let client =
     Client.create ~timeout:(Time.Span.of_sec 0.05)
@@ -339,7 +348,7 @@ let test_timeout switch () =
 
 (* Test timeout tool call *)
 let test_timeout_tool_call switch () =
-  let server = Server.create ~name:"TestServer" () in
+  let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
 
   (* Add a sleep tool *)
   let sleep_tool =
@@ -351,7 +360,7 @@ let test_timeout_tool_call switch () =
         let%bind () = Clock.after (Time.Span.of_sec seconds) in
         return [ Content_block.text (sprintf "Slept for %f seconds" seconds) ])
   in
-  Server.add_tool server sleep_tool;
+  Ox_fast_mcp_server.Server.add_tool server sleep_tool;
 
   let client = Client.create (Transports.FastMCP_transport server) in
 

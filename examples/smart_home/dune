@@ -4,7 +4,7 @@
   core
   async
   ox_fast_mcp
-  server
+  ox-fast-mcp.server
   yojson
   ppx_yojson_conv_lib
   cohttp-async)
@@ -19,7 +19,7 @@
   core
   async
   ox_fast_mcp
-  server
+  ox-fast-mcp.server
   yojson
   ppx_yojson_conv_lib
   smart_home_lib)

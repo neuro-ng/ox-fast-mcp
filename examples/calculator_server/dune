@@ -3,14 +3,20 @@
  (name main)
  (modules main)
  (package ox-fast-mcp)
- (libraries ox_fast_mcp server core async)
+ (libraries ox_fast_mcp ox-fast-mcp.server core async)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))
 
 (executable
  (name test_calculator)
  (modules test_calculator)
- (libraries core async ox_fast_mcp server yojson ppx_inline_test.runner.lib)
+ (libraries
+  core
+  async
+  ox_fast_mcp
+  ox-fast-mcp.server
+  yojson
+  ppx_inline_test.runner.lib)
  (preprocess
   (pps
    ppx_jane

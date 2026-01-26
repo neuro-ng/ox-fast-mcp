@@ -12,7 +12,7 @@ open Async
 (** {1 Server Description Tests} *)
 
 let%expect_test "describe_server_basic_info" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server =
     create ~name:"test-server" ~version:"1.0.0"
       ~instructions:"Test instructions" ()
@@ -25,7 +25,7 @@ let%expect_test "describe_server_basic_info" =
   return ()
 
 let%expect_test "describe_server_with_components" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"full-server" () in
   (* Add some components *)
   add_simple_tool ~name:"tool1" ~handler:(fun _ -> return (`String "ok")) server;
@@ -61,22 +61,22 @@ let%expect_test "describe_server_with_components" =
 (** {1 Component Search Tests} *)
 
 let%expect_test "find_tools_by_tag" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   let tool1 =
-    Server.Tool.create ~name:"tool1"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"tool1"
       ~tags:(String.Set.of_list [ "api"; "v1" ])
       ~handler:(fun _ -> return `Null)
       ()
   in
   let tool2 =
-    Server.Tool.create ~name:"tool2"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"tool2"
       ~tags:(String.Set.of_list [ "api"; "v2" ])
       ~handler:(fun _ -> return `Null)
       ()
   in
   let tool3 =
-    Server.Tool.create ~name:"tool3"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"tool3"
       ~tags:(String.Set.of_list [ "internal" ])
       ~handler:(fun _ -> return `Null)
       ()
@@ -99,20 +99,23 @@ let%expect_test "find_tools_by_tag" =
   return ()
 
 let%expect_test "find_resources_by_scheme" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   let file_res =
-    Server.Resource.create ~uri:"file:///path/to/file" ~name:"file"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"file:///path/to/file"
+      ~name:"file"
       ~reader:(fun () -> return "data")
       ()
   in
   let http_res =
-    Server.Resource.create ~uri:"http://example.com/api" ~name:"http"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"http://example.com/api"
+      ~name:"http"
       ~reader:(fun () -> return "data")
       ()
   in
   let https_res =
-    Server.Resource.create ~uri:"https://secure.com/data" ~name:"https"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"https://secure.com/data"
+      ~name:"https"
       ~reader:(fun () -> return "data")
       ()
   in
@@ -134,22 +137,22 @@ let%expect_test "find_resources_by_scheme" =
   return ()
 
 let%expect_test "find_prompts_by_tag" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   let prompt1 =
-    Server.Prompt.create ~name:"prompt1"
+    Ox_fast_mcp_server.Server.Prompt.create ~name:"prompt1"
       ~tags:(String.Set.of_list [ "creative" ])
       ~render:(fun _ -> return `Null)
       ()
   in
   let prompt2 =
-    Server.Prompt.create ~name:"prompt2"
+    Ox_fast_mcp_server.Server.Prompt.create ~name:"prompt2"
       ~tags:(String.Set.of_list [ "creative"; "long" ])
       ~render:(fun _ -> return `Null)
       ()
   in
   let prompt3 =
-    Server.Prompt.create ~name:"prompt3"
+    Ox_fast_mcp_server.Server.Prompt.create ~name:"prompt3"
       ~tags:(String.Set.of_list [ "technical" ])
       ~render:(fun _ -> return `Null)
       ()
@@ -173,7 +176,8 @@ let%expect_test "find_prompts_by_tag" =
 let%expect_test "suggest_similar_names_exact_match" =
   let available = [ "user_profile"; "user_settings"; "admin_panel" ] in
   let suggestions =
-    Server.Ox_fast_mcp.suggest_similar_names "user_pro" available
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.suggest_similar_names "user_pro"
+      available
   in
   List.iter suggestions ~f:print_endline;
   [%expect {| |}];
@@ -182,7 +186,8 @@ let%expect_test "suggest_similar_names_exact_match" =
 let%expect_test "suggest_similar_names_typo" =
   let available = [ "calculate"; "calibrate"; "validate"; "navigate" ] in
   let suggestions =
-    Server.Ox_fast_mcp.suggest_similar_names "calulate" available
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.suggest_similar_names "calulate"
+      available
   in
   List.iter suggestions ~f:print_endline;
   [%expect {|
@@ -195,7 +200,8 @@ let%expect_test "suggest_similar_names_typo" =
 let%expect_test "suggest_similar_names_no_matches" =
   let available = [ "apple"; "banana"; "cherry" ] in
   let suggestions =
-    Server.Ox_fast_mcp.suggest_similar_names "zebra" available
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.suggest_similar_names "zebra"
+      available
   in
   print_s [%sexp (List.length suggestions : int)];
   [%expect {| 0 |}];
@@ -203,7 +209,9 @@ let%expect_test "suggest_similar_names_no_matches" =
 
 let%expect_test "suggest_similar_names_multiple_close" =
   let available = [ "tool1"; "tool2"; "tool3"; "cool1"; "pool1" ] in
-  let suggestions = Server.Ox_fast_mcp.suggest_similar_names "tol1" available in
+  let suggestions =
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.suggest_similar_names "tol1" available
+  in
   List.iter suggestions ~f:print_endline;
   [%expect {|
     tool1
@@ -217,7 +225,7 @@ let%expect_test "suggest_similar_names_multiple_close" =
 (** {1 Server Validation Tests} *)
 
 let%expect_test "validate_server_valid_config" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"valid-server" () in
   add_simple_tool ~name:"tool1" ~handler:(fun _ -> return `Null) server;
   add_simple_resource ~uri:"file:///valid" ~name:"res"
@@ -234,11 +242,11 @@ let%expect_test "validate_server_valid_config" =
   return ()
 
 let%expect_test "validate_server_invalid_uri" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   (* Manually create resource with invalid URI to test validation *)
   let invalid_res =
-    Server.Resource.create ~uri:"no_scheme" ~name:"bad"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"no_scheme" ~name:"bad"
       ~reader:(fun () -> return "data")
       ()
   in
@@ -259,13 +267,13 @@ let%expect_test "validate_server_invalid_uri" =
 (** {1 Integration Tests} *)
 
 let%expect_test "search_then_validate" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"integration-test" () in
 
   (* Add tagged components *)
   add_simple_tool ~name:"api_tool" ~handler:(fun _ -> return `Null) server;
   let tool_with_tag =
-    Server.Tool.create ~name:"tagged_tool"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"tagged_tool"
       ~tags:(String.Set.of_list [ "production" ])
       ~handler:(fun _ -> return `Null)
       ()
@@ -298,7 +306,7 @@ let%expect_test "search_then_validate" =
   return ()
 
 let%expect_test "suggest_on_missing_component" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   add_simple_tool ~name:"calculate_sum" ~handler:(fun _ -> return `Null) server;
   add_simple_tool ~name:"calculate_product"

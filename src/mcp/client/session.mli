@@ -111,6 +111,38 @@ val list_tools : t -> ?cursor:string -> unit -> list_tools_result Deferred.t
 val send_roots_list_changed : t -> unit Deferred.t
 (** Send roots list changed notification *)
 
+val send_notification :
+  t ->
+  method_name:string ->
+  params:Yojson.Safe.t option ->
+  unit ->
+  unit Deferred.t
+(** Send a custom notification *)
+
+val send_progress_notification :
+  t ->
+  progress_token ->
+  float ->
+  ?total:float ->
+  ?message:string ->
+  unit ->
+  unit Deferred.t
+(** Send progress notification *)
+
+val get_prompt :
+  t ->
+  string ->
+  (string * Yojson.Safe.t) list option ->
+  get_prompt_result Deferred.t
+(** Get prompt *)
+
+val complete :
+  t ->
+  [ `Resource of resource_template_reference | `Prompt of prompt_reference ] ->
+  (string * string) list ->
+  complete_result Deferred.t
+(** Complete argument *)
+
 val send_request :
   t ->
   method_name:string ->

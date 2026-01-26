@@ -2,7 +2,7 @@
 
 open! Core
 open! Async
-module Http = Server__Http
+module Http = Ox_fast_mcp_server__Http
 
 (** {1 Test: SSE App Sets Server State} *)
 

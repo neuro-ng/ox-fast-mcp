@@ -8,7 +8,7 @@
 
 open! Core
 open! Expect_test_helpers_core
-module Dependencies = Server__Dependencies
+module Dependencies = Ox_fast_mcp_server__Dependencies
 
 (* =============================================================================
    Helper Functions

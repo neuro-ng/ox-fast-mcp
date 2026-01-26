@@ -1,7 +1,7 @@
 open Core
 open Async
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
-module FastMCP = Server.Ox_fast_mcp
+module FastMCP = Ox_fast_mcp_server.Server.Ox_fast_mcp
 
 type json = Yojson.Safe.t
 

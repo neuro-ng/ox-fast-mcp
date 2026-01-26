@@ -16,7 +16,8 @@ let main () =
   let open Deferred.Let_syntax in
   (* Create server *)
   let server =
-    Server.Ox_fast_mcp.create ~name:"calculator-server" ~version:"1.0.0"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.create ~name:"calculator-server"
+      ~version:"1.0.0"
       ~instructions:"A simple calculator with basic arithmetic operations" ()
   in
 
@@ -36,7 +37,7 @@ let main () =
   in
 
   (* Add arithmetic operation tools *)
-  Server.Ox_fast_mcp.add_simple_tool ~name:"add"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"add"
     ~description:"Add two numbers together" ~parameters:binary_op_schema
     ~handler:(fun params ->
       match params with
@@ -58,7 +59,7 @@ let main () =
             [ ("error", `String "Expected object with 'a' and 'b' fields") ]))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"subtract"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"subtract"
     ~description:"Subtract b from a" ~parameters:binary_op_schema
     ~handler:(fun params ->
       match params with
@@ -77,7 +78,7 @@ let main () =
       | _ -> return (`Assoc [ ("error", `String "Expected object") ]))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"multiply"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"multiply"
     ~description:"Multiply two numbers" ~parameters:binary_op_schema
     ~handler:(fun params ->
       match params with
@@ -96,7 +97,7 @@ let main () =
       | _ -> return (`Assoc [ ("error", `String "Expected object") ]))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"divide"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"divide"
     ~description:"Divide a by b (returns error if b is zero)"
     ~parameters:binary_op_schema
     ~handler:(fun params ->
@@ -122,7 +123,7 @@ let main () =
   Log.Global.info "Available tools: add, subtract, multiply, divide";
 
   (* Run with STDIO transport *)
-  Server.Ox_fast_mcp.run_async server ~transport:Stdio ()
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.run_async server ~transport:Stdio ()
 
 let () =
   Command.async

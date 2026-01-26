@@ -23,7 +23,7 @@ let get_text_content result =
 let%expect_test "add tool" =
   let server = Demo_server.create () in
   let%bind result =
-    Server.Ox_fast_mcp.call_tool server ~name:"add"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.call_tool server ~name:"add"
       ~arguments:(`Assoc [ ("a", `Int 2); ("b", `Int 3) ])
   in
   print_endline (get_text_content result);
@@ -33,7 +33,7 @@ let%expect_test "add tool" =
 let%expect_test "greet tool default" =
   let server = Demo_server.create () in
   let%bind result =
-    Server.Ox_fast_mcp.call_tool server ~name:"greet"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.call_tool server ~name:"greet"
       ~arguments:(`Assoc [ ("name", `String "Alice") ])
   in
   print_endline (get_text_content result);
@@ -43,7 +43,7 @@ let%expect_test "greet tool default" =
 let%expect_test "greet tool custom" =
   let server = Demo_server.create () in
   let%bind result =
-    Server.Ox_fast_mcp.call_tool server ~name:"greet"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.call_tool server ~name:"greet"
       ~arguments:
         (`Assoc [ ("name", `String "Bob"); ("greeting", `String "Hi") ])
   in
@@ -54,7 +54,8 @@ let%expect_test "greet tool custom" =
 let%expect_test "async multiply tool" =
   let server = Demo_server.create () in
   let%bind result =
-    Server.Ox_fast_mcp.call_tool server ~name:"async_multiply"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.call_tool server
+      ~name:"async_multiply"
       ~arguments:(`Assoc [ ("x", `Float 3.5); ("y", `Float 2.0) ])
   in
   print_endline (get_text_content result);
@@ -64,7 +65,8 @@ let%expect_test "async multiply tool" =
 let%expect_test "server info resource" =
   let server = Demo_server.create () in
   let%bind content =
-    Server.Ox_fast_mcp.read_resource server ~uri:"demo://info"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.read_resource server
+      ~uri:"demo://info"
   in
   print_endline content;
   [%expect {| This is the FastMCP Testing Demo server |}];
@@ -92,7 +94,8 @@ let get_prompt_text result =
 let%expect_test "hello prompt default" =
   let server = Demo_server.create () in
   let%bind result =
-    Server.Ox_fast_mcp.get_prompt server ~name:"hello" ~arguments:(`Assoc [])
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.get_prompt server ~name:"hello"
+      ~arguments:(`Assoc [])
   in
   print_endline (get_prompt_text result);
   [%expect {| Say hello to World in a friendly way. |}];
@@ -101,7 +104,7 @@ let%expect_test "hello prompt default" =
 let%expect_test "hello prompt custom" =
   let server = Demo_server.create () in
   let%bind result =
-    Server.Ox_fast_mcp.get_prompt server ~name:"hello"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.get_prompt server ~name:"hello"
       ~arguments:(`Assoc [ ("name", `String "Dave") ])
   in
   print_endline (get_prompt_text result);
@@ -111,7 +114,7 @@ let%expect_test "hello prompt custom" =
 let%expect_test "explain prompt simple" =
   let server = Demo_server.create () in
   let%bind result =
-    Server.Ox_fast_mcp.get_prompt server ~name:"explain"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.get_prompt server ~name:"explain"
       ~arguments:
         (`Assoc
           [ ("topic", `String "MCP"); ("detail_level", `String "simple") ])
@@ -123,7 +126,7 @@ let%expect_test "explain prompt simple" =
 let%expect_test "explain prompt detailed" =
   let server = Demo_server.create () in
   let%bind result =
-    Server.Ox_fast_mcp.get_prompt server ~name:"explain"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.get_prompt server ~name:"explain"
       ~arguments:
         (`Assoc
           [ ("topic", `String "MCP"); ("detail_level", `String "detailed") ])
@@ -134,7 +137,7 @@ let%expect_test "explain prompt detailed" =
 
 let%expect_test "list tools" =
   let server = Demo_server.create () in
-  let tools = Server.Ox_fast_mcp.list_tools_mcp server in
+  let tools = Ox_fast_mcp_server.Server.Ox_fast_mcp.list_tools_mcp server in
   let names =
     List.map tools ~f:(fun t ->
         match t with
@@ -152,7 +155,9 @@ let%expect_test "list tools" =
 
 let%expect_test "list resources" =
   let server = Demo_server.create () in
-  let resources = Server.Ox_fast_mcp.list_resources_mcp server in
+  let resources =
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.list_resources_mcp server
+  in
   let uris =
     List.map resources ~f:(fun r ->
         match r with
@@ -173,7 +178,7 @@ let%expect_test "list resources" =
 
 let%expect_test "list prompts" =
   let server = Demo_server.create () in
-  let prompts = Server.Ox_fast_mcp.list_prompts_mcp server in
+  let prompts = Ox_fast_mcp_server.Server.Ox_fast_mcp.list_prompts_mcp server in
   let names =
     List.map prompts ~f:(fun p ->
         match p with

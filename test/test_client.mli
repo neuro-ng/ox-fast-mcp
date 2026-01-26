@@ -9,7 +9,7 @@ type initialize_result = {
 
 type t
 
-val create : Server.Ox_fast_mcp.t -> t Deferred.t
+val create : Ox_fast_mcp_server.Server.Ox_fast_mcp.t -> t Deferred.t
 (** Create test client connected to server *)
 
 val close : t -> unit Deferred.t

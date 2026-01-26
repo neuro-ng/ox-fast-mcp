@@ -8,7 +8,7 @@
 
 open! Core
 open! Expect_test_helpers_core
-module Http = Server__Http
+module Http = Ox_fast_mcp_server__Http
 
 (* =============================================================================
    Helper Types and Functions

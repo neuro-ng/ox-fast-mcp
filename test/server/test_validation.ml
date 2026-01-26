@@ -2,7 +2,7 @@
 
 open! Core
 open! Async
-module Ox_fast_mcp = Server.Ox_fast_mcp
+module Ox_fast_mcp = Ox_fast_mcp_server.Server.Ox_fast_mcp
 
 (** {1 Test: Tool Name Validation} *)
 

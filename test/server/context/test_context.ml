@@ -5,7 +5,7 @@ open! Expect_test_helpers_core
 
 (* Context is accessible directly since we depend on ox-fast-mcp.server
    library *)
-module Context = Server__Context
+module Context = Ox_fast_mcp_server__Context
 open Context
 
 (* =============================================================================

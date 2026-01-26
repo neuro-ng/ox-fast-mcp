@@ -1,6 +1,12 @@
 (library
  (name config_server_lib)
- (libraries core async ox_fast_mcp server yojson ppx_yojson_conv_lib)
+ (libraries
+  core
+  async
+  ox_fast_mcp
+  ox-fast-mcp.server
+  yojson
+  ppx_yojson_conv_lib)
  (modules config_server)
  (preprocess
   (pps ppx_jane ppx_yojson_conv)))
@@ -16,7 +22,13 @@
 (library
  (name test_config_server)
  (modules test_config_server)
- (libraries core async config_server_lib ox_fast_mcp server yojson)
+ (libraries
+  core
+  async
+  config_server_lib
+  ox_fast_mcp
+  ox-fast-mcp.server
+  yojson)
  (inline_tests)
  (preprocess
   (pps ppx_jane ppx_yojson_conv ppx_expect)))

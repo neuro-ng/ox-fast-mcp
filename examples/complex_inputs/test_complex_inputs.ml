@@ -21,7 +21,8 @@ let%expect_test "name_shrimp tool" =
       ]
   in
   let%bind result =
-    Server.Ox_fast_mcp.call_tool server ~name:"name_shrimp" ~arguments:args
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.call_tool server ~name:"name_shrimp"
+      ~arguments:args
   in
   match result with
   | `List names ->

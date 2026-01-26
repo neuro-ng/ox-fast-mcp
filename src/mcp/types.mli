@@ -49,11 +49,11 @@ module Request_params : sig
       progress_token : progress_token option;
           [@key "progressToken"] [@yojson.option]
     }
-    [@@deriving compare, sexp]
+    [@@deriving yojson, compare, sexp]
   end
 
   type t = { meta : Meta.t option [@key "_meta"] [@yojson.option] }
-  [@@deriving compare, sexp]
+  [@@deriving yojson, compare, sexp]
 end
 
 type paginated_request_params = {
@@ -66,13 +66,13 @@ type paginated_request_params = {
 
 module Notification_params : sig
   module Meta : sig
-    type t = unit [@@deriving compare, sexp]
+    type t = unit [@@deriving yojson, compare, sexp]
   end
 
   type t = {
     meta : Meta.t option; [@key "_meta"] [@default None] [@yojson.option]
   }
-  [@@deriving compare, sexp]
+  [@@deriving yojson, compare, sexp]
 end
 
 (* Alias used by shared modules for request metadata *)
@@ -301,6 +301,12 @@ type progress_notification_params = {
       [@of_yojson Notification_params.of_yojson]
 }
 [@@deriving yojson, compare, sexp]
+
+val progress_notification_params_to_yojson :
+  progress_notification_params -> Yojson.Safe.t
+
+val progress_notification_params_of_yojson :
+  Yojson.Safe.t -> progress_notification_params
 
 type progress_notification = progress_notification_params notification
 [@@deriving yojson, compare, sexp]
@@ -743,24 +749,25 @@ type resource_template_reference = {
   type_ : [ `Ref_resource ]; [@key "type"]
   uri : string;
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
-type resource_reference = resource_template_reference [@@deriving compare, sexp]
+type resource_reference = resource_template_reference
+[@@deriving yojson, compare, sexp]
 
 type prompt_reference = { type_ : [ `Ref_prompt ]; [@key "type"] name : string }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type completion_argument = { name : string; value : string }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type completion_context = {
   arguments : (string, string) List.Assoc.t option;
       [@default None] [@yojson.option]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
 
 type complete_request_params = {
-  ref :
+  reference :
     [ `Resource of resource_template_reference | `Prompt of prompt_reference ];
   argument : completion_argument;
   context : completion_context option; [@default None] [@yojson.option]
@@ -768,10 +775,16 @@ type complete_request_params = {
       [@to_yojson Request_params.to_yojson]
       [@of_yojson Request_params.of_yojson]
 }
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
+
+val complete_request_params_to_yojson : complete_request_params -> Yojson.Safe.t
+val complete_request_params_of_yojson : Yojson.Safe.t -> complete_request_params
 
 type complete_request = complete_request_params request
-[@@deriving compare, sexp]
+[@@deriving yojson, compare, sexp]
+
+val complete_request_to_yojson : complete_request -> Yojson.Safe.t
+val complete_request_of_yojson : Yojson.Safe.t -> complete_request
 
 type completion = {
   values : string list;

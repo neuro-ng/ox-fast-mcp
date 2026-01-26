@@ -7,11 +7,13 @@ open Async
 
 let%expect_test "run_stdio_accepts_log_level" =
   (* Test that run_async with stdio transport accepts log_level parameter *)
-  let server = Server.Ox_fast_mcp.create ~name:"TestServer" () in
+  let server =
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.create ~name:"TestServer" ()
+  in
   (* This should accept the log_level parameter without error *)
   let%bind () =
-    Server.Ox_fast_mcp.run_async server ~transport:Server.Transport.Stdio
-      ~log_level:"debug" ()
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.run_async server
+      ~transport:Ox_fast_mcp_server.Server.Transport.Stdio ~log_level:"debug" ()
   in
   [%expect
     {|
@@ -25,12 +27,15 @@ let%expect_test "run_http_accepts_log_level" =
   (* Test that run_async with SSE transport accepts log_level parameter *)
   (* Suppress log output to avoid dynamic timestamps in test expectations *)
   Log.Global.set_output [];
-  let server = Server.Ox_fast_mcp.create ~name:"TestServer" () in
+  let server =
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.create ~name:"TestServer" ()
+  in
   (* HTTP servers run indefinitely, so we just verify the parameter is accepted *)
   (* and initialization starts without error *)
   let (_ : unit Deferred.t) =
-    Server.Ox_fast_mcp.run_async server ~transport:Server.Transport.Sse
-      ~host:"127.0.0.1" ~port:8000 ~log_level:"info" ()
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.run_async server
+      ~transport:Ox_fast_mcp_server.Server.Transport.Sse ~host:"127.0.0.1"
+      ~port:8000 ~log_level:"info" ()
   in
   (* Give it a moment to start up *)
   let%bind () = after (sec 0.1) in
@@ -41,10 +46,13 @@ let%expect_test "run_sse_accepts_log_level" =
   (* Test that run_async with SSE transport accepts log_level parameter *)
   (* Suppress log output to avoid dynamic timestamps in test expectations *)
   Log.Global.set_output [];
-  let server = Server.Ox_fast_mcp.create ~name:"TestServer" () in
+  let server =
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.create ~name:"TestServer" ()
+  in
   let (_ : unit Deferred.t) =
-    Server.Ox_fast_mcp.run_async server ~transport:Server.Transport.Sse
-      ~host:"127.0.0.1" ~port:8001 ~log_level:"info" ()
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.run_async server
+      ~transport:Ox_fast_mcp_server.Server.Transport.Sse ~host:"127.0.0.1"
+      ~port:8001 ~log_level:"info" ()
   in
   (* Give it a moment to start - this test just verifies no exception is
      thrown *)
@@ -54,11 +62,14 @@ let%expect_test "run_sse_accepts_log_level" =
 
 let%expect_test "run_async_passes_log_level" =
   (* Test that run_async passes log_level to transport methods *)
-  let server = Server.Ox_fast_mcp.create ~name:"TestServer" () in
+  let server =
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.create ~name:"TestServer" ()
+  in
   (* Test with different log levels *)
   let%bind () =
-    Server.Ox_fast_mcp.run_async server ~transport:Server.Transport.Stdio
-      ~log_level:"warning" ()
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.run_async server
+      ~transport:Ox_fast_mcp_server.Server.Transport.Stdio ~log_level:"warning"
+      ()
   in
   [%expect
     {|
@@ -70,9 +81,12 @@ let%expect_test "run_async_passes_log_level" =
 
 let%expect_test "run_without_log_level" =
   (* Test that omitting log_level works (it's optional) *)
-  let server = Server.Ox_fast_mcp.create ~name:"TestServer" () in
+  let server =
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.create ~name:"TestServer" ()
+  in
   let%bind () =
-    Server.Ox_fast_mcp.run_async server ~transport:Server.Transport.Stdio ()
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.run_async server
+      ~transport:Ox_fast_mcp_server.Server.Transport.Stdio ()
   in
   [%expect
     {|

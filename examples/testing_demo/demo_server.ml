@@ -8,10 +8,12 @@ open Async
 
 (* Define server creation function for both main entrypoint and tests *)
 let create () =
-  let server = Server.Ox_fast_mcp.create ~name:"Testing Demo" () in
+  let server =
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.create ~name:"Testing Demo" ()
+  in
 
   (* Tools *)
-  Server.Ox_fast_mcp.add_simple_tool server ~name:"add"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool server ~name:"add"
     ~description:"Add two numbers together"
     ~parameters:
       (`Assoc
@@ -55,7 +57,7 @@ let create () =
             ])
       | _ -> return (`Assoc [ ("error", `String "Expected object") ]));
 
-  Server.Ox_fast_mcp.add_simple_tool server ~name:"greet"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool server ~name:"greet"
     ~description:"Greet someone with a customizable greeting"
     ~parameters:
       (`Assoc
@@ -100,8 +102,8 @@ let create () =
             ])
       | _ -> return (`Assoc [ ("error", `String "Expected object") ]));
 
-  Server.Ox_fast_mcp.add_simple_tool server ~name:"async_multiply"
-    ~description:"Multiply two numbers (async example)"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool server
+    ~name:"async_multiply" ~description:"Multiply two numbers (async example)"
     ~parameters:
       (`Assoc
         [
@@ -150,14 +152,14 @@ let create () =
 
   (* Resources *)
   let info_reader () = return "This is the FastMCP Testing Demo server" in
-  Server.Ox_fast_mcp.add_simple_resource server ~uri:"demo://info"
-    ~name:"demo://info" ~description:"Get server information"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_resource server
+    ~uri:"demo://info" ~name:"demo://info" ~description:"Get server information"
     ~mime_type:"text/plain" ~reader:info_reader;
 
   (* Resource Template: demo://greeting/{name} *)
   let greeting_template =
-    Server.Resource_template.create ~uri_template:"demo://greeting/{name}"
-      ~name:"greeting_resource"
+    Ox_fast_mcp_server.Server.Resource_template.create
+      ~uri_template:"demo://greeting/{name}" ~name:"greeting_resource"
       ~description:"Get a personalized greeting resource"
       ~mime_type:"text/plain"
       ~create_resource:(fun ~params ->
@@ -168,14 +170,14 @@ let create () =
         let uri = sprintf "demo://greeting/%s" name in
         let reader () = return (sprintf "Welcome to FastMCP, %s!" name) in
         return
-          (Server.Resource.create ~uri ~name:"greeting_inst"
+          (Ox_fast_mcp_server.Server.Resource.create ~uri ~name:"greeting_inst"
              ~mime_type:"text/plain" ~reader ()))
       ()
   in
-  Server.Ox_fast_mcp.add_template server greeting_template;
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_template server greeting_template;
 
   (* Prompts *)
-  Server.Ox_fast_mcp.add_simple_prompt server ~name:"hello"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_prompt server ~name:"hello"
     ~description:"Generate a hello world prompt"
     ~arguments:
       [
@@ -213,7 +215,7 @@ let create () =
                 ] );
           ]));
 
-  Server.Ox_fast_mcp.add_simple_prompt server ~name:"explain"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_prompt server ~name:"explain"
     ~description:"Generate a prompt to explain a topic"
     ~arguments:
       [
@@ -279,16 +281,17 @@ let main () =
   let server = create () in
   let transport =
     match Sys.getenv "FASTMCP_TRANSPORT" with
-    | Some "http" -> Server.Transport.Http
-    | Some "sse" -> Server.Transport.Sse
-    | _ -> Server.Transport.Stdio
+    | Some "http" -> Ox_fast_mcp_server.Server.Transport.Http
+    | Some "sse" -> Ox_fast_mcp_server.Server.Transport.Sse
+    | _ -> Ox_fast_mcp_server.Server.Transport.Stdio
   in
   let port =
     match Sys.getenv "FASTMCP_PORT" with
     | Some p -> Int.of_string p
     | None -> 8000
   in
-  Server.Ox_fast_mcp.run_async ~transport ~port server ~log_level:"INFO" ()
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.run_async ~transport ~port server
+    ~log_level:"INFO" ()
 
 let () =
   (* Only run main if this file is executed as an entrypoint, but since this is
@@ -305,5 +308,5 @@ let () =
      and having a tiny separate executable runner, OR just not running the main
      loop if we detect we are in a test environment? Actually, we will make this
      file `server.ml` purely a library that exports `create` and `main`, and
-     have a `main.ml` entrypoint that calls `Server.main`. *)
+     have a `main.ml` entrypoint that calls `Ox_fast_mcp_server.Server.main`. *)
   ()

@@ -5,11 +5,13 @@ let main () =
   let open Deferred.Let_syntax in
   (* Create the FastMCP server instance - dependencies are now in fastmcp.json *)
   (* Python: mcp = FastMCP("Screenshot Demo") *)
-  let server = Server.Ox_fast_mcp.create ~name:"Screenshot Demo" () in
+  let server =
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.create ~name:"Screenshot Demo" ()
+  in
 
   (* Python: @mcp.tool def take_screenshot() -> Image: """Take a screenshot of
      the user's screen and return it as an image.""" ... *)
-  Server.Ox_fast_mcp.add_simple_tool ~name:"take_screenshot"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"take_screenshot"
     ~description:
       "Take a screenshot of the user's screen and return it as an image.\n\
        Use this tool anytime the user wants you to look at something on their \
@@ -38,7 +40,7 @@ let main () =
 
   (* Python: @mcp.tool def analyze_colors() -> dict: """Analyze the dominant
      colors in the current screen.""" ... *)
-  Server.Ox_fast_mcp.add_simple_tool ~name:"analyze_colors"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"analyze_colors"
     ~description:
       "Analyze the dominant colors in the current screen.\n\
        Returns a dictionary with color statistics from the screen."
@@ -103,7 +105,7 @@ let main () =
 
   (* Run with STDIO transport *)
   (* Python: asyncio.run(mcp.run_async()) *)
-  Server.Ox_fast_mcp.run_async server ~transport:Stdio ()
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.run_async server ~transport:Stdio ()
 
 let () =
   Command.async ~summary:"Screenshot Demo Server" (Command.Param.return main)

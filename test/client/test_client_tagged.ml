@@ -4,7 +4,9 @@ open Alcotest_async
 
 (* Test server fixture *)
 let create_tagged_resources_server () =
-  let server = Server.create ~name:"TaggedResourcesServer" () in
+  let server =
+    Ox_fast_mcp_server.Server.create ~name:"TaggedResourcesServer" ()
+  in
 
   (* Add a resource with tags *)
   let tagged_resource =
@@ -12,7 +14,7 @@ let create_tagged_resources_server () =
       ~description:"A tagged resource" ~f:(fun () ->
         return (`Assoc [ ("type", `String "tagged_data") ]))
   in
-  Server.add_resource server tagged_resource;
+  Ox_fast_mcp_server.Server.add_resource server tagged_resource;
 
   (* Add a resource template with tags *)
   let tagged_template =
@@ -22,7 +24,7 @@ let create_tagged_resources_server () =
         return
           (`Assoc [ ("id", `String id); ("type", `String "template_data") ]))
   in
-  Server.add_resource_template server tagged_template;
+  Ox_fast_mcp_server.Server.add_resource_template server tagged_template;
 
   server
 

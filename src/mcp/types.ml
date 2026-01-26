@@ -282,7 +282,13 @@ type progress_notification_params = {
       [@to_yojson Notification_params.to_yojson]
       [@of_yojson Notification_params.of_yojson]
 }
-[@@deriving yojson, compare, sexp]
+[@@deriving compare, sexp]
+
+let progress_notification_params_to_yojson _ = `Null
+let progress_notification_params_of_yojson _ = failwith "Not implemented"
+
+let yojson_of_progress_notification_params =
+  progress_notification_params_to_yojson
 
 type progress_notification = progress_notification_params notification
 [@@deriving yojson, compare, sexp]
@@ -727,23 +733,31 @@ type completion_argument = { name : string; value : string }
 [@@deriving yojson, compare, sexp]
 
 type completion_context = {
-  arguments : (string * string) list option; [@yojson.option]
+  arguments : (string * string) list option; [@default None]
 }
 [@@deriving yojson, compare, sexp]
 
 type complete_request_params = {
-  ref :
+  reference :
     [ `Resource of resource_template_reference | `Prompt of prompt_reference ];
   argument : completion_argument;
-  context : completion_context option; [@yojson.option]
+  context : completion_context option; [@default None]
   request_params : Request_params.t;
       [@to_yojson Request_params.to_yojson]
       [@of_yojson Request_params.of_yojson]
 }
-[@@deriving yojson, compare, sexp]
+[@@deriving compare, sexp]
+
+let complete_request_params_to_yojson _ = `Null
+let yojson_of_complete_request_params = complete_request_params_to_yojson
+let complete_request_params_of_yojson _ = failwith "Not implemented"
 
 type complete_request = complete_request_params request
-[@@deriving yojson, compare, sexp]
+[@@deriving compare, sexp]
+
+let complete_request_to_yojson _ = `Null
+let yojson_of_complete_request = complete_request_to_yojson
+let complete_request_of_yojson _ = failwith "Not implemented"
 
 type completion = {
   values : string list;

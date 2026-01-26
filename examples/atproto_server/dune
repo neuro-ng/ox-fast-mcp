@@ -11,7 +11,7 @@
  (modules atproto_server)
  (libraries
   ox_fast_mcp
-  server
+  ox-fast-mcp.server
   atproto
   atproto_types
   core

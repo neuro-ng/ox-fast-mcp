@@ -1688,7 +1688,7 @@ module Ox_fast_mcp = struct
 
     process_loop ()
 
-  let run_http_async ?log_level t ~transport ~host ~port =
+  let run_http_async ?log_level ?auth t ~transport ~host ~port =
     let%bind () =
       (match log_level with
       | Some level ->
@@ -1708,11 +1708,17 @@ module Ox_fast_mcp = struct
       | Transport.Sse ->
         Http.create_sse_app
           ~server:(`Assoc [ ("name", `String t.name) ])
-          ~message_path:"/messages" ~sse_path:"/sse" ()
+          ~message_path:"/messages" ~sse_path:"/sse" ?auth ()
       | Transport.Streamable_http ->
         Http.create_streamable_http_app
           ~server:(`Assoc [ ("name", `String t.name) ])
-          ~streamable_http_path:"/mcp/v1" ()
+          ~streamable_http_path:"/mcp/v1" ?auth
+          ~process_request:(fun message ->
+            (* Create a fresh set of handlers for each request or reuse? Reuse is fine. *)
+            (* handlers are created in run_http_async context if we lift setup_handlers *)
+            let handlers = setup_handlers t in
+            handle_stdio_message t handlers message)
+          ()
       | _ ->
         raise_s [%message "Invalid HTTP transport" (transport : Transport.t)]
     in
@@ -1723,13 +1729,16 @@ module Ox_fast_mcp = struct
     (* Start HTTP server *)
     Http.start_http_server ~config ~app ()
 
-  let run_async t ?(transport = Transport.Stdio) ?host ?port ?log_level () =
+  let run_async t ?(transport = Transport.Stdio) ?host ?port ?log_level ?auth ()
+      =
     match transport with
     | Transport.Stdio -> run_stdio_async ?log_level t
     | Transport.Http | Transport.Sse | Transport.Streamable_http ->
       let host = Option.value host ~default:"127.0.0.1" in
       let port = Option.value port ~default:8000 in
-      let%bind _server = run_http_async ?log_level t ~transport ~host ~port in
+      let%bind _server =
+        run_http_async ?log_level ?auth t ~transport ~host ~port
+      in
       Deferred.never () (* HTTP server runs indefinitely *)
 end
 

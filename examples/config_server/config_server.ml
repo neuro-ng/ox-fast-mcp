@@ -1,6 +1,6 @@
 open Core
 open Async
-module FastMCP = Server.Ox_fast_mcp
+module FastMCP = Ox_fast_mcp_server.Server.Ox_fast_mcp
 
 let create ~name ~debug () =
   let server_name = if debug then name ^ " (Debug)" else name in
@@ -49,5 +49,5 @@ let create ~name ~debug () =
 
 let main ~name ~debug () =
   let server = create ~name ~debug () in
-  let transport = Server.Transport.Stdio in
+  let transport = Ox_fast_mcp_server.Server.Transport.Stdio in
   FastMCP.run_async ~transport server ()

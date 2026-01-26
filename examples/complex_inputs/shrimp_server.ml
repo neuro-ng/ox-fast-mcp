@@ -22,7 +22,7 @@ module Name_shrimp_args = struct
   [@@deriving yojson, sexp]
 end
 
-module FastMCP = Server.Ox_fast_mcp
+module FastMCP = Ox_fast_mcp_server.Server.Ox_fast_mcp
 
 let create () =
   let server = FastMCP.create ~name:"Shrimp Tank" () in
@@ -95,5 +95,5 @@ let create () =
 
 let main () =
   let server = create () in
-  let transport = Server.Transport.Stdio in
+  let transport = Ox_fast_mcp_server.Server.Transport.Stdio in
   FastMCP.run_async ~transport server ()
