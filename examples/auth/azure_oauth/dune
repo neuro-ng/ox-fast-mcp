@@ -1,0 +1,14 @@
+(executables
+ (names server client)
+ (public_names azure_oauth_server azure_oauth_client)
+ (package ox-fast-mcp)
+ (libraries
+  ox-fast-mcp.server
+  ox-fast-mcp.client
+  ox-fast-mcp.server.auth.providers
+  ox-fast-mcp.utilities
+  core
+  async
+  lwt)
+ (preprocess
+  (pps ppx_jane)))

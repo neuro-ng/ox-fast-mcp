@@ -1,0 +1,15 @@
+(executables
+ (names server client)
+ (public_names workos_oauth_server workos_oauth_client)
+ (package ox-fast-mcp)
+ (libraries
+  ox-fast-mcp
+  ox-fast-mcp.server
+  ox-fast-mcp.client
+  ox-fast-mcp.server.auth.providers
+  async
+  core
+  cohttp-async
+  yojson)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))

@@ -1,0 +1,11 @@
+(executables
+ (names server client)
+ (libraries
+  ox-fast-mcp.server
+  ox-fast-mcp.client
+  ox-fast-mcp.server.auth.providers
+  core
+  async
+  lwt)
+ (preprocess
+  (pps ppx_jane)))

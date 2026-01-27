@@ -1,0 +1,15 @@
+(executables
+ (names server client)
+ (public_names google_oauth_server google_oauth_client)
+ (package ox-fast-mcp)
+ (libraries
+  ox-fast-mcp.server
+  ox-fast-mcp.client
+  ox-fast-mcp.server.auth.providers
+  ox-fast-mcp.utilities
+  core
+  async
+  cohttp-async
+  lwt)
+ (preprocess
+  (pps ppx_jane)))
