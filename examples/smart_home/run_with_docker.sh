@@ -19,28 +19,35 @@ cleanup() {
 trap cleanup EXIT
 
 # Clean up any existing container
+# Clean up any existing container
 cleanup
 
 echo "Starting diyhue container..."
-# Assuming diyhue/core:latest is available or pulled
-# Mapping port 80 to 8080 (as per test expectations 127.0.0.1:8080)
-# Note: DIYHue usually runs on port 80 inside the container.
-docker run -d \
+# Using create + cp + start to avoid volume mount issues in CI/DooD environments
+# where the build path inside the container doesn't match the host path.
+docker create \
   --name $CONTAINER_NAME \
   -p 8080:80 \
   -e MAC=00:11:22:33:44:55 \
-  -v $(pwd)/test_config.json:/opt/hue-emulator/config.json \
   diyhue/core:latest
+
+# Copy config file (docker cp works from client to container, bypassing host path issues)
+docker cp $(pwd)/test_config.json $CONTAINER_NAME:/opt/hue-emulator/config.json
+
+# Start the container
+docker start $CONTAINER_NAME
 
 echo "Waiting for diyhue to be ready..."
 # Simple health check loop
-max_retries=30
+max_retries=60
 count=0
 while ! curl -s http://127.0.0.1:8080/api/config >/dev/null; do
   sleep 1
   count=$((count+1))
   if [ $count -ge $max_retries ]; then
     echo "Timeout waiting for diyhue to start"
+    echo "Container logs:"
+    docker logs $CONTAINER_NAME
     exit 1
   fi
   echo -n "."
