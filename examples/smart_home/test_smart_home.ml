@@ -25,7 +25,11 @@ let%expect_test "thermostat logic" =
 
 (* Integration test with running DIYHue container *)
 let%expect_test "integration: diyhue lights" =
-  let ip = "127.0.0.1:8080" in
+  let ip =
+    match Sys.getenv "SMART_HOME_TEST_IP" with
+    | Some ip -> ip
+    | None -> "127.0.0.1:8080"
+  in
   let username = "102030405060708090a0b0c0d0e0f000" in
   let client = Phue.create ~ip ~username in
 
