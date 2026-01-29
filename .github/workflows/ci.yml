@@ -34,6 +34,12 @@ jobs:
         cd /workspace
         ls -al
 
+    - name: Verify Docker access
+      run: |
+        # Ensure we can access Docker
+        docker ps
+        docker version
+
     - name: Build project
       working-directory: /workspace
       run: |

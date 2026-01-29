@@ -27,7 +27,7 @@ echo "Starting diyhue container..."
 # where the build path inside the container doesn't match the host path.
 docker create \
   --name $CONTAINER_NAME \
-  -p 0:80 \
+  -p 8080:80 \
   -e MAC=00:11:22:33:44:55 \
   diyhue/core:latest
 
@@ -37,16 +37,25 @@ docker cp $(pwd)/test_config.json $CONTAINER_NAME:/opt/hue-emulator/config.json
 # Start the container
 docker start $CONTAINER_NAME
 
-# Get mapped port
-HOST_PORT=$(docker port $CONTAINER_NAME 80 | head -n 1 | awk -F: '{print $2}')
-CONTAINER_ADDR="127.0.0.1:$HOST_PORT"
-echo "Container Address: $CONTAINER_ADDR"
-
 echo "Waiting for diyhue to be ready..."
+# Get container IP address (works in Docker-in-Docker setups)
+CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_NAME)
+echo "Container IP: $CONTAINER_IP"
+
+# Try both localhost (for normal Docker) and container IP (for DinD)
+# In CI/DinD environments, localhost port mapping doesn't work, so we use container IP
+if [ -n "$CONTAINER_IP" ]; then
+  HEALTH_URL="http://$CONTAINER_IP:80/api/config"
+else
+  HEALTH_URL="http://127.0.0.1:8080/api/config"
+fi
+
+echo "Health check URL: $HEALTH_URL"
+
 # Simple health check loop
 max_retries=60
 count=0
-while ! curl -m 1 -s http://$CONTAINER_ADDR/api/config >/dev/null; do
+while ! curl -s "$HEALTH_URL" > /dev/null; do
   sleep 1
   count=$((count+1))
   if [ $count -ge $max_retries ]; then
@@ -59,8 +68,7 @@ while ! curl -m 1 -s http://$CONTAINER_ADDR/api/config >/dev/null; do
 done
 echo " Ready!"
 
-export SMART_HOME_TEST_IP="$CONTAINER_ADDR"
-echo "Running tests with SMART_HOME_TEST_IP=$SMART_HOME_TEST_IP"
+echo "Running tests..."
 CMD="$1"
 shift
 if [[ "$CMD" != /* && "$CMD" != ./* ]]; then
