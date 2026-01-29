@@ -53,5 +53,3 @@ let%expect_test "integration: diyhue lights" =
   | _ :: _ ->
     print_endline "Lights found (seeded container).";
     return ()
-
-let () = Ppx_inline_test_lib.exit ()

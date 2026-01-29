@@ -42,31 +42,46 @@ echo "Waiting for diyhue to be ready..."
 CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_NAME)
 echo "Container IP: $CONTAINER_IP"
 
-# Try both localhost (for normal Docker) and container IP (for DinD)
-# In CI/DinD environments, localhost port mapping doesn't work, so we use container IP
-if [ -n "$CONTAINER_IP" ]; then
-  HEALTH_URL="http://$CONTAINER_IP:80/api/config"
-else
-  HEALTH_URL="http://127.0.0.1:8080/api/config"
-fi
-
-echo "Health check URL: $HEALTH_URL"
-
-# Simple health check loop
+# Health check loop - try both addresses until one works
+echo "Waiting for diyhue to be ready (checking localhost and container IP)..."
+target_found=false
 max_retries=60
 count=0
-while ! curl -s "$HEALTH_URL" > /dev/null; do
+
+while [ $count -lt $max_retries ]; do
+  # Try localhost first
+  if curl -s --max-time 1 "http://127.0.0.1:8080/api/config" > /dev/null; then
+    echo " Connection successful via localhost:8080"
+    target_found=true
+    TARGET_HOST="127.0.0.1:8080"
+    break
+  fi
+
+  # Try container IP if available
+  if [ -n "$CONTAINER_IP" ]; then
+    if curl -s --max-time 1 "http://$CONTAINER_IP:80/api/config" > /dev/null; then
+      echo " Connection successful via Container IP: $CONTAINER_IP"
+      target_found=true
+      TARGET_HOST="$CONTAINER_IP:80"
+      break
+    fi
+  fi
+
   sleep 1
   count=$((count+1))
-  if [ $count -ge $max_retries ]; then
-    echo "Timeout waiting for diyhue to start"
-    echo "Container logs:"
-    docker logs $CONTAINER_NAME
-    exit 1
-  fi
   echo -n "."
 done
+
+if [ "$target_found" = false ]; then
+  echo "Timeout waiting for diyhue to start"
+  echo "Container logs:"
+  docker logs $CONTAINER_NAME
+  cleanup
+  exit 1
+fi
+
 echo " Ready!"
+export SMART_HOME_TEST_IP="$TARGET_HOST"
 
 echo "Running tests..."
 CMD="$1"
@@ -74,8 +89,19 @@ shift
 if [[ "$CMD" != /* && "$CMD" != ./* ]]; then
   CMD="./$CMD"
 fi
-$CMD "$@"
+
+# Run test with timeout to prevent indefinite hangs (5 minutes max)
+# timeout returns 124 if the command times out
+timeout 300 $CMD "$@"
 TEST_EXIT_CODE=$?
 
-echo "Tests finished with exit code: $TEST_EXIT_CODE"
-exit $TEST_EXIT_CODE
+if [ $TEST_EXIT_CODE -eq 124 ]; then
+  echo "ERROR: Test timed out after 5 minutes"
+  exit 1
+elif [ $TEST_EXIT_CODE -ne 0 ]; then
+  echo "Tests failed with exit code: $TEST_EXIT_CODE"
+  exit $TEST_EXIT_CODE
+else
+  echo "Tests completed successfully"
+  exit 0
+fi
