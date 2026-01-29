@@ -75,3 +75,7 @@ if [[ "$CMD" != /* && "$CMD" != ./* ]]; then
   CMD="./$CMD"
 fi
 $CMD "$@"
+TEST_EXIT_CODE=$?
+
+echo "Tests finished with exit code: $TEST_EXIT_CODE"
+exit $TEST_EXIT_CODE
