@@ -45,7 +45,7 @@ echo "Container IP: $CONTAINER_IP"
 # Health check loop - try both addresses until one works
 echo "Waiting for diyhue to be ready (checking localhost and container IP)..."
 target_found=false
-max_retries=60
+max_retries=300
 count=0
 
 while [ $count -lt $max_retries ]; do
