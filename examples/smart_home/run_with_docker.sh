@@ -22,12 +22,31 @@ trap cleanup EXIT
 # Clean up any existing container
 cleanup
 
+# Configure networking based on environment
+if [ "$GITHUB_ACTIONS" = "true" ]; then
+  echo "Detected GitHub Actions environment."
+  # Get the network of the current container
+  RUNNER_NETWORK=$(docker inspect --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}' $(hostname) || echo "bridge")
+  echo "Running on network: $RUNNER_NETWORK"
+  
+  # Run on the same network, no port mapping needed (access via container name)
+  NETWORK_ARGS="--network $RUNNER_NETWORK --network-alias $CONTAINER_NAME"
+  HEALTH_URL_BASE="http://$CONTAINER_NAME:80"
+  
+  # Ensure we don't try to reuse name if it exists (though cleanup handled this)
+  
+else
+  echo "Detected local/dev environment."
+  # Standard port mapping for local dev
+  NETWORK_ARGS="-p 8080:80"
+  HEALTH_URL_BASE="http://127.0.0.1:8080"
+fi
+
 echo "Starting diyhue container..."
 # Using create + cp + start to avoid volume mount issues in CI/DooD environments
-# where the build path inside the container doesn't match the host path.
 docker create \
   --name $CONTAINER_NAME \
-  -p 8080:80 \
+  $NETWORK_ARGS \
   -e MAC=00:11:22:33:44:55 \
   diyhue/core:latest
 
@@ -43,21 +62,24 @@ CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddres
 echo "Container IP: $CONTAINER_IP"
 
 # Health check loop - try both addresses until one works
-echo "Waiting for diyhue to be ready (checking localhost and container IP)..."
+echo "Waiting for diyhue to be ready (checking $HEALTH_URL_BASE and IP)..."
 target_found=false
 max_retries=300
 count=0
 
 while [ $count -lt $max_retries ]; do
-  # Try localhost first
-  if curl -s --max-time 1 "http://127.0.0.1:8080/api/config" > /dev/null; then
-    echo " Connection successful via localhost:8080"
+  # Try the primary URL (DNS or localhost)
+  if curl -s --max-time 1 "$HEALTH_URL_BASE/api/config" > /dev/null; then
+    echo " Connection successful via $HEALTH_URL_BASE"
     target_found=true
-    TARGET_HOST="127.0.0.1:8080"
+    TARGET_HOST="$HEALTH_URL_BASE"
+    # Extract host part for export (remove http:// and /...)
+    TARGET_HOST=${TARGET_HOST#http://}
+    TARGET_HOST=${TARGET_HOST%%/*}
     break
   fi
 
-  # Try container IP if available
+  # Try container IP as fallback
   if [ -n "$CONTAINER_IP" ]; then
     if curl -s --max-time 1 "http://$CONTAINER_IP:80/api/config" > /dev/null; then
       echo " Connection successful via Container IP: $CONTAINER_IP"
