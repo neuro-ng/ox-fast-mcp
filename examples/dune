@@ -1,20 +1,14 @@
 (executable
- (public_name calculator-server)
- (name calculator_server)
- (modules calculator_server)
- (libraries ox_fast_mcp server))
-
-(executable
  (public_name demo)
  (name demo)
  (modules demo)
- (libraries ox_fast_mcp server))
+ (libraries ox_fast_mcp ox-fast-mcp.server))
 
 (executable
  (public_name http-demo)
  (name http_demo)
  (modules http_demo)
- (libraries ox_fast_mcp server core async cohttp-async))
+ (libraries ox_fast_mcp ox-fast-mcp.server core async cohttp-async))
 
 (executable
  (name test_session)

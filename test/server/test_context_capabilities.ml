@@ -6,7 +6,7 @@
 open! Core
 open! Async
 open! Expect_test_helpers_core
-module Context = Server__Context
+module Context = Ox_fast_mcp_server__Context
 
 (** Test sample() fails without session *)
 let%expect_test "sample fails without session" =

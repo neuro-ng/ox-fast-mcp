@@ -297,23 +297,19 @@ let send_ping t =
 
 [@@@warning "-32"]
 
-let send_progress_notification t token progress ?total ?message () =
+let send_progress_notification t progress_token progress ?total ?message () =
   let params =
-    `Assoc
-      ([
-         ("progressToken", Mcp.Types.progress_token_to_yojson token);
-         ("progress", `Float progress);
-       ]
-      @ (match total with
-        | Some t -> [ ("total", `Float t) ]
-        | None -> [])
-      @
-      match message with
-      | Some m -> [ ("message", `String m) ]
-      | None -> [])
+    {
+      progress_token;
+      progress;
+      total;
+      message;
+      notification_params = { meta = None };
+    }
   in
   send_notification t ~method_name:"notifications/progress"
-    ~params:(Some params) ()
+    ~params:(Some (progress_notification_params_to_yojson params))
+    ()
 
 let set_logging_level t level =
   let params = `Assoc [ ("level", yojson_of_logging_level level) ] in
@@ -380,6 +376,41 @@ let unsubscribe_resource t uri =
   send_request t ~method_name:"resources/unsubscribe" ~params:(Some params)
     ~result_decoder:(fun json ->
       try Ok (empty_result_of_yojson json)
+      with exn -> Error (Exn.to_string exn))
+    ()
+
+let get_prompt t name arguments =
+  let params =
+    `Assoc
+      ([ ("name", `String name) ]
+      @
+      match arguments with
+      | Some args -> [ ("arguments", `Assoc args) ]
+      | None -> [])
+  in
+  send_request t ~method_name:"prompts/get" ~params:(Some params)
+    ~result_decoder:(fun json ->
+      try Ok (get_prompt_result_of_yojson json)
+      with exn -> Error (Exn.to_string exn))
+    ()
+
+let complete t ref argument =
+  let params =
+    Mcp.Types.complete_request_params_to_yojson
+      {
+        reference = ref;
+        argument =
+          {
+            name = fst (List.hd_exn argument);
+            value = snd (List.hd_exn argument);
+          };
+        context = None;
+        request_params = { meta = None };
+      }
+  in
+  send_request t ~method_name:"completion/complete" ~params:(Some params)
+    ~result_decoder:(fun json ->
+      try Ok (complete_result_of_yojson json)
       with exn -> Error (Exn.to_string exn))
     ()
 

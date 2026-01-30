@@ -24,7 +24,13 @@
   test_context_delegation
   test_context_http
   test_context_capabilities)
- (libraries core async yojson expect_test_helpers_core server ox_fast_mcp)
+ (libraries
+  core
+  async
+  yojson
+  expect_test_helpers_core
+  ox-fast-mcp.server
+  ox_fast_mcp)
  (inline_tests)
  (preprocess
   (pps ppx_jane ppx_expect ppx_yojson_conv)))

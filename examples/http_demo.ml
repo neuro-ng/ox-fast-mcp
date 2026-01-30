@@ -5,7 +5,7 @@
 
 open! Core
 open! Async
-module OxServer = Server.Ox_fast_mcp
+module OxServer = Ox_fast_mcp_server.Server.Ox_fast_mcp
 
 let () =
   Command.async ~summary:"Start HTTP server with SSE transport"
@@ -36,6 +36,7 @@ let () =
            "Message endpoint will be at: http://127.0.0.1:8000/messages";
 
          (* Run server with SSE transport using built-in run_async *)
-         OxServer.run_async server ~transport:Server.Transport.Sse
-           ~host:"127.0.0.1" ~port:8000 ()))
+         OxServer.run_async server
+           ~transport:Ox_fast_mcp_server.Server.Transport.Sse ~host:"127.0.0.1"
+           ~port:8000 ()))
   |> Command_unix.run

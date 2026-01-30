@@ -304,11 +304,13 @@ module Auth_config = struct
     get_middleware : unit -> Middleware.t list;
     get_routes : mcp_path:string -> Route.t list;
     get_resource_url : string -> string option;
+    verify_token : string -> (unit, string) Result.t Deferred.t;
   }
 
   let get_middleware t = t.get_middleware ()
   let get_routes t ~mcp_path = t.get_routes ~mcp_path
   let get_resource_url t path = t.get_resource_url path
+  let verify_token t = t.verify_token
 end
 
 (** Build RFC 9728-compliant resource metadata URL. \@see
@@ -320,14 +322,27 @@ let build_resource_metadata_url (resource_url : string) : string =
 
 (** Require authentication middleware wrapper *)
 let require_auth_middleware ~(handler : Route.handler)
-    ~(required_scopes : string list) ~(resource_metadata_url : string option) :
+    ~(required_scopes : string list) ~(resource_metadata_url : string option)
+    ~(verify_token : string -> (unit, string) Result.t Deferred.t) :
     Route.handler =
   let _ = required_scopes in
   let _ = resource_metadata_url in
-  (* PLACEHOLDER: Auth checking passes all requests through. Implement: extract
-     Authorization header, verify JWT/Bearer token, check scopes match
-     required_scopes. See http.todo for details. *)
-  handler
+  fun request ->
+    match Request.get_header request ~name:"authorization" with
+    | Some auth_header -> (
+      match String.split auth_header ~on:' ' with
+      | [ "Bearer"; token ] -> (
+        match%bind verify_token token with
+        | Ok () -> handler request
+        | Error msg ->
+          let body = sprintf "Invalid token: %s" msg in
+          return (Response.unauthorized ~body ()))
+      | _ ->
+        return
+          (Response.unauthorized ~body:"Invalid Authorization header format" ())
+      )
+    | None ->
+      return (Response.unauthorized ~body:"Missing Authorization header" ())
 
 (** Create an SSE (Server-Sent Events) application.
 
@@ -379,6 +394,7 @@ let create_sse_app ~(server : Yojson.Safe.t) ~(message_path : string)
     let protected_sse_handler =
       require_auth_middleware ~handler:handle_sse
         ~required_scopes:auth_config.required_scopes ~resource_metadata_url
+        ~verify_token:(Auth_config.verify_token auth_config)
     in
     server_routes :=
       !server_routes
@@ -392,6 +408,7 @@ let create_sse_app ~(server : Yojson.Safe.t) ~(message_path : string)
       require_auth_middleware
         ~handler:(Sse_transport.handle_post_message sse)
         ~required_scopes:auth_config.required_scopes ~resource_metadata_url
+        ~verify_token:(Auth_config.verify_token auth_config)
     in
     server_routes :=
       !server_routes
@@ -455,7 +472,9 @@ let create_streamable_http_app ~(server : Yojson.Safe.t)
     ~(streamable_http_path : string) ?(_event_store : Yojson.Safe.t option)
     ?(auth : Auth_config.t option) ?(json_response = false)
     ?(stateless_http = false) ?(debug = false) ?(routes : Route.t list option)
-    ?(middleware : Middleware.t list option) () : App.t =
+    ?(middleware : Middleware.t list option)
+    ?(process_request : (Yojson.Safe.t -> Yojson.Safe.t Deferred.t) option) () :
+    App.t =
   let server_routes = ref [] in
   let server_middleware = ref [] in
 
@@ -470,11 +489,26 @@ let create_streamable_http_app ~(server : Yojson.Safe.t)
       ~session_manager:
         {
           handle_request =
-            (fun _request ->
-              (* PLACEHOLDER: Route requests to actual MCP server handlers.
-                 Parse JSON-RPC, dispatch to tools/resources/prompts, return
-                 response. Integrate with Server.handle_request or similar. *)
-              return (Response.ok ()));
+            (fun request ->
+              match request.body with
+              | Some body_str -> (
+                match process_request with
+                | Some handler -> (
+                  try
+                    let json = Yojson.Safe.from_string body_str in
+                    let%bind result = handler json in
+                    return (Response.json result)
+                  with exn ->
+                    let error_msg =
+                      sprintf "Error processing request: %s" (Exn.to_string exn)
+                    in
+                    return (Response.internal_server_error ~body:error_msg ()))
+                | None ->
+                  return
+                    (Response.internal_server_error
+                       ~body:"No request handler configured" ()))
+              | None ->
+                return (Response.bad_request ~body:"Missing request body" ()));
         }
   in
 
@@ -507,6 +541,7 @@ let create_streamable_http_app ~(server : Yojson.Safe.t)
     let protected_handler =
       require_auth_middleware ~handler:handle_streamable_http
         ~required_scopes:auth_config.required_scopes ~resource_metadata_url
+        ~verify_token:(Auth_config.verify_token auth_config)
     in
     server_routes :=
       !server_routes

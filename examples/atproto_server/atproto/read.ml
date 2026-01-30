@@ -160,6 +160,39 @@ let fetch_author_feed ~actor ~limit : Types.author_feed_result Deferred.t =
 
       let json = Yojson.Safe.from_string json_str in
       let feed = Yojson.Safe.Util.(member "feed" json |> to_list) in
+      let posts =
+        List.map feed ~f:(fun item ->
+            let post = Yojson.Safe.Util.member "post" item in
+            parse_post post)
+      in
+      return
+        Types.{ success = true; count = List.length posts; posts; error = None })
+  >>| function
+  | Ok result -> result
+  | Error exn ->
+    Types.
+      {
+        success = false;
+        count = 0;
+        posts = [];
+        error = Some (Exn.to_string exn);
+      }
+
+(** Fetch custom feed (app.bsky.feed.getFeed) *)
+let fetch_custom_feed ~feed_uri ~limit : Types.timeline_result Deferred.t =
+  let open Deferred.Let_syntax in
+  Monitor.try_with (fun () ->
+      let settings = Settings.get_settings () in
+      let%bind client = Client.get_client settings in
+
+      let encoded_feed_uri = Uri.pct_encode feed_uri in
+      let endpoint =
+        sprintf "app.bsky.feed.getFeed?feed=%s&limit=%d" encoded_feed_uri limit
+      in
+      let%bind json_str = Client.api_get client ~endpoint in
+
+      let json = Yojson.Safe.from_string json_str in
+      let feed = Yojson.Safe.Util.(member "feed" json |> to_list) in
 
       let posts =
         List.map feed ~f:(fun item ->
@@ -228,3 +261,41 @@ let fetch_post_thread ~uri : Types.post_thread_result Deferred.t =
   | Ok result -> result
   | Error exn ->
     Types.{ success = false; thread = None; error = Some (Exn.to_string exn) }
+
+(** Get a single post (wrapper around fetch_post_thread) *)
+let get_post ~uri : Types.post_result Deferred.t =
+  let open Deferred.Let_syntax in
+  match%bind fetch_post_thread ~uri with
+  | { success = true; thread = Some thread_view; _ } ->
+    return
+      Types.
+        {
+          success = true;
+          uri = Some thread_view.post.uri;
+          cid = Some thread_view.post.cid;
+          text = thread_view.post.text;
+          created_at = thread_view.post.created_at;
+          error = None;
+        }
+  | { error = Some err; _ } ->
+    return
+      Types.
+        {
+          success = false;
+          uri = None;
+          cid = None;
+          text = None;
+          created_at = None;
+          error = Some err;
+        }
+  | _ ->
+    return
+      Types.
+        {
+          success = false;
+          uri = None;
+          cid = None;
+          text = None;
+          created_at = None;
+          error = Some "Post not found";
+        }

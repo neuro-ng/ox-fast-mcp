@@ -4,7 +4,7 @@ open Alcotest_async
 
 (* Test server fixture *)
 let create_test_server () =
-  let server = Server.create ~name:"TestServer" () in
+  let server = Ox_fast_mcp_server.Server.create ~name:"TestServer" () in
 
   (* Add a prompt that accepts all string args but client sends mixed types *)
   let echo_args_prompt =
@@ -23,7 +23,7 @@ let create_test_server () =
         in
         return (sprintf "arg1: %s, arg2: %s, arg3: %s" arg1 arg2 arg3))
   in
-  Server.add_prompt server echo_args_prompt;
+  Ox_fast_mcp_server.Server.add_prompt server echo_args_prompt;
 
   (* Add a prompt that expects typed args *)
   let typed_prompt =
@@ -48,7 +48,7 @@ let create_test_server () =
           (sprintf "Got %d numbers and %d config items"
              (List.length numbers_list) (List.length config_map)))
   in
-  Server.add_prompt server typed_prompt;
+  Ox_fast_mcp_server.Server.add_prompt server typed_prompt;
 
   server
 

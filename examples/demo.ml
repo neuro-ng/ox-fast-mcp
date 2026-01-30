@@ -10,12 +10,13 @@ let main () =
   let open Deferred.Let_syntax in
   (* Create server with metadata *)
   let server =
-    Server.Ox_fast_mcp.create ~name:"demo-server" ~version:"1.0.0"
+    Ox_fast_mcp_server.Server.Ox_fast_mcp.create ~name:"demo-server"
+      ~version:"1.0.0"
       ~instructions:"A comprehensive demonstration of OxFastMCP features" ()
   in
 
   (* Tool examples *)
-  Server.Ox_fast_mcp.add_simple_tool ~name:"greet"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"greet"
     ~description:"Greet a person by name"
     ~handler:(fun params ->
       match params with
@@ -31,12 +32,12 @@ let main () =
       | _ -> return (`Assoc [ ("message", `String "Hello, World!") ]))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"echo"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"echo"
     ~description:"Echo back the input"
     ~handler:(fun params -> return (`Assoc [ ("echoed", params) ]))
     server;
 
-  Server.Ox_fast_mcp.add_simple_tool ~name:"get_time"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_tool ~name:"get_time"
     ~description:"Get current server time"
     ~handler:(fun _params ->
       let now = Time_ns.now () |> Time_ns.to_string in
@@ -44,12 +45,14 @@ let main () =
     server;
 
   (* Resource example *)
-  Server.Ox_fast_mcp.add_simple_resource ~uri:"demo://info" ~name:"Server Info"
-    ~description:"Information about this demo server" ~mime_type:"text/plain"
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.add_simple_resource ~uri:"demo://info"
+    ~name:"Server Info" ~description:"Information about this demo server"
+    ~mime_type:"text/plain"
     ~reader:(fun () ->
       let info =
         sprintf "OxFastMCP Demo Server\nVersion: 1.0.0\nTools: %d"
-          (Hashtbl.length (Server.Ox_fast_mcp.get_tools server))
+          (Hashtbl.length
+             (Ox_fast_mcp_server.Server.Ox_fast_mcp.get_tools server))
       in
       return info)
     server;
@@ -59,7 +62,7 @@ let main () =
   Log.Global.info "Resources: demo://info";
 
   (* Run with STDIO transport *)
-  Server.Ox_fast_mcp.run_async server ~transport:Stdio ()
+  Ox_fast_mcp_server.Server.Ox_fast_mcp.run_async server ~transport:Stdio ()
 
 let () =
   Command.async

@@ -17,11 +17,11 @@ module Conftest = Conftest
 
 let%expect_test "Stateful_proxy_client.create - creates with client" =
   let proxy_client =
-    Server__Proxy.Proxy_client.create ~transport:(`Assoc []) ~name:"test-client"
-      ()
+    Ox_fast_mcp_server__Proxy.Proxy_client.create ~transport:(`Assoc [])
+      ~name:"test-client" ()
   in
-  let _stateful : unit Server__Proxy.Stateful_proxy_client.t =
-    Server__Proxy.Stateful_proxy_client.create ~client:proxy_client
+  let _stateful : unit Ox_fast_mcp_server__Proxy.Stateful_proxy_client.t =
+    Ox_fast_mcp_server__Proxy.Stateful_proxy_client.create ~client:proxy_client
   in
   printf "stateful_client_created: true\n";
   [%expect {| stateful_client_created: true |}]
@@ -32,16 +32,16 @@ let%expect_test "Stateful_proxy_client.create - creates with client" =
 
 let%expect_test "Stateful_proxy_client.clear - clears cache" =
   let proxy_client =
-    Server__Proxy.Proxy_client.create ~transport:(`Assoc []) ~name:"test-client"
-      ()
+    Ox_fast_mcp_server__Proxy.Proxy_client.create ~transport:(`Assoc [])
+      ~name:"test-client" ()
   in
   let stateful =
-    Server__Proxy.Stateful_proxy_client.create ~client:proxy_client
+    Ox_fast_mcp_server__Proxy.Stateful_proxy_client.create ~client:proxy_client
   in
   (* Clear should complete without error *)
   Async.Thread_safe.block_on_async_exn (fun () ->
-      Server__Proxy.Stateful_proxy_client.clear (module Conftest.Mock_client)
-        stateful);
+      Ox_fast_mcp_server__Proxy.Stateful_proxy_client.clear
+        (module Conftest.Mock_client) stateful);
   printf "cache_cleared: true\n";
   [%expect {| cache_cleared: true |}]
 
@@ -52,14 +52,15 @@ let%expect_test "Stateful_proxy_client.clear - clears cache" =
 let%expect_test "Stateful_proxy_client.new_stateful - creates client with \
                  session" =
   let proxy_client =
-    Server__Proxy.Proxy_client.create ~transport:(`Assoc []) ~name:"test-client"
-      ()
+    Ox_fast_mcp_server__Proxy.Proxy_client.create ~transport:(`Assoc [])
+      ~name:"test-client" ()
   in
   let _stateful =
-    Server__Proxy.Stateful_proxy_client.create ~client:proxy_client
+    Ox_fast_mcp_server__Proxy.Stateful_proxy_client.create ~client:proxy_client
   in
   let _stateful2 =
-    Server__Proxy.Stateful_proxy_client.new_stateful ~client:proxy_client
+    Ox_fast_mcp_server__Proxy.Stateful_proxy_client.new_stateful
+      ~client:proxy_client
   in
   printf "client_created: true\n";
   [%expect {| client_created: true |}]

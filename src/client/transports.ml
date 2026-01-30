@@ -234,6 +234,15 @@ let to_string = function
   | Mcp_config_transport path ->
     sprintf "<MCPConfigTransport(config='%s')>" path
 
+(** Set authentication configuration on transport *)
+let set_auth t auth =
+  match t with
+  | Sse_transport config -> Sse_transport { config with auth }
+  | Streamable_http_transport config ->
+    Streamable_http_transport { config with auth }
+  | _ -> t
+(* Other transports don't support dynamic auth or use different mechanism *)
+
 (** {1 Transport Operations} *)
 
 (** Connect to transport and return an initialized client session. Supports SSE,

@@ -1,7 +1,7 @@
 (** Tests for New Server Functionality **)
 
 open! Core
-module Ox_fast_mcp = Server.Ox_fast_mcp
+module Ox_fast_mcp = Ox_fast_mcp_server.Server.Ox_fast_mcp
 
 (** {1 Test: Mutable Instructions}
     **)

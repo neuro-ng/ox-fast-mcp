@@ -493,6 +493,7 @@ module Ox_fast_mcp : sig
     ?host:string ->
     ?port:int ->
     ?log_level:string ->
+    ?auth:Http.Auth_config.t ->
     unit ->
     unit Deferred.t
   (** Running the server *)

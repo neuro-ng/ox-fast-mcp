@@ -7,6 +7,7 @@
   tools
   utilities
   ox_fast_mcp
+  ox-fast-mcp.server
   expect_test_helpers_core
   expect_test_helpers_async)
  (preprocess

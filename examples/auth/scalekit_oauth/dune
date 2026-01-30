@@ -1,0 +1,14 @@
+(executables
+ (names server client)
+ (public_names scalekit_oauth_server scalekit_oauth_client)
+ (package ox-fast-mcp)
+ (libraries
+  ox-fast-mcp
+  ox-fast-mcp.server
+  ox-fast-mcp.client
+  ox-fast-mcp.server.auth.providers
+  async
+  core
+  cohttp-async)
+ (preprocess
+  (pps ppx_jane)))

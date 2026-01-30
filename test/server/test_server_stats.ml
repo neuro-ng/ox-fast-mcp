@@ -2,11 +2,11 @@
 
 open! Core
 open! Async
-module Ox_fast_mcp = Server.Ox_fast_mcp
-module Tool = Server.Tool
-module Resource = Server.Resource
-module Resource_template = Server.Resource_template
-module Prompt = Server.Prompt
+module Ox_fast_mcp = Ox_fast_mcp_server.Server.Ox_fast_mcp
+module Tool = Ox_fast_mcp_server.Server.Tool
+module Resource = Ox_fast_mcp_server.Server.Resource
+module Resource_template = Ox_fast_mcp_server.Server.Resource_template
+module Prompt = Ox_fast_mcp_server.Server.Prompt
 
 (** {1 Test: Server Statistics}
     **)

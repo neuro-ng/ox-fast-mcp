@@ -1,12 +1,12 @@
 (** Tests for OxFastMCP Server Module *)
 
 open! Core
-module Ox_fast_mcp = Server.Ox_fast_mcp
-module Tool = Server.Tool
-module Resource = Server.Resource
-module Prompt = Server.Prompt
-module Transport = Server.Transport
-module Duplicate_behavior = Server.Duplicate_behavior
+module Ox_fast_mcp = Ox_fast_mcp_server.Server.Ox_fast_mcp
+module Tool = Ox_fast_mcp_server.Server.Tool
+module Resource = Ox_fast_mcp_server.Server.Resource
+module Prompt = Ox_fast_mcp_server.Server.Prompt
+module Transport = Ox_fast_mcp_server.Server.Transport
+module Duplicate_behavior = Ox_fast_mcp_server.Server.Duplicate_behavior
 
 (* Helper to create a sync handler for testing *)
 let sync_handler result _args = Async.return result
@@ -243,8 +243,8 @@ let%expect_test "transport to_string" =
 let%expect_test "add_resource_prefix protocol format" =
   let uri = "resource://data" in
   let result =
-    Server.add_resource_prefix ~uri ~prefix:"mounted"
-      ~format:Server.Resource_prefix_format.Protocol
+    Ox_fast_mcp_server.Server.add_resource_prefix ~uri ~prefix:"mounted"
+      ~format:Ox_fast_mcp_server.Server.Resource_prefix_format.Protocol
   in
   print_endline result;
   [%expect {| resource://mounted/data |}]
@@ -252,8 +252,8 @@ let%expect_test "add_resource_prefix protocol format" =
 let%expect_test "add_resource_prefix path format" =
   let uri = "resource://data" in
   let result =
-    Server.add_resource_prefix ~uri ~prefix:"mounted"
-      ~format:Server.Resource_prefix_format.Path
+    Ox_fast_mcp_server.Server.add_resource_prefix ~uri ~prefix:"mounted"
+      ~format:Ox_fast_mcp_server.Server.Resource_prefix_format.Path
   in
   print_endline result;
   [%expect {| mounted/resource://data |}]
@@ -261,8 +261,8 @@ let%expect_test "add_resource_prefix path format" =
 let%expect_test "has_resource_prefix" =
   let uri = "resource://mounted/data" in
   let result =
-    Server.has_resource_prefix ~uri ~prefix:"mounted"
-      ~format:Server.Resource_prefix_format.Protocol
+    Ox_fast_mcp_server.Server.has_resource_prefix ~uri ~prefix:"mounted"
+      ~format:Ox_fast_mcp_server.Server.Resource_prefix_format.Protocol
   in
   print_s [%sexp (result : bool)];
   [%expect {| true |}]

@@ -1,0 +1,35 @@
+(library
+ (name testing_demo_lib)
+ (package ox-fast-mcp)
+ (modules demo_server)
+ (libraries
+  core
+  async
+  yojson
+  ppx_yojson_conv_lib
+  ox-fast-mcp
+  ox-fast-mcp.server)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))
+
+(executable
+ (name main)
+ (public_name fastmcp_testing_demo)
+ (modules main)
+ (libraries core async testing_demo_lib)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))
+
+(library
+ (name testing_demo_tests)
+ (modules test_server)
+ (libraries
+  core
+  async
+  testing_demo_lib
+  ox-fast-mcp
+  ox-fast-mcp.server
+  yojson)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv ppx_expect)))

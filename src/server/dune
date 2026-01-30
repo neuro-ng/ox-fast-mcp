@@ -1,5 +1,5 @@
 (library
- (name server)
+ (name ox_fast_mcp_server)
  (public_name ox-fast-mcp.server)
  (libraries
   core

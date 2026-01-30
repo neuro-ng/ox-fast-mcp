@@ -16,8 +16,8 @@ module Conftest = Conftest
    ============================================================================= *)
 
 let%expect_test "Proxy_client.generate_name - creates unique names" =
-  let name1 = Server__Proxy.Proxy_client.generate_name () in
-  let name2 = Server__Proxy.Proxy_client.generate_name () in
+  let name1 = Ox_fast_mcp_server__Proxy.Proxy_client.generate_name () in
+  let name2 = Ox_fast_mcp_server__Proxy.Proxy_client.generate_name () in
   printf "name1_prefix: %b\n" (String.is_prefix name1 ~prefix:"proxy-client-");
   printf "name2_prefix: %b\n" (String.is_prefix name2 ~prefix:"proxy-client-");
   printf "names_different: %b\n" (not (String.equal name1 name2));
@@ -33,7 +33,9 @@ let%expect_test "Proxy_client.generate_name - creates unique names" =
    ============================================================================= *)
 
 let%expect_test "Proxy_client.create - with default name" =
-  let client = Server__Proxy.Proxy_client.create ~transport:(`Assoc []) () in
+  let client =
+    Ox_fast_mcp_server__Proxy.Proxy_client.create ~transport:(`Assoc []) ()
+  in
   (* Client should be created successfully - we can't inspect internal state but
      we can verify it doesn't raise *)
   printf "client_created: true\n";
@@ -42,7 +44,7 @@ let%expect_test "Proxy_client.create - with default name" =
 
 let%expect_test "Proxy_client.create - with custom name" =
   let _client =
-    Server__Proxy.Proxy_client.create ~name:"my-custom-client"
+    Ox_fast_mcp_server__Proxy.Proxy_client.create ~name:"my-custom-client"
       ~transport:(`Assoc []) ()
   in
   printf "client_with_name_created: true\n";
@@ -59,8 +61,9 @@ let%expect_test "Proxy_client.create - with handlers" =
   let progress_handler _progress _total _message = Async.return () in
 
   let _client =
-    Server__Proxy.Proxy_client.create ~transport:(`Assoc []) ~roots_handler
-      ~sampling_handler ~elicitation_handler ~log_handler ~progress_handler ()
+    Ox_fast_mcp_server__Proxy.Proxy_client.create ~transport:(`Assoc [])
+      ~roots_handler ~sampling_handler ~elicitation_handler ~log_handler
+      ~progress_handler ()
   in
   printf "client_with_handlers_created: true\n";
   [%expect {| client_with_handlers_created: true |}]
@@ -74,8 +77,8 @@ let%expect_test "Proxy_client.default_sampling_handler - returns expected \
   (* Default handler returns a role/model/content structure *)
   let result =
     Async.Thread_safe.block_on_async_exn (fun () ->
-        Server__Proxy.Proxy_client.default_sampling_handler ~messages:`Null
-          ~params:`Null)
+        Ox_fast_mcp_server__Proxy.Proxy_client.default_sampling_handler
+          ~messages:`Null ~params:`Null)
   in
   let open Yojson.Safe.Util in
   printf "has_role: %b\n"
@@ -95,8 +98,8 @@ let%expect_test "Proxy_client.default_elicitation_handler - returns accept \
                  action" =
   let result =
     Async.Thread_safe.block_on_async_exn (fun () ->
-        Server__Proxy.Proxy_client.default_elicitation_handler ~message:"test"
-          ~params:`Null)
+        Ox_fast_mcp_server__Proxy.Proxy_client.default_elicitation_handler
+          ~message:"test" ~params:`Null)
   in
   let open Yojson.Safe.Util in
   printf "action: %s\n" (result |> member "action" |> to_string);
@@ -114,7 +117,7 @@ let%expect_test "Tool_result.create - with content only" =
   let content =
     [ `Assoc [ ("type", `String "text"); ("text", `String "Hello") ] ]
   in
-  let result = Server__Proxy.Tool_result.create ~content () in
+  let result = Ox_fast_mcp_server__Proxy.Tool_result.create ~content () in
   printf "content_count: %d\n" (List.length result.content);
   printf "has_structured: %b\n" (Option.is_some result.structured_content);
   [%expect {|
@@ -128,7 +131,8 @@ let%expect_test "Tool_result.create - with structured content" =
   in
   let structured = `Assoc [ ("data", `String "structured") ] in
   let result =
-    Server__Proxy.Tool_result.create ~content ~structured_content:structured ()
+    Ox_fast_mcp_server__Proxy.Tool_result.create ~content
+      ~structured_content:structured ()
   in
   printf "content_count: %d\n" (List.length result.content);
   printf "has_structured: %b\n" (Option.is_some result.structured_content);
@@ -149,21 +153,25 @@ let%expect_test "Tool_result.create - with structured content" =
    ============================================================================= *)
 
 let%expect_test "Mirrored_component.create - default not mirrored" =
-  let component = Server__Proxy.Mirrored_component.create () in
+  let component = Ox_fast_mcp_server__Proxy.Mirrored_component.create () in
   printf "is_mirrored: %b\n"
-    (Server__Proxy.Mirrored_component.is_mirrored component);
+    (Ox_fast_mcp_server__Proxy.Mirrored_component.is_mirrored component);
   [%expect {| is_mirrored: false |}]
 
 let%expect_test "Mirrored_component.create - explicitly mirrored" =
-  let component = Server__Proxy.Mirrored_component.create ~mirrored:true () in
+  let component =
+    Ox_fast_mcp_server__Proxy.Mirrored_component.create ~mirrored:true ()
+  in
   printf "is_mirrored: %b\n"
-    (Server__Proxy.Mirrored_component.is_mirrored component);
+    (Ox_fast_mcp_server__Proxy.Mirrored_component.is_mirrored component);
   [%expect {| is_mirrored: true |}]
 
 let%expect_test "Mirrored_component.create - explicitly not mirrored" =
-  let component = Server__Proxy.Mirrored_component.create ~mirrored:false () in
+  let component =
+    Ox_fast_mcp_server__Proxy.Mirrored_component.create ~mirrored:false ()
+  in
   printf "is_mirrored: %b\n"
-    (Server__Proxy.Mirrored_component.is_mirrored component);
+    (Ox_fast_mcp_server__Proxy.Mirrored_component.is_mirrored component);
   [%expect {| is_mirrored: false |}]
 
 (* =============================================================================

@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/neuro-ng/oxcaml-ubuntu:latest
-      options: --user ocaml-user --workdir /workspace
+      options: --user ocaml-user --workdir /workspace -v /var/run/docker.sock:/var/run/docker.sock
     env:
       USER: ocaml-user
       HOME: /home/ocaml-user
@@ -33,6 +33,12 @@ jobs:
         cp -r . /workspace/
         cd /workspace
         ls -al
+
+    - name: Verify Docker access
+      run: |
+        # Ensure we can access Docker
+        docker ps
+        docker version
 
     - name: Build project
       working-directory: /workspace

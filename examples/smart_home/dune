@@ -1,0 +1,57 @@
+(library
+ (name smart_home_lib)
+ (libraries
+  core
+  async
+  ox_fast_mcp
+  ox-fast-mcp.server
+  yojson
+  ppx_yojson_conv_lib
+  cohttp-async)
+ (modules lights config thermostat phue)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))
+
+(executable
+ (name hub)
+ (public_name smart_home_hub)
+ (libraries
+  core
+  async
+  ox_fast_mcp
+  ox-fast-mcp.server
+  yojson
+  ppx_yojson_conv_lib
+  smart_home_lib)
+ (modules hub)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))
+
+(executable
+ (name test_smart_home)
+ (modules test_smart_home)
+ (libraries
+  core
+  async
+  smart_home_lib
+  yojson
+  ppx_yojson_conv_lib
+  ppx_inline_test.runner.lib)
+ (preprocess
+  (pps
+   ppx_jane
+   ppx_yojson_conv
+   ppx_expect
+   --
+   -inline-test-lib
+   test_smart_home)))
+
+(rule
+ (alias runtest)
+ (deps test_config.json)
+ (action
+  (run
+   ./run_with_docker.sh
+   %{exe:test_smart_home.exe}
+   inline-test-runner
+   test_smart_home)))

@@ -1,0 +1,32 @@
+(executable
+ (public_name calculator-server)
+ (name main)
+ (modules main)
+ (package ox-fast-mcp)
+ (libraries ox_fast_mcp ox-fast-mcp.server core async)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))
+
+(executable
+ (name test_calculator)
+ (modules test_calculator)
+ (libraries
+  core
+  async
+  ox_fast_mcp
+  ox-fast-mcp.server
+  yojson
+  ppx_inline_test.runner.lib)
+ (preprocess
+  (pps
+   ppx_jane
+   ppx_yojson_conv
+   ppx_expect
+   --
+   -inline-test-lib
+   test_calculator)))
+
+(rule
+ (alias runtest)
+ (action
+  (run %{exe:test_calculator.exe} inline-test-runner test_calculator)))

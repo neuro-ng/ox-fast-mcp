@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/neuro-ng/ox-fast-mcp/main/schemas/fastmcp.v1.json",
+  "command": "dune",
+  "args": [
+    "exec",
+    "examples/fastmcp_config/main.exe"
+  ],
+  "environment": {
+    "dependencies": [],
+    "requirements": null,
+    "project": null,
+    "editable": null
+  },
+  "deployment": {
+    "transport": "http",
+    "host": "127.0.0.1",
+    "port": 8000,
+    "path": "/mcp/",
+    "log_level": "INFO",
+    "env": {
+      "DEBUG": "false",
+      "API_TIMEOUT": "30"
+    },
+    "cwd": null,
+    "args": null
+  }
+}

@@ -190,11 +190,13 @@ module Auth_config : sig
     get_middleware : unit -> Middleware.t list;
     get_routes : mcp_path:string -> Route.t list;
     get_resource_url : string -> string option;
+    verify_token : string -> (unit, string) Result.t Deferred.t;
   }
 
   val get_middleware : t -> Middleware.t list
   val get_routes : t -> mcp_path:string -> Route.t list
   val get_resource_url : t -> string -> string option
+  val verify_token : t -> string -> (unit, string) Result.t Deferred.t
 end
 
 (** {1 Application Creation} *)
@@ -206,6 +208,7 @@ val require_auth_middleware :
   handler:Route.handler ->
   required_scopes:string list ->
   resource_metadata_url:string option ->
+  verify_token:(string -> (unit, string) Result.t Deferred.t) ->
   Route.handler
 (** Require authentication middleware wrapper *)
 
@@ -240,6 +243,7 @@ val create_streamable_http_app :
   ?debug:bool ->
   ?routes:Route.t list ->
   ?middleware:Middleware.t list ->
+  ?process_request:(Yojson.Safe.t -> Yojson.Safe.t Deferred.t) ->
   unit ->
   App.t
 (** Create a Streamable HTTP application *)

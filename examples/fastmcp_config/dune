@@ -1,0 +1,33 @@
+(library
+ (name fastmcp_config_lib)
+ (modules config)
+ (libraries core async re ox-fast-mcp ox-fast-mcp.server cohttp-async)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))
+
+(executable
+ (name main)
+ (public_name fastmcp_config_server)
+ (package ox-fast-mcp)
+ (modules main)
+ (libraries core async fastmcp_config_lib ox-fast-mcp ox-fast-mcp.server)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv)))
+
+(executable
+ (name test_http_load)
+ (modules test_http_load)
+ (libraries core async fastmcp_config_lib ppx_inline_test.runner.lib)
+ (preprocess
+  (pps
+   ppx_jane
+   ppx_yojson_conv
+   ppx_expect
+   --
+   -inline-test-lib
+   test_http_load)))
+
+(rule
+ (alias runtest)
+ (action
+  (run %{exe:test_http_load.exe} inline-test-runner test_http_load)))

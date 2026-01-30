@@ -49,20 +49,39 @@ ox-fast-mcp/
 
 All modules are fully tested and passing:
 
-**✅ Utilities Module**: 13/13 tests passing
+**✅ Utilities Module**: 83/83 tests passing
 - JSON helper functions, content types, JSON-RPC structures
 - Tool/resource/prompt definitions, transport configs
 - Authentication, error handling, progress info, constants
 
-**✅ Tools Module**: 11/11 tests passing  
+**✅ Tools Module**: 64/64 tests passing  
 - Tool creation, execution, error handling
 - Manager operations, filtering, enable/disable
 - Parameter validation, MCP serialization
 
-**✅ Prompts Module**: 11/11 tests passing
+**✅ Prompts Module**: 14/14 tests passing
 - Prompt creation, execution, template rendering
 - Manager operations, argument validation
 - Complex message handling, tag filtering
+
+**✅ Resources Module**: 14/14 tests passing
+- Manager operations, creation, addition, removal
+- Resource retrieval, reading (text/binary), filtering
+- Enable/disable operations, listing
+
+**✅ Server Module**: 889/889 tests passing
+- Core server functionality, stats, validation
+- HTTP/SSE integration, app state, auth integration
+- Input validation, logging, error handling
+- Context delegation, capabilities, sampling
+
+**✅ Client Module**: 56/56 tests passing
+- Session management, basic client operations
+- List operations, connection handling
+
+**✅ MCP Core**: 82/82 tests passing
+- Core protocol implementation, shared types
+- Client/Server shared logic
 
 ## Core Components
 
@@ -95,7 +114,7 @@ Command-line interface supporting multiple transport types and configuration opt
 - Explicit error handling with Result types
 
 ### 3. Comprehensive Coverage
-- 35 total test cases across all modules
+- 1200+ total test cases across all modules
 - All edge cases and error conditions tested
 - Round-trip serialization testing
 

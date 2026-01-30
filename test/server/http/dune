@@ -19,7 +19,7 @@
   cohttp-lwt
   cohttp-lwt-unix
   expect_test_helpers_core
-  server
+  ox-fast-mcp.server
   server_auth
   ox-fast-mcp.server.auth.providers
   ox-fast-mcp.mcp.server.auth))

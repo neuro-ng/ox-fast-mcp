@@ -3,8 +3,9 @@
 open! Core
 open! Async
 
-module Http = Server__Http
-(** Access Http module using the Server__ prefix pattern used in other tests **)
+module Http = Ox_fast_mcp_server__Http
+(** Access Http module using the Ox_fast_mcp_server__ prefix pattern used in
+    other tests **)
 
 (** {1 Test: SSE Transport}
     **)

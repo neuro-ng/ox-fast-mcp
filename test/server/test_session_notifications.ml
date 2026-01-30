@@ -5,7 +5,7 @@ open! Async
 open! Expect_test_helpers_core
 
 (* Access Context using internal module name *)
-module Context = Server__Context
+module Context = Ox_fast_mcp_server__Context
 open Context
 
 let create_test_context ?session () = create ?session ()

@@ -139,3 +139,6 @@ val to_string : t -> string
 (** {1 Type Inference} *)
 
 val infer_transport_from_string : string -> (t, Error.t) Result.t Deferred.t
+
+val set_auth : t -> auth_config -> t
+(** Set authentication configuration on transport *)

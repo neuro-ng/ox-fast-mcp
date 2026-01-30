@@ -8,7 +8,7 @@ open Async
 (** {1 Tool Lookup Error Tests} *)
 
 let%expect_test "tool_lookup_with_suggestion" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   add_simple_tool ~name:"calculate_sum" ~handler:(fun _ -> return `Null) server;
   add_simple_tool ~name:"format_data" ~handler:(fun _ -> return `Null) server;
@@ -30,7 +30,7 @@ let%expect_test "tool_lookup_with_suggestion" =
   return ()
 
 let%expect_test "tool_lookup_no_suggestion" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   add_simple_tool ~name:"format_data" ~handler:(fun _ -> return `Null) server;
 
@@ -54,7 +54,7 @@ let%expect_test "tool_lookup_no_suggestion" =
 (** {1 Resource Lookup Error Tests} *)
 
 let%expect_test "resource_lookup_with_suggestion" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   add_simple_resource ~uri:"file:///config.json" ~name:"config"
     ~reader:(fun () -> return "data")
@@ -79,7 +79,7 @@ let%expect_test "resource_lookup_with_suggestion" =
 (** {1 Prompt Lookup Error Tests} *)
 
 let%expect_test "prompt_lookup_with_suggestion" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   add_simple_prompt ~name:"write_email" ~render:(fun _ -> return `Null) server;
   add_simple_prompt ~name:"write_story" ~render:(fun _ -> return `Null) server;
@@ -100,14 +100,15 @@ let%expect_test "prompt_lookup_with_suggestion" =
 (** {1 Template Lookup Error Tests} *)
 
 let%expect_test "template_lookup_with_suggestion" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   let template1 =
-    Server.Resource_template.create ~uri_template:"file:///{path}/data"
-      ~name:"file_template"
+    Ox_fast_mcp_server.Server.Resource_template.create
+      ~uri_template:"file:///{path}/data" ~name:"file_template"
       ~create_resource:(fun ~params:_ ->
         return
-          (Server.Resource.create ~uri:"file:///test" ~name:"test"
+          (Ox_fast_mcp_server.Server.Resource.create ~uri:"file:///test"
+             ~name:"test"
              ~reader:(fun () -> return "data")
              ()))
       ()
@@ -130,7 +131,7 @@ let%expect_test "template_lookup_with_suggestion" =
 (** {1 Multiple Suggestions Test} *)
 
 let%expect_test "multiple_similar_tools" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   add_simple_tool ~name:"tool1" ~handler:(fun _ -> return `Null) server;
   add_simple_tool ~name:"tool2" ~handler:(fun _ -> return `Null) server;
@@ -155,7 +156,7 @@ let%expect_test "multiple_similar_tools" =
 (** {1 Exact Match Test} *)
 
 let%expect_test "exact_typo_correction" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   add_simple_tool ~name:"calculate_sum" ~handler:(fun _ -> return `Null) server;
 

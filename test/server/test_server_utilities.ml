@@ -8,7 +8,7 @@ open Async
 (** {1 Component Listing Tests} *)
 
 let%expect_test "list_all_component_names_empty" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   let names = list_all_component_names server in
   print_endline (Yojson.Safe.to_string names);
@@ -16,7 +16,7 @@ let%expect_test "list_all_component_names_empty" =
   return ()
 
 let%expect_test "list_all_component_names_with_components" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   add_simple_tool ~name:"tool1" ~handler:(fun _ -> return `Null) server;
   add_simple_resource ~uri:"file:///test" ~name:"res1"
@@ -47,7 +47,7 @@ let%expect_test "list_all_component_names_with_components" =
 (** {1 Component Count by Tag Tests} *)
 
 let%expect_test "component_count_by_tag_no_tags" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   add_simple_tool ~name:"tool1" ~handler:(fun _ -> return `Null) server;
 
@@ -57,22 +57,22 @@ let%expect_test "component_count_by_tag_no_tags" =
   return ()
 
 let%expect_test "component_count_by_tag_with_tags" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   let tool1 =
-    Server.Tool.create ~name:"tool1"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"tool1"
       ~tags:(String.Set.of_list [ "api"; "v1" ])
       ~handler:(fun _ -> return `Null)
       ()
   in
   let tool2 =
-    Server.Tool.create ~name:"tool2"
+    Ox_fast_mcp_server.Server.Tool.create ~name:"tool2"
       ~tags:(String.Set.of_list [ "api"; "v2" ])
       ~handler:(fun _ -> return `Null)
       ()
   in
   let resource1 =
-    Server.Resource.create ~uri:"file:///test" ~name:"res1"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"file:///test" ~name:"res1"
       ~tags:(String.Set.of_list [ "api" ])
       ~reader:(fun () -> return "data")
       ()
@@ -93,7 +93,7 @@ let%expect_test "component_count_by_tag_with_tags" =
 (** {1 Statistics Tests} *)
 
 let%expect_test "get_tool_stats_initial" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   let stats = get_tool_stats server in
   print_s [%sexp (List.length stats : int)];
@@ -101,7 +101,7 @@ let%expect_test "get_tool_stats_initial" =
   return ()
 
 let%expect_test "reset_stats" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   reset_stats server;
   let tool_stats = get_tool_stats server in
@@ -116,7 +116,7 @@ let%expect_test "reset_stats" =
 (** {1 Health Check Tests} *)
 
 let%expect_test "health_check_healthy_server" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"healthy-server" () in
   add_simple_tool ~name:"tool1" ~handler:(fun _ -> return `Null) server;
 
@@ -139,11 +139,11 @@ let%expect_test "health_check_healthy_server" =
   return ()
 
 let%expect_test "health_check_degraded_server" =
-  let open Server.Ox_fast_mcp in
+  let open Ox_fast_mcp_server.Server.Ox_fast_mcp in
   let server = create ~name:"test" () in
   (* Add invalid resource to cause degraded state *)
   let invalid_res =
-    Server.Resource.create ~uri:"no_scheme" ~name:"bad"
+    Ox_fast_mcp_server.Server.Resource.create ~uri:"no_scheme" ~name:"bad"
       ~reader:(fun () -> return "data")
       ()
   in
