@@ -1,4 +1,6 @@
 # Ox Fast MCP 🚀
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fneuro-ng%2Fox-fast-mcp.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fneuro-ng%2Fox-fast-mcp?ref=badge_shield)
+
 
 **The fast, functional way to build MCP servers and clients in OCaml**
 
@@ -218,6 +220,9 @@ dune build @doc
 
 Apache-2.0 License - see [LICENSE](LICENSE) file for details.
 
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fneuro-ng%2Fox-fast-mcp.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fneuro-ng%2Fox-fast-mcp?ref=badge_large)
+
 ## Related Projects 🔗
 
 - [FastMCP Python](https://github.com/jlowin/fastmcp) - Original Python implementation
@@ -235,4 +240,4 @@ Apache-2.0 License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-Built with ❤️ using OCaml and TDD principles 
+Built with ❤️ using OCaml and TDD principles
